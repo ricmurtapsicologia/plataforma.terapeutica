@@ -1,0 +1,13 @@
+{
+  "name": "Richelmy Murta — Clínica",
+  "short_name": "RM Clínica",
+  "description": "Plataforma clínica local-first para uso profissional individual.",
+  "start_url": "./#today",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f8fa",
+  "theme_color": "#4ba4c1",
+  "icons": [
+    {"src":"assets/images/icon-512.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

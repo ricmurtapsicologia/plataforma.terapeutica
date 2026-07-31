@@ -1,0 +1,4 @@
+export async function requestNotificationPermission(){if(!('Notification'in window))throw new Error('Notificações não são suportadas neste navegador.');const p=await Notification.requestPermission();if(p!=='granted')throw new Error('Permissão de notificação não concedida.');return p}
+export function isSilentTime(start='20:00',end='08:00'){const now=new Date(),mins=now.getHours()*60+now.getMinutes(),toM=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),a=toM(start),b=toM(end);return a>b?mins>=a||mins<b:mins>=a&&mins<b}
+export function showLocalNotification(title,body,{silentStart='20:00',silentEnd='08:00'}={}){if(Notification.permission!=='granted')return false;if(isSilentTime(silentStart,silentEnd))return false;new Notification(title,{body,icon:'assets/images/favicon.svg',tag:'rm-local'});return true}
+export async function registerServiceWorker(){if(!('serviceWorker'in navigator))return null;return navigator.serviceWorker.register('./sw.js')}
