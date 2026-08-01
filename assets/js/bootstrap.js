@@ -1,6 +1,5 @@
 (async()=>{
-  const VERSION='1.2.9';
-  const DB_NAME='richelmy-clinica-db';
+  const VERSION='1.3.0';
   const app=document.getElementById('app');
 
   const show=(title,message)=>{
@@ -34,14 +33,7 @@
     card.append(h,p);main.append(card);app.append(main);
   };
 
-  const deleteLocalDatabase=()=>new Promise((resolve,reject)=>{
-    const req=indexedDB.deleteDatabase(DB_NAME);
-    req.onsuccess=()=>resolve();
-    req.onerror=()=>reject(req.error||new Error('Não foi possível apagar o cofre local.'));
-    req.onblocked=()=>reject(new Error('O cofre está aberto em outra aba. Feche todas as outras abas da plataforma e tente novamente.'));
-  });
-
-  const clearOldCaches=async()=>{
+  const clearLegacyCaches=async()=>{
     if('serviceWorker' in navigator){
       const regs=await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map(r=>r.unregister().catch(()=>false)));
@@ -55,7 +47,7 @@
   const repairTail=(source)=>{
     const start=source.indexOf("document.addEventListener('click',handleClick);");
     const end=source.indexOf("window.addEventListener('hashchange'",start);
-    if(start<0||end<0)throw new Error('Não foi possível localizar o bloco final do controlador para correção.');
+    if(start<0||end<0)throw new Error('Não foi possível localizar o bloco final do controlador.');
     const replacement=`document.addEventListener('click',handleClick);\n`+
 `document.addEventListener('input',e=>{\n`+
 `  resetIdle();\n`+
@@ -72,7 +64,7 @@
 `        const p=selectedRequired();\n`+
 `        const draft={id:'draft_record_'+p.id,patientId:p.id,title:sanitizeText($('#record-title').value),date:$('#record-date').value,text:sanitizeText($('#record-text').value),followup:sanitizeText($('#record-followup').value),updatedAt:nowISO()};\n`+
 `        await saveEntity('settings',draft);\n`+
-`        const saved=$('#record-save-status');if(saved)saved.textContent='Rascunho salvo no cofre local.';\n`+
+`        const saved=$('#record-save-status');if(saved)saved.textContent='Rascunho salvo localmente.';\n`+
 `      }catch(err){const failed=$('#record-save-status');if(failed)failed.textContent='Falha ao salvar rascunho.';console.error(err);}\n`+
 `    },700);\n`+
 `  }\n`+
@@ -88,7 +80,23 @@
     return source.slice(0,start)+replacement+source.slice(end);
   };
 
-  const removePasswordDisclosure=(source)=>source.replace(/<div class="notice warning">Senha operacional configurada:[\s\S]*?<\/div>/,'');
+  const simplifyAccess=(source)=>{
+    const start=source.indexOf('function vaultView(){');
+    const end=source.indexOf('function shell(',start);
+    if(start<0||end<0)throw new Error('Não foi possível localizar a tela de acesso.');
+    const replacement=`function vaultView(){return\`<main class="vault"><section class="vault-hero"><div><img class="brand-banner" src="assets/images/brand-banner.png" alt="Richelmy Murta, Psicólogo Clínico"><p class="hero-caption">Plataforma clínica pessoal para uso exclusivo do psicólogo.</p><div class="feature-list"><div class="feature"><span class="dot"></span><span>Dados clínicos protegidos e armazenados localmente.</span></div><div class="feature"><span class="dot"></span><span>Agenda, prontuário, plano, exercícios, materiais, documentos e WhatsApp.</span></div><div class="feature"><span class="dot"></span><span>Aplicação estática e local-first, sem portal do paciente.</span></div></div></div></section><section class="vault-panel"><div class="vault-card"><div class="brand-mini"><img src="assets/images/brand-symbol.svg" alt=""><div class="brand-copy"><strong>Richelmy Murta</strong><span>Psicólogo clínico</span></div></div><h1 class="mt-24">Acesso à plataforma</h1><p class="muted">Digite sua senha para continuar.</p><div class="field"><label>Senha</label><input id="vault-password" class="input" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6"></div><button type="button" class="btn ghost w-full mt-8" data-action="toggle-access-password">Mostrar senha</button><button class="btn w-full mt-12" data-action="access-platform">Entrar</button><button class="btn secondary w-full mt-8" data-action="toggle-public-theme">Alternar aparência</button><div class="tiny muted mt-16">Acesso local. Não há sincronização automática dos dados clínicos com o GitHub.</div></div></section></main>\`}\n`;
+    source=source.slice(0,start)+replacement+source.slice(end);
+    const needle="const a=el.dataset.action;try{";
+    const injected=`const a=el.dataset.action;try{\n  if(a==='access-platform'){const pass=$('#vault-password').value;assert(pass,'Digite a senha.');let v;if(runtime.vaultKnown){v=await unlockVault(pass)}else{v=await createVault(pass);runtime.vaultKnown=true}runtime.key=v.key;runtime.salt=v.salt;runtime.locked=false;await loadAll();render();return}\n  if(a==='toggle-access-password'){const input=$('#vault-password');if(!input)return;const show=input.type==='password';input.type=show?'text':'password';el.textContent=show?'Ocultar senha':'Mostrar senha';input.focus();return}\n`;
+    if(!source.includes(needle))throw new Error('Não foi possível preparar o acesso por senha.');
+    source=source.replace(needle,injected);
+    source=source.replaceAll('Cofre bloqueado','Sessão encerrada');
+    source=source.replaceAll('Cofre criado','Acesso configurado');
+    source=source.replaceAll('Cofre desbloqueado','Acesso autorizado');
+    source=source.replaceAll('cofre clínico','armazenamento local');
+    source=source.replaceAll('cofre local','armazenamento local');
+    return source;
+  };
 
   const absolutizeImports=(source)=>{
     const base=new URL('./',import.meta.url);
@@ -99,86 +107,18 @@
     });
   };
 
-  const enhanceVault=()=>{
-    const warning=[...document.querySelectorAll('.notice.warning')].find(el=>el.textContent.includes('Senha operacional configurada'));
-    if(warning)warning.remove();
-    const input=document.getElementById('vault-password');
-    if(!input)return;
-
-    if(!document.getElementById('vault-password-toggle')){
-      const button=document.createElement('button');
-      button.id='vault-password-toggle';
-      button.type='button';
-      button.textContent='Mostrar senha';
-      button.style.marginTop='8px';
-      button.style.border='0';
-      button.style.background='transparent';
-      button.style.color='#2f748b';
-      button.style.font='600 13px system-ui,sans-serif';
-      button.style.cursor='pointer';
-      button.addEventListener('click',()=>{
-        const showing=input.type==='text';
-        input.type=showing?'password':'text';
-        button.textContent=showing?'Mostrar senha':'Ocultar senha';
-        input.focus();
-      });
-      input.insertAdjacentElement('afterend',button);
-    }
-
-    const card=input.closest('.vault-card');
-    if(card&&!document.getElementById('reset-local-vault')){
-      const reset=document.createElement('button');
-      reset.id='reset-local-vault';
-      reset.type='button';
-      reset.textContent='Reiniciar cofre local';
-      reset.style.width='100%';
-      reset.style.marginTop='10px';
-      reset.style.padding='11px 14px';
-      reset.style.border='1px solid #d7e7ec';
-      reset.style.borderRadius='12px';
-      reset.style.background='transparent';
-      reset.style.color='#7a4b4b';
-      reset.style.font='600 13px system-ui,sans-serif';
-      reset.style.cursor='pointer';
-      reset.addEventListener('click',()=>{
-        const first=confirm('Reiniciar o cofre apagará os dados criptografados armazenados SOMENTE neste navegador. Se houver algo que deseja preservar, clique em Cancelar. Deseja continuar?');
-        if(!first)return;
-        const second=confirm('Confirma a exclusão do cofre local antigo? Depois será criado um novo cofre para usar a senha 213098.');
-        if(!second)return;
-        const url=new URL(location.href);
-        url.search='';
-        url.searchParams.set('reset-vault','1');
-        location.href=url.href;
-      });
-      const version=[...card.querySelectorAll('.tiny')].find(el=>el.textContent.includes('Versão'));
-      if(version)card.insertBefore(reset,version);else card.appendChild(reset);
-    }
-  };
-
   try{
-    show('Carregando plataforma','Preparando o cofre clínico…');
-    await clearOldCaches();
-
-    const params=new URLSearchParams(location.search);
-    if(params.get('reset-vault')==='1'){
-      show('Reiniciando cofre local','Apagando apenas o cofre antigo deste navegador…');
-      await deleteLocalDatabase();
-      const clean=new URL(location.href);
-      clean.search='';
-      history.replaceState(null,'',clean.pathname+clean.hash);
-    }
-
+    show('Carregando plataforma','Preparando a aplicação…');
+    await clearLegacyCaches();
     const appUrl=new URL(`./app.js?v=${VERSION}`,import.meta.url);
     const response=await fetch(appUrl,{cache:'no-store'});
     if(!response.ok)throw new Error(`Não foi possível carregar app.js (HTTP ${response.status}).`);
     let source=await response.text();
     source=repairTail(source);
-    source=removePasswordDisclosure(source);
+    source=simplifyAccess(source);
     source=absolutizeImports(source);
     const blobUrl=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
     try{await import(blobUrl)}finally{setTimeout(()=>URL.revokeObjectURL(blobUrl),1500)}
-    enhanceVault();
-    new MutationObserver(enhanceVault).observe(app,{childList:true,subtree:true});
   }catch(err){
     console.error('Falha de inicialização da Plataforma Clínica Richelmy',err);
     const details=[err?.message,err?.stack].filter(Boolean).join('\n\n');
