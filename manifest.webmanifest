@@ -1,13 +1,18 @@
 {
-  "name": "Richelmy Murta — Clínica",
-  "short_name": "RM Clínica",
-  "description": "Plataforma clínica local-first para uso profissional individual.",
+  "name": "Plataforma Clínica Richelmy Murta",
+  "short_name": "Clínica Richelmy",
+  "description": "Plataforma clínica local e criptografada para uso exclusivo do psicólogo Richelmy Murta.",
   "start_url": "./#today",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f8fa",
   "theme_color": "#4ba4c1",
   "icons": [
-    {"src":"assets/images/icon-512.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "assets/images/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
