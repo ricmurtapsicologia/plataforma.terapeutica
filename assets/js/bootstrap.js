@@ -1,5 +1,5 @@
 (async()=>{
-  const VERSION='1.3.4';
+  const VERSION='1.3.5';
   const ACCESS_HASH='bd15594e672a0eba1bf38436c9752c5456bcb2bd42c4bed91d8eb6911e0af1ca';
   const app=document.getElementById('app');
 
@@ -88,6 +88,7 @@
     const base=new URL('./',import.meta.url);
     return source.replace(/from\s+(['"])\.\/([^'\"]+)\1/g,(_m,_q,path)=>{
       const url=new URL(path,base);
+      if(path==='modules/dashboard.js')url.searchParams.set('v',VERSION);
       return `from '${url.href}'`;
     });
   }
