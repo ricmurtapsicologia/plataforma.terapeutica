@@ -1,5 +1,5 @@
 (async()=>{
-  const VERSION='1.3.1';
+  const VERSION='1.3.2';
   const app=document.getElementById('app');
 
   function show(title,message){
@@ -57,7 +57,10 @@
 
     const needle="const a=el.dataset.action;try{";
     if(!source.includes(needle))throw new Error('Não foi possível preparar os controles da tela de acesso.');
-    source=source.replace(needle,`const a=el.dataset.action;try{\n  if(a==='toggle-access-password'){const input=$('#vault-password');if(!input)return;const visible=input.type==='text';input.type=visible?'password':'text';el.textContent=visible?'Mostrar senha':'Ocultar senha';input.focus();return}\n`);
+    const accessHandler=`const a=el.dataset.action;try{\n`+
+`  if(a==='toggle-access-password'){const input=$('#vault-password');if(!input)return;const visible=input.type==='text';input.type=visible?'password':'text';el.textContent=visible?'Mostrar senha':'Ocultar senha';input.focus();return}\n`+
+`  if(a==='unlock-vault'){const pass=$('#vault-password')?.value||'';assert(pass,'Digite a senha.');const v=await unlockVault(pass);runtime.key=v.key;runtime.salt=v.salt;runtime.locked=false;runtime.vaultKnown=true;await loadAll();render();toast('Acesso autorizado.','success');return}\n`;
+    source=source.replace(needle,accessHandler);
 
     source=source.replaceAll('Cofre bloqueado','Sessão encerrada');
     source=source.replaceAll('Cofre criado','Acesso configurado');
