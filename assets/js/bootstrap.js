@@ -1,6 +1,8 @@
 (async()=>{
-  const VERSION='1.2.8';
+  const VERSION='1.2.9';
+  const DB_NAME='richelmy-clinica-db';
   const app=document.getElementById('app');
+
   const show=(title,message)=>{
     if(!app)return;
     app.innerHTML='';
@@ -30,6 +32,24 @@
     p.style.color='#48636d';
     p.style.font='14px/1.55 system-ui,sans-serif';
     card.append(h,p);main.append(card);app.append(main);
+  };
+
+  const deleteLocalDatabase=()=>new Promise((resolve,reject)=>{
+    const req=indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess=()=>resolve();
+    req.onerror=()=>reject(req.error||new Error('Não foi possível apagar o cofre local.'));
+    req.onblocked=()=>reject(new Error('O cofre está aberto em outra aba. Feche todas as outras abas da plataforma e tente novamente.'));
+  });
+
+  const clearOldCaches=async()=>{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister().catch(()=>false)));
+    }
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.filter(k=>k.startsWith('rm-clinica-')).map(k=>caches.delete(k)));
+    }
   };
 
   const repairTail=(source)=>{
@@ -83,36 +103,71 @@
     const warning=[...document.querySelectorAll('.notice.warning')].find(el=>el.textContent.includes('Senha operacional configurada'));
     if(warning)warning.remove();
     const input=document.getElementById('vault-password');
-    if(!input||document.getElementById('vault-password-toggle'))return;
-    const button=document.createElement('button');
-    button.id='vault-password-toggle';
-    button.type='button';
-    button.textContent='Mostrar senha';
-    button.style.marginTop='8px';
-    button.style.border='0';
-    button.style.background='transparent';
-    button.style.color='#2f748b';
-    button.style.font='600 13px system-ui,sans-serif';
-    button.style.cursor='pointer';
-    button.addEventListener('click',()=>{
-      const showing=input.type==='text';
-      input.type=showing?'password':'text';
-      button.textContent=showing?'Mostrar senha':'Ocultar senha';
-      input.focus();
-    });
-    input.insertAdjacentElement('afterend',button);
+    if(!input)return;
+
+    if(!document.getElementById('vault-password-toggle')){
+      const button=document.createElement('button');
+      button.id='vault-password-toggle';
+      button.type='button';
+      button.textContent='Mostrar senha';
+      button.style.marginTop='8px';
+      button.style.border='0';
+      button.style.background='transparent';
+      button.style.color='#2f748b';
+      button.style.font='600 13px system-ui,sans-serif';
+      button.style.cursor='pointer';
+      button.addEventListener('click',()=>{
+        const showing=input.type==='text';
+        input.type=showing?'password':'text';
+        button.textContent=showing?'Mostrar senha':'Ocultar senha';
+        input.focus();
+      });
+      input.insertAdjacentElement('afterend',button);
+    }
+
+    const card=input.closest('.vault-card');
+    if(card&&!document.getElementById('reset-local-vault')){
+      const reset=document.createElement('button');
+      reset.id='reset-local-vault';
+      reset.type='button';
+      reset.textContent='Reiniciar cofre local';
+      reset.style.width='100%';
+      reset.style.marginTop='10px';
+      reset.style.padding='11px 14px';
+      reset.style.border='1px solid #d7e7ec';
+      reset.style.borderRadius='12px';
+      reset.style.background='transparent';
+      reset.style.color='#7a4b4b';
+      reset.style.font='600 13px system-ui,sans-serif';
+      reset.style.cursor='pointer';
+      reset.addEventListener('click',()=>{
+        const first=confirm('Reiniciar o cofre apagará os dados criptografados armazenados SOMENTE neste navegador. Se houver algo que deseja preservar, clique em Cancelar. Deseja continuar?');
+        if(!first)return;
+        const second=confirm('Confirma a exclusão do cofre local antigo? Depois será criado um novo cofre para usar a senha 213098.');
+        if(!second)return;
+        const url=new URL(location.href);
+        url.search='';
+        url.searchParams.set('reset-vault','1');
+        location.href=url.href;
+      });
+      const version=[...card.querySelectorAll('.tiny')].find(el=>el.textContent.includes('Versão'));
+      if(version)card.insertBefore(reset,version);else card.appendChild(reset);
+    }
   };
 
   try{
     show('Carregando plataforma','Preparando o cofre clínico…');
-    if('serviceWorker' in navigator){
-      const regs=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r=>r.unregister().catch(()=>false)));
+    await clearOldCaches();
+
+    const params=new URLSearchParams(location.search);
+    if(params.get('reset-vault')==='1'){
+      show('Reiniciando cofre local','Apagando apenas o cofre antigo deste navegador…');
+      await deleteLocalDatabase();
+      const clean=new URL(location.href);
+      clean.search='';
+      history.replaceState(null,'',clean.pathname+clean.hash);
     }
-    if('caches' in window){
-      const keys=await caches.keys();
-      await Promise.all(keys.filter(k=>k.startsWith('rm-clinica-')).map(k=>caches.delete(k)));
-    }
+
     const appUrl=new URL(`./app.js?v=${VERSION}`,import.meta.url);
     const response=await fetch(appUrl,{cache:'no-store'});
     if(!response.ok)throw new Error(`Não foi possível carregar app.js (HTTP ${response.status}).`);
