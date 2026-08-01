@@ -42,14 +42,14 @@
 `  if(e.target.id==='search-modal')globalSearch(e.target.value);\n`+
 `  if(e.target.id==='patient-search'){const q=e.target.value.toLowerCase();$$('[data-patient-card]').forEach(card=>card.hidden=!card.dataset.name.includes(q));}\n`+
 `  if(e.target.id==='patient-status-filter'){const q=e.target.value;$$('[data-patient-card]').forEach(card=>card.hidden=q&&card.dataset.status!==q);}\n`+
-`  if(e.target.id==='comm-message')$('#comm-count').textContent=\`${e.target.value.length} caracteres\`;\n`+
+`  if(e.target.id==='comm-message')$('#comm-count').textContent=e.target.value.length+' caracteres';\n`+
 `  if(e.target.dataset.action==='record-autosave'){\n`+
 `    clearTimeout(autosaveTimer);\n`+
 `    const status=$('#record-save-status');if(status)status.textContent='Salvando…';\n`+
 `    autosaveTimer=setTimeout(async()=>{\n`+
 `      try{\n`+
 `        const p=selectedRequired();\n`+
-`        const draft={id:\`draft_record_${p.id}\`,patientId:p.id,title:sanitizeText($('#record-title').value),date:$('#record-date').value,text:sanitizeText($('#record-text').value),followup:sanitizeText($('#record-followup').value),updatedAt:nowISO()};\n`+
+`        const draft={id:'draft_record_'+p.id,patientId:p.id,title:sanitizeText($('#record-title').value),date:$('#record-date').value,text:sanitizeText($('#record-text').value),followup:sanitizeText($('#record-followup').value),updatedAt:nowISO()};\n`+
 `        await saveEntity('settings',draft);\n`+
 `        const saved=$('#record-save-status');if(saved)saved.textContent='Rascunho salvo no cofre local.';\n`+
 `      }catch(err){const failed=$('#record-save-status');if(failed)failed.textContent='Falha ao salvar rascunho.';console.error(err);}\n`+
@@ -82,7 +82,7 @@
       const keys=await caches.keys();
       await Promise.all(keys.filter(k=>k.startsWith('rm-clinica-')).map(k=>caches.delete(k)));
     }
-    const response=await fetch('./app.js?v=1.2.5',{cache:'no-store'});
+    const response=await fetch('./app.js?v=1.2.6',{cache:'no-store'});
     if(!response.ok)throw new Error(`Não foi possível carregar app.js (HTTP ${response.status}).`);
     let source=await response.text();
     source=repairTail(source);
