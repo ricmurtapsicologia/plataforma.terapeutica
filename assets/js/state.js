@@ -1,10 +1,11 @@
-export const APP_VERSION='1.0.0';
-export const SCHEMA_VERSION=3;
-export const STORE_NAMES=['patients','appointments','records','notes','formulations','goals','tasks','responses','materials','documents','payments','consents','communications','audit','settings'];
-export const CLINICAL_STORES=['patients','appointments','records','notes','formulations','goals','tasks','responses','materials','documents','payments','consents','communications'];
+export const DEFAULT_VAULT_PASSWORD='213098';
+export const APP_VERSION='1.2.0';
+export const SCHEMA_VERSION=4;
+export const STORE_NAMES=['patients','appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications','audit','settings'];
+export const CLINICAL_STORES=['patients','appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications'];
 export const runtime={
   key:null,salt:null,locked:true,route:'today',patientTab:'summary',selectedPatientId:null,
-  sidebarOpen:false,privacyMask:false,privacyCover:false,kioskPatientId:null,kioskUnlocked:false,
+  sidebarOpen:false,privacyMask:false,privacyCover:false,
   financeHidden:true,lastActive:Date.now(),modalReturnFocus:null
 };
 export const data=Object.fromEntries(STORE_NAMES.map(name=>[name,[]]));
@@ -29,7 +30,7 @@ export const patientById=id=>data.patients.find(p=>p.id===id)||null;
 export const selectedPatient=()=>patientById(runtime.selectedPatientId);
 export function setStore(name,items){data[name]=Array.isArray(items)?items:[]}
 export function savePreference(key,value){preferences[key]=value;localStorage.setItem(`rm.pref.${key}`,String(value))}
-export function resetRuntime(){runtime.key=null;runtime.salt=null;runtime.locked=true;runtime.route='today';runtime.patientTab='summary';runtime.selectedPatientId=null;runtime.sidebarOpen=false;runtime.privacyMask=false;runtime.privacyCover=false;runtime.kioskPatientId=null;runtime.kioskUnlocked=false;for(const store of STORE_NAMES)data[store]=[]}
+export function resetRuntime(){runtime.key=null;runtime.salt=null;runtime.locked=true;runtime.route='today';runtime.patientTab='summary';runtime.selectedPatientId=null;runtime.sidebarOpen=false;runtime.privacyMask=false;runtime.privacyCover=false;for(const store of STORE_NAMES)data[store]=[]}
 export const DEFAULT_TASK_TEMPLATES=[
   {title:'Registro de pensamentos',category:'TCC',objective:'Observar a relação entre situação, interpretação, emoção e resposta.',instruction:'Registre uma situação relevante, o pensamento que apareceu, a emoção, a intensidade e uma resposta alternativa possível.'},
   {title:'Análise funcional',category:'TCC',objective:'Compreender antecedentes, comportamento e consequências.',instruction:'Descreva o que ocorreu antes, o que você fez e o que aconteceu logo depois e mais tarde.'},
