@@ -82,7 +82,8 @@
       const keys=await caches.keys();
       await Promise.all(keys.filter(k=>k.startsWith('rm-clinica-')).map(k=>caches.delete(k)));
     }
-    const response=await fetch('./app.js?v=1.2.6',{cache:'no-store'});
+    const appUrl=new URL('./app.js?v=1.2.7',import.meta.url);
+    const response=await fetch(appUrl,{cache:'no-store'});
     if(!response.ok)throw new Error(`Não foi possível carregar app.js (HTTP ${response.status}).`);
     let source=await response.text();
     source=repairTail(source);
