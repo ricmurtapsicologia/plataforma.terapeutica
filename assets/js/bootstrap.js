@@ -1,5 +1,6 @@
 (async()=>{
-  const VERSION='1.3.2';
+  const VERSION='1.3.3';
+  const ACCESS_HASH='bd15594e672a0eba1bf38436c9752c5456bcb2bd42c4bed91d8eb6911e0af1ca';
   const app=document.getElementById('app');
 
   function show(title,message){
@@ -25,16 +26,13 @@
     const replacement=`document.addEventListener('click',handleClick);\n`+
 `document.addEventListener('input',e=>{\n`+
 `  resetIdle();\n`+
+`  if(e.target.id==='vault-password'){const mask=document.getElementById('access-mask');if(mask)mask.hidden=!e.target.value;}\n`+
 `  if(e.target.id==='global-search'&&e.target.value.trim().length>=2)globalSearch(e.target.value);\n`+
 `  if(e.target.id==='search-modal')globalSearch(e.target.value);\n`+
 `  if(e.target.id==='patient-search'){const q=e.target.value.toLowerCase();$$('[data-patient-card]').forEach(card=>card.hidden=!card.dataset.name.includes(q));}\n`+
 `  if(e.target.id==='patient-status-filter'){const q=e.target.value;$$('[data-patient-card]').forEach(card=>card.hidden=q&&card.dataset.status!==q);}\n`+
 `  if(e.target.id==='comm-message'){const counter=$('#comm-count');if(counter)counter.textContent=e.target.value.length+' caracteres';}\n`+
-`  if(e.target.dataset.action==='record-autosave'){\n`+
-`    clearTimeout(autosaveTimer);\n`+
-`    const status=$('#record-save-status');if(status)status.textContent='Salvando…';\n`+
-`    autosaveTimer=setTimeout(async()=>{try{const p=selectedRequired();const draft={id:'draft_record_'+p.id,patientId:p.id,title:sanitizeText($('#record-title').value),date:$('#record-date').value,text:sanitizeText($('#record-text').value),followup:sanitizeText($('#record-followup').value),updatedAt:nowISO()};await saveEntity('settings',draft);const saved=$('#record-save-status');if(saved)saved.textContent='Rascunho salvo localmente.';}catch(err){const failed=$('#record-save-status');if(failed)failed.textContent='Falha ao salvar rascunho.';console.error(err);}},700);\n`+
-`  }\n`+
+`  if(e.target.dataset.action==='record-autosave'){clearTimeout(autosaveTimer);const status=$('#record-save-status');if(status)status.textContent='Salvando…';autosaveTimer=setTimeout(async()=>{try{const p=selectedRequired();const draft={id:'draft_record_'+p.id,patientId:p.id,title:sanitizeText($('#record-title').value),date:$('#record-date').value,text:sanitizeText($('#record-text').value),followup:sanitizeText($('#record-followup').value),updatedAt:nowISO()};await saveEntity('settings',draft);const saved=$('#record-save-status');if(saved)saved.textContent='Rascunho salvo localmente.';}catch(err){const failed=$('#record-save-status');if(failed)failed.textContent='Falha ao salvar rascunho.';console.error(err);}},700);}\n`+
 `});\n`+
 `document.addEventListener('keydown',e=>{\n`+
 `  resetIdle();\n`+
@@ -52,14 +50,14 @@
     const start=source.indexOf('function vaultView(){');
     const end=source.indexOf('function shell(',start);
     if(start<0||end<0)throw new Error('Não foi possível localizar a tela de acesso.');
-    const replacement=`function vaultView(){return\`<main class="vault"><section class="vault-hero"><div><img class="brand-banner" src="assets/images/brand-banner.png" alt="Richelmy Murta, Psicólogo Clínico"><p class="hero-caption">Plataforma clínica pessoal para uso exclusivo do psicólogo.</p><div class="feature-list"><div class="feature"><span class="dot"></span><span>Dados clínicos protegidos e armazenados localmente.</span></div><div class="feature"><span class="dot"></span><span>Agenda, prontuário, plano, exercícios, materiais, documentos e WhatsApp.</span></div><div class="feature"><span class="dot"></span><span>Aplicação estática e local-first, sem portal do paciente.</span></div></div></div></section><section class="vault-panel"><div class="vault-card"><div class="brand-mini"><img src="assets/images/brand-symbol.svg" alt=""><div class="brand-copy"><strong>Richelmy Murta</strong><span>Psicólogo clínico</span></div></div><h1 class="mt-24">Acesso à plataforma</h1><p class="muted">Digite sua senha para continuar.</p><div class="field"><label>Senha</label><input id="vault-password" class="input" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6"></div><button type="button" class="btn ghost w-full mt-8" data-action="toggle-access-password">Mostrar senha</button><button type="button" class="btn w-full mt-12" data-action="unlock-vault">Entrar</button><button type="button" class="btn secondary w-full mt-8" data-action="toggle-public-theme">Alternar aparência</button><div class="tiny muted mt-16">Acesso local. Os dados clínicos não são publicados no GitHub.</div></div></section></main>\`}\n`;
+    const replacement=`function vaultView(){return\`<main class="vault"><section class="vault-hero"><div><img class="brand-banner" src="assets/images/brand-banner.png" alt="Richelmy Murta, Psicólogo Clínico"><p class="hero-caption">Plataforma clínica pessoal para uso exclusivo do psicólogo.</p><div class="feature-list"><div class="feature"><span class="dot"></span><span>Dados clínicos protegidos e armazenados localmente.</span></div><div class="feature"><span class="dot"></span><span>Agenda, prontuário, plano, exercícios, materiais, documentos e WhatsApp.</span></div><div class="feature"><span class="dot"></span><span>Aplicação estática e local-first, sem portal do paciente.</span></div></div></div></section><section class="vault-panel"><div class="vault-card"><div class="brand-mini"><img src="assets/images/brand-symbol.svg" alt=""><div class="brand-copy"><strong>Richelmy Murta</strong><span>Psicólogo clínico</span></div></div><h1 class="mt-24">Acesso à plataforma</h1><p class="muted">Digite sua senha para continuar.</p><div class="field"><label>Senha</label><div style="position:relative"><input id="vault-password" class="input" type="password" autocomplete="off" spellcheck="false" style="color:transparent;caret-color:#20343d"><span id="access-mask" hidden aria-hidden="true" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);pointer-events:none;letter-spacing:.12em;color:#20343d;font-weight:700">••••••••••</span></div></div><button type="button" class="btn ghost w-full mt-8" data-action="toggle-access-password">Mostrar senha</button><button type="button" class="btn w-full mt-12" data-action="unlock-vault">Entrar</button><button type="button" class="btn secondary w-full mt-8" data-action="toggle-public-theme">Alternar aparência</button><div class="tiny muted mt-16">Acesso local. Os dados clínicos não são publicados no GitHub.</div></div></section></main>\`}\n`;
     source=source.slice(0,start)+replacement+source.slice(end);
 
     const needle="const a=el.dataset.action;try{";
     if(!source.includes(needle))throw new Error('Não foi possível preparar os controles da tela de acesso.');
     const accessHandler=`const a=el.dataset.action;try{\n`+
-`  if(a==='toggle-access-password'){const input=$('#vault-password');if(!input)return;const visible=input.type==='text';input.type=visible?'password':'text';el.textContent=visible?'Mostrar senha':'Ocultar senha';input.focus();return}\n`+
-`  if(a==='unlock-vault'){const pass=$('#vault-password')?.value||'';assert(pass,'Digite a senha.');const v=await unlockVault(pass);runtime.key=v.key;runtime.salt=v.salt;runtime.locked=false;runtime.vaultKnown=true;await loadAll();render();toast('Acesso autorizado.','success');return}\n`;
+`  if(a==='toggle-access-password'){const input=$('#vault-password');const mask=document.getElementById('access-mask');if(!input)return;const visible=input.type==='text';input.type=visible?'password':'text';input.style.color=visible?'transparent':'';if(mask)mask.hidden=visible?!input.value:true;el.textContent=visible?'Mostrar senha':'Ocultar senha';input.focus();return}\n`+
+`  if(a==='unlock-vault'){const pass=$('#vault-password')?.value||'';assert(pass,'Digite a senha.');const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass));const hex=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');if(hex!=='${ACCESS_HASH}')throw new Error('Senha incorreta.');const db=await openDatabase();let vaultRow=null;{const tx=db.transaction('meta','readonly');vaultRow=await new Promise((resolve,reject)=>{const r=tx.objectStore('meta').get('vault');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});}let salt;if(vaultRow?.value?.salt){const bin=atob(vaultRow.value.salt);salt=Uint8Array.from(bin,c=>c.charCodeAt(0));}else{salt=crypto.getRandomValues(new Uint8Array(16));const saltB64=btoa(String.fromCharCode(...salt));await setMeta('vault',{format:'rm-local-data',version:3,salt:saltB64,iterations:310000,createdAt:new Date().toISOString()});}const baseKey=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);runtime.key=key;runtime.salt=salt;runtime.locked=false;runtime.vaultKnown=true;await loadAll();render();toast('Acesso autorizado.','success');return}\n`;
     source=source.replace(needle,accessHandler);
 
     source=source.replaceAll('Cofre bloqueado','Sessão encerrada');
@@ -72,7 +70,11 @@
 
   function absolutizeImports(source){
     const base=new URL('./',import.meta.url);
-    return source.replace(/from\s+(['"])\.\/([^'\"]+)\1/g,(_m,_q,path)=>`from '${new URL(path,base).href}'`);
+    return source.replace(/from\s+(['"])\.\/([^'\"]+)\1/g,(_m,_q,path)=>{
+      const url=new URL(path,base);
+      if(path.endsWith('database.js'))url.searchParams.set('v',VERSION);
+      return `from '${url.href}'`;
+    });
   }
 
   try{
