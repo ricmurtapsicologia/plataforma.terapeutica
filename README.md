@@ -1,136 +1,93 @@
-# Plataforma Clínica Richelmy Murta — v1.5.1
+# Plataforma Clínica Richelmy Murta — v1.5.3
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
-## Estado da versão
-A v1.5.1 mantém o debug estrutural da v1.5.0 e corrige especificamente o travamento observado após a mensagem **“Senha validada. Carregando dados locais...”**.
+## Estado atual
+A v1.5.3 preserva o núcleo estabilizado das versões anteriores e acrescenta somente ajustes cirúrgicos de agenda, aniversários, PDF, exportação e portabilidade.
 
-### Correção principal da v1.5.1
-A autenticação e a carga do IndexedDB foram desacopladas.
-
-Agora o fluxo é:
-1. validar a senha;
-2. abrir imediatamente a interface clínica;
-3. carregar os dados locais em segundo plano;
-4. atualizar o dashboard e as demais rotas à medida que os registros ficam disponíveis.
-
-Assim, um atraso, bloqueio ou erro no IndexedDB não pode mais deixar toda a aplicação presa na tela de acesso.
-
-Durante a carga é mostrado um aviso discreto no canto inferior direito com a etapa atual. Se os dados locais não puderem ser lidos, a interface continua responsiva e apresenta o erro de forma explícita, sem apagar nenhum registro.
-
-## IndexedDB e persistência
-O driver do banco local também foi reforçado:
-- conexões são fechadas automaticamente quando ocorre mudança de versão;
-- uma tentativa de abertura que falhar não deixa uma Promise rejeitada permanentemente em cache;
-- upgrades bloqueados por outra aba produzem mensagem específica;
-- transações passam a registrar o evento de conclusão antes de aguardar a requisição;
-- descriptografia de registros ocorre em paralelo para reduzir tempo de abertura;
-- stores ausentes são tratadas defensivamente;
-- nenhuma atualização apaga pacientes ou demais registros existentes.
-
-## Arquitetura atual
-- `bootstrap-v151.js`: autenticação imediata, abertura da interface e carga assíncrona dos dados;
-- `app-core-v150.js`: shell, rotas, relógio e renderização defensiva;
-- `clinical-v136.js`: cadastro ampliado, foto, CPF/RG/endereço, recorrência e agenda;
-- `actions-v150.js`: prontuário, notas, conceitualização, plano, tarefas, documentos, consentimentos, backup e diagnóstico;
-- `resources-premium.js`: materiais psicoeducativos e PDF profissional;
-- `ux-runtime-v150.js`: busca, proteção visual e bloqueio por inatividade.
-
-O arquivo legado `app.js` não participa da inicialização.
-
-## Causa do congelamento global já corrigida
-Versões anteriores utilizavam `MutationObserver` global sobre toda a árvore da página. Como a rotina também reescrevia o relógio, a própria atualização do relógio gerava nova mutação e novo ciclo de execução. Esse mecanismo foi removido.
-
-Na arquitetura atual:
-- não há `MutationObserver` global em Clínica ou Recursos;
-- o relógio pertence exclusivamente ao núcleo;
-- existe um único timer de 1 segundo;
-- erros de módulos opcionais não congelam a aplicação inteira.
-
-## Acesso
-A plataforma utiliza uma senha local única. A senha não é exibida neste README nem armazenada em texto claro no arquivo de estado.
-
-Como a aplicação é estática e executada no navegador, esse mecanismo funciona como controle de acesso local e não substitui autenticação de servidor.
-
-## Dados e banco local
-- IndexedDB local e criptografado;
-- schema atual: versão 5;
-- stores: pacientes, agenda, prontuário, notas, conceitualização, objetivos, tarefas, materiais, documentos, financeiro, consentimentos, comunicações, auditoria e configurações;
-- nenhum cadastro, prontuário ou fotografia é enviado ao GitHub;
-- upgrades preservam os stores existentes e criam apenas os ausentes;
-- datas operacionais usam a data local do navegador.
-
-## Segurança dos dados
-- não existe rotina automática para apagar dados clínicos;
-- não é necessário apagar IndexedDB para atualizar a interface;
-- service workers antigos são desregistrados;
-- exclusão de dados clínicos permanece vinculada ao paciente específico;
-- não há botão global de exclusão do banco nas Configurações;
-- mantenha backups periódicos `.rmvault`.
-
-## Pacientes
-- nome completo e nome preferido;
-- foto local;
-- código interno e status;
-- data de nascimento;
-- CPF e RG;
-- endereço completo;
-- telefone com máscara `(XX) XXXXX-XXXX`;
-- e-mail;
-- modalidade;
-- canal preferido;
-- valor de referência em reais;
-- frequência usual: Avulso, Semanal ou Quinzenal;
-- síntese clínica;
-- rascunho automático;
-- descarte explícito do rascunho;
-- agendamento diretamente pelo paciente;
-- WhatsApp e e-mail.
+## Inicialização e estabilidade
+- senha local validada antes da abertura da interface;
+- interface abre sem depender da leitura integral do IndexedDB;
+- dados locais são carregados em segundo plano;
+- relógio pertence ao núcleo e atualiza a cada segundo;
+- não há `MutationObserver` global capaz de congelar a interface;
+- módulos opcionais são isolados para que uma falha localizada não derrube a plataforma;
+- arquivos versionados evitam exigir exclusão manual do IndexedDB.
 
 ## Agenda
 - visão semanal;
-- navegação entre semanas;
+- semana anterior, atual e seguinte;
 - recorrência avulsa, semanal e quinzenal;
-- semanal a cada 7 dias no mesmo horário;
-- quinzenal a cada 14 dias no mesmo horário;
+- clique em horário vazio para abrir uma nova sessão com data/horário preenchidos;
 - edição e exclusão individual;
-- exclusão de série;
-- registro da sessão pela própria agenda;
-- lembrete por WhatsApp;
-- verificação de conflito.
+- exclusão de série recorrente;
+- registro de sessão pela própria agenda;
+- menu de presença e pagamento diretamente em cada sessão;
+- estados: Presente, Desmarcou e Faltou;
+- registro de pagamento associado à sessão;
+- lembrete via WhatsApp;
+- aviso quando uma sessão entra na janela das próximas 6 horas.
 
-## Prontuário e atendimento
-- preparação de sessão;
-- registros clínicos e rascunhos;
-- finalização e adendos;
-- notas restritas;
-- conceitualização;
-- plano terapêutico e objetivos;
-- tarefas;
-- timeline;
-- consentimentos;
-- comunicações;
-- financeiro por paciente.
+## Aniversários
+- aviso um dia antes do aniversário em amarelo claro;
+- aviso do dia em laranja;
+- popup de aniversário com foto do paciente quando cadastrada;
+- botão para preparar mensagem de feliz aniversário no WhatsApp;
+- popup exibido apenas uma vez por paciente no dia.
 
-## Recursos psicoeducativos
-Biblioteca premium com conteúdos e exercícios sobre ansiedade, pensamentos e interpretações, ativação comportamental, valores, autocompaixão, aterramento, sono e resolução de problemas.
+## Pacientes
+- foto local;
+- CPF e RG;
+- endereço completo;
+- telefone, e-mail e canal preferido;
+- valor de referência;
+- frequência usual;
+- síntese clínica;
+- rascunho automático;
+- agendamento diretamente pelo paciente;
+- WhatsApp e e-mail.
 
-Os materiais podem ser visualizados, associados ao paciente, convertidos em PDF e preparados para WhatsApp ou e-mail.
+## Recursos e PDF
+A biblioteca psicoeducativa possui materiais estruturados com exercício, reflexão, papelaria profissional, texto justificado, contato e QR Code para WhatsApp.
 
-## PDF e papelaria
-Os PDFs utilizam identidade visual profissional, layout A4, texto justificado, exercícios, área de anotações, identificação profissional, contato e QR Code funcional para WhatsApp.
+Na v1.5.3 foi corrigida a compatibilidade de abertura da janela de impressão/PDF em navegadores que retornavam `null` quando `window.open` era chamado com `noopener/noreferrer`.
+
+## Backup e exportação
+### Backup seguro `.rmvault`
+É o formato restaurável da plataforma. Mantém a estrutura criptografada necessária para recuperar o banco local.
+
+### Exportação Excel
+Em Configurações há também uma exportação legível `.xls`, organizada por áreas: pacientes, agenda, prontuários, notas, conceitualizações, objetivos, tarefas, materiais, documentos, financeiro, consentimentos e comunicações.
+
+O arquivo Excel é destinado a leitura e organização. Ele **não é criptografado** e não substitui o `.rmvault` para restauração integral. Fotografias não são incorporadas ao Excel para evitar arquivos excessivamente grandes.
+
+## Sincronização entre notebook e celular
+O GitHub Pages distribui e atualiza o **código da aplicação**, mas o IndexedDB clínico continua local a cada navegador.
+
+A plataforma **não grava dados clínicos no repositório público**. CPF, fotos, prontuários, agenda e demais dados não devem ser sincronizados para o repositório público da página, mesmo criptografados com a senha local.
+
+Para sincronização automática entre notebook e celular é necessário um armazenamento privado autenticado, por exemplo:
+- repositório GitHub privado dedicado exclusivamente ao arquivo clínico criptografado; ou
+- Google Drive privado via OAuth.
+
+Todos os repositórios atualmente disponíveis nesta conta estão públicos; portanto a sincronização clínica automática não foi ativada artificialmente nesta versão. Em Configurações há um painel que explica os requisitos para ativar a sincronização privada sem expor dados.
+
+A instalação móvel/PWA continua sendo apenas uma instalação da interface enquanto não houver armazenamento privado configurado. Os dados não são copiados automaticamente do notebook para o celular apenas pela instalação.
+
+## Segurança dos dados
+- IndexedDB local criptografado;
+- nenhum dado clínico é publicado no GitHub;
+- nenhuma rotina automática apaga pacientes;
+- exclusão clínica permanece vinculada ao paciente específico;
+- backup periódico `.rmvault` recomendado;
+- Excel deve ser tratado como arquivo sensível porque é legível.
 
 ## Diagnóstico e qualidade
-Em `Configurações > Executar diagnóstico`, a plataforma verifica sessão, renderização, roteamento, relógio, stores e IndexedDB.
-
-Também existe `tests/self-test.html`, um autoteste não destrutivo.
-
-O workflow `.github/workflows/static-integrity.yml` verifica sintaxe dos arquivos JavaScript e destinos dos imports relativos.
-
-## Integrações Google
-A arquitetura permanece preparada para Google Calendar, Google Drive e Gmail por OAuth 2.0. A integração real depende de um OAuth Client ID autorizado para a origem do GitHub Pages.
+- diagnóstico interno em Configurações;
+- `tests/self-test.html` não destrutivo;
+- workflow `.github/workflows/static-integrity.yml` para sintaxe e imports locais.
 
 ## Publicação
 Origem: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
-Versão de interface: `1.5.1`.
+Versão de interface: `1.5.3`.
