@@ -2,7 +2,7 @@ import {STORE_NAMES,SCHEMA_VERSION} from './state.js';
 import {encryptJson,decryptJson,bytesToB64,b64ToBytes,randomBytes,deriveKey,makeVerifier,verifyKey} from './crypto.js';
 
 const DB_NAME='richelmy-plataforma-db-v2';
-const DB_VERSION=3;
+const DB_VERSION=4;
 const ACCESS_PIN_SHA256='bd15594e672a0eba1bf38436c9752c5456bcb2bd42c4bed91d8eb6911e0af1ca';
 let dbPromise;
 
@@ -55,7 +55,7 @@ export async function deleteRecord(storeName,id){const db=await openDatabase(),t
 export async function clearStore(storeName){const db=await openDatabase(),tx=db.transaction(storeName,'readwrite');tx.objectStore(storeName).clear();await txDone(tx)}
 export async function clearAll(){const db=await openDatabase(),tx=db.transaction(['meta',...STORE_NAMES],'readwrite');tx.objectStore('meta').clear();for(const s of STORE_NAMES)tx.objectStore(s).clear();await txDone(tx)}
 
-export async function exportRawDatabase(){const db=await openDatabase(),stores={};for(const name of STORE_NAMES){const tx=db.transaction(name,'readonly');stores[name]=await requestAsPromise(tx.objectStore(name).getAll());await txDone(tx)}return{format:'rm-local-backup',version:2,exportedAt:new Date().toISOString(),meta:await getAllMeta(),stores}}
+export async function exportRawDatabase(){const db=await openDatabase(),stores={};for(const name of STORE_NAMES){const tx=db.transaction(name,'readonly');stores[name]=await requestAsPromise(tx.objectStore(name).getAll());await txDone(tx)}return{format:'rm-local-backup',version:3,exportedAt:new Date().toISOString(),meta:await getAllMeta(),stores}}
 export async function importRawDatabase(payload){if(!['rm-local-backup','rmvault-indexed'].includes(payload?.format)||!payload.meta?.vault||!payload.stores)throw new Error('Backup incompatível.');const db=await openDatabase(),names=['meta',...STORE_NAMES],tx=db.transaction(names,'readwrite');tx.objectStore('meta').clear();for(const [key,value] of Object.entries(payload.meta))tx.objectStore('meta').put({key,value});for(const name of STORE_NAMES){const store=tx.objectStore(name);store.clear();for(const row of payload.stores[name]||[])store.put(row)}await txDone(tx)}
 export async function rawStoreCounts(){const db=await openDatabase(),out={};for(const name of STORE_NAMES){const tx=db.transaction(name,'readonly');out[name]=await requestAsPromise(tx.objectStore(name).count());await txDone(tx)}return out}
 export async function dumpDecrypted(key){const out={};for(const name of STORE_NAMES)out[name]=await getAllDecrypted(name,key);return out}
