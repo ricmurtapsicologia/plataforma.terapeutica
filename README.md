@@ -1,37 +1,73 @@
-# Plataforma Clínica Richelmy Murta — v1.4.3
+# Plataforma Clínica Richelmy Murta — v1.5.0
 
-Aplicação clínica estática, local-first e de uso exclusivo do psicólogo Richelmy Murta, publicada por GitHub Pages.
+Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
+
+## Estado da versão
+A v1.5.0 resulta de um debug estrutural da aplicação. O objetivo desta versão é eliminar travamentos globais, separar responsabilidades entre módulos, restaurar controladores que haviam ficado órfãos e tornar erros localizados incapazes de congelar toda a interface.
+
+### Causa do congelamento corrigida
+O módulo clínico utilizava um `MutationObserver` sobre toda a árvore da página. A rotina acionada pelo observer também reescrevia o relógio no DOM; essa reescrita gerava nova mutação, que acionava novamente o observer. O resultado era um ciclo de microtarefas que podia deixar a página visualmente renderizada, porém com relógio congelado e cliques sem resposta.
+
+Na v1.5.0:
+- o `MutationObserver` global foi removido do módulo clínico;
+- o `MutationObserver` global também foi removido da biblioteca premium de recursos;
+- o relógio pertence exclusivamente ao núcleo da interface e é atualizado a cada segundo por um único timer;
+- complementos de paciente/agenda são acionados somente por eventos explícitos de renderização;
+- falha em um módulo opcional não impede o núcleo de abrir.
+
+## Arquitetura v1.5.0
+
+### Inicialização
+- `bootstrap-v150.js`: autenticação, abertura do IndexedDB, leitura dos dados e carregamento dos módulos;
+- `app-core-v150.js`: shell, menu, rotas, relógio, formulários básicos e renderização defensiva;
+- `clinical-v136.js`: cadastro clínico ampliado, foto, CPF/RG/endereço, recorrência e agenda;
+- `actions-v150.js`: prontuário, notas, conceitualização, plano, tarefas, documentos, consentimentos, backup e diagnóstico;
+- `resources-premium.js`: materiais psicoeducativos e PDF profissional.
+
+O arquivo legado `app.js` não participa da inicialização.
+
+### Isolamento de falhas
+Os complementos clínicos, ações e recursos são carregados separadamente. Se um complemento falhar, o núcleo continua disponível e a falha é registrada para diagnóstico. Cada rota também possui tratamento de erro próprio.
 
 ## Acesso
-A plataforma utiliza uma senha local única. A senha não é exibida neste README e não é armazenada em texto claro no arquivo de estado. A autenticação acontece antes do carregamento da interface clínica.
+A plataforma utiliza uma senha local única. A senha não é exibida neste README nem armazenada em texto claro no arquivo de estado. A autenticação ocorre antes do carregamento dos dados clínicos.
 
-## Arquitetura estável v1.4.3
-- o arquivo legado `app.js` não participa mais da inicialização;
-- não há transformação dinâmica do código por Blob;
-- não há `repairTail` nem correções de sintaxe em tempo de execução;
-- `bootstrap-v143.js` cuida somente de autenticação, abertura dos dados locais e inicialização;
-- `app-core-v143.js` cuida da interface, rotas, relógio e ações básicas;
-- `clinical-v136.js` complementa cadastro de pacientes, recorrência e agenda;
-- `resources-premium.js` complementa a biblioteca psicoeducativa;
-- a inicialização possui timeout e exibe erro legível se algum módulo não carregar;
-- o service worker permanece desativado para não manter versões antigas da interface presas em cache.
+Como a aplicação é estática e executada no navegador, esse mecanismo funciona como controle de acesso local e não substitui autenticação de servidor.
 
-## Arquitetura de dados
-- dados clínicos armazenados localmente no navegador;
-- criptografia local dos registros persistidos;
-- nenhum prontuário ou cadastro de paciente é publicado no GitHub;
-- exclusão de dados somente por ação explícita do usuário;
-- exclusão individual de paciente preserva os demais cadastros.
+## Dados e banco local
+- IndexedDB local e criptografado;
+- nenhum cadastro, prontuário ou fotografia é enviado ao GitHub;
+- schema atual: versão 5;
+- stores: pacientes, agenda, prontuário, notas, conceitualização, objetivos, tarefas, materiais, documentos, financeiro, consentimentos, comunicações, auditoria e configurações;
+- a store `goals` passou a fazer parte formal do banco na v1.5.0;
+- upgrade do IndexedDB preserva os stores existentes e cria apenas os que estiverem ausentes;
+- migrações de paciente, agenda e prontuário são persistidas no banco;
+- datas operacionais usam a data local do navegador, evitando deslocamento de dia provocado por UTC.
 
-## Navegação e estabilidade
-- Hoje, Agenda, Pacientes, Recursos, Financeiro e Configurações são rotas do núcleo principal;
-- navegação sem recarregar a página;
-- botões do dashboard usam o mesmo roteamento;
-- relógio do cabeçalho atualizado a cada segundo, com data e horário completos;
-- relógio reiniciado automaticamente após cada renderização;
-- retorno à aba atualiza imediatamente o relógio;
-- ações modernizadas de paciente e agenda permanecem delegadas ao módulo clínico atual;
-- arquivos novos são carregados com versão no URL para reduzir inconsistências de cache sem apagar os dados clínicos.
+## Segurança dos dados
+- não há rotina automática para excluir dados clínicos;
+- não há necessidade de apagar IndexedDB para atualizar a interface;
+- service workers antigos são desregistrados;
+- a exclusão de dados clínicos permanece vinculada ao paciente específico;
+- a Configuração não apresenta botão global de exclusão do banco clínico;
+- mantenha backups periódicos `.rmvault`.
+
+## Backup
+- geração de backup `.rmvault`;
+- verificação antes de restauração;
+- restauração assistida;
+- o verificador aceita o formato atualmente gerado pela própria plataforma (`rm-local-backup`) e o formato legado compatível (`rmvault-indexed`);
+- exportação criptografada de um paciente selecionado continua disponível.
+
+## Navegação e interface
+- Hoje;
+- Agenda;
+- Pacientes;
+- Recursos;
+- Financeiro;
+- Configurações.
+
+O menu utiliza um único roteador do núcleo. Os listeners principais são registrados uma única vez. O relógio exibe data local e horário com segundos e é atualizado a cada segundo.
 
 ## Dashboard
 - próximas sessões;
@@ -39,88 +75,98 @@ A plataforma utiliza uma senha local única. A senha não é exibida neste READM
 - tarefas abertas;
 - pagamentos pendentes;
 - agenda próxima;
-- gráfico de sessões dos próximos sete dias;
-- atalhos para nova sessão, novo paciente, agenda e financeiro.
+- gráfico dos próximos sete dias;
+- atalhos para agenda, paciente e financeiro.
 
 ## Pacientes
-- cadastro de nome completo e nome preferido;
-- foto do paciente;
-- código interno e status;
+- nome completo e nome preferido;
+- foto local do paciente;
+- código interno;
+- status;
 - data de nascimento;
-- CPF e RG;
+- CPF;
+- RG;
 - endereço completo: CEP, logradouro, número, complemento, bairro, cidade e UF;
 - telefone com máscara brasileira `(XX) XXXXX-XXXX`;
 - e-mail;
-- modalidade de atendimento;
+- modalidade;
 - canal preferido;
 - valor de referência em reais;
-- frequência usual: avulso, semanal ou quinzenal;
+- frequência usual: Avulso, Semanal ou Quinzenal;
 - síntese clínica objetiva;
-- rascunho automático do cadastro durante a digitação;
-- descarte explícito do rascunho quando desejado;
-- exclusão local de um paciente sem apagar os demais cadastros.
+- rascunho automático enquanto o cadastro é preenchido;
+- descarte explícito do rascunho;
+- agendamento diretamente no contexto do paciente;
+- WhatsApp e e-mail a partir dos dados cadastrados.
 
 ## Agenda
-- visão semanal em grade por dia e horário;
-- navegação entre semana anterior, semana atual e próxima semana;
-- agendamento diretamente pelo paciente ou pela agenda;
-- recorrência avulsa, semanal ou quinzenal;
-- semanal repete no mesmo dia e horário a cada sete dias;
-- quinzenal repete no mesmo dia e horário a cada quatorze dias;
-- geração automática das ocorrências futuras da série;
-- verificação de conflito de horário;
-- edição e exclusão de uma sessão;
-- exclusão opcional de toda a série recorrente;
-- lembrete de sessão por WhatsApp;
-- registro da sessão diretamente a partir da agenda.
+- visão semanal;
+- semana anterior, semana atual e próxima semana;
+- posicionamento do paciente no dia e horário agendados;
+- edição de agendamento;
+- exclusão de sessão individual;
+- exclusão de série recorrente;
+- registro de sessão diretamente pela agenda;
+- lembrete pelo WhatsApp;
+- recorrência Avulsa, Semanal e Quinzenal;
+- semanal: repetição a cada 7 dias no mesmo horário;
+- quinzenal: repetição a cada 14 dias no mesmo horário;
+- verificação de conflito antes de salvar a série.
 
-## Prontuário e acompanhamento
-- registros clínicos;
+## Prontuário e atendimento
+- fluxo de preparação da sessão;
+- registro clínico;
+- salvamento de rascunho;
+- finalização de registro;
+- adendos;
 - notas restritas;
 - conceitualização;
-- plano terapêutico e objetivos;
-- tarefas terapêuticas;
-- timeline do paciente;
+- objetivos do plano terapêutico;
+- tarefas;
+- timeline;
 - consentimentos;
-- histórico de comunicações;
-- financeiro por paciente e visão consolidada.
+- comunicações;
+- financeiro por paciente.
 
 ## Recursos psicoeducativos
-Biblioteca de materiais e exercícios com conteúdos sobre ansiedade, pensamentos e interpretações, ativação comportamental, valores, autocompaixão, aterramento, sono, resolução de problemas e outros temas clínicos.
+Biblioteca premium com materiais sobre ansiedade, pensamentos e interpretações, ativação comportamental, valores, autocompaixão, aterramento, sono e resolução de problemas.
 
-Os materiais podem ser associados ao paciente e preparados para:
-- visualização;
-- geração de PDF em papelaria profissional;
-- envio assistido por WhatsApp;
-- envio assistido por e-mail.
+Cada material pode incluir:
+- conteúdo psicoeducativo;
+- exercício estruturado;
+- perguntas para reflexão;
+- associação ao paciente;
+- geração de PDF;
+- preparação para WhatsApp;
+- preparação para e-mail.
 
 ## PDF e papelaria
-Os materiais em PDF utilizam identidade visual clínica, título, conteúdo psicoeducativo, exercícios estruturados, áreas de reflexão/anotações e QR Code de contato por WhatsApp quando configurado.
+Os PDFs utilizam identidade visual profissional, conteúdo em layout A4, texto justificado, exercício, área de anotações, identificação profissional, contato e QR Code funcional para WhatsApp.
 
-No navegador, use **Gerar PDF** e escolha **Salvar como PDF**. O arquivo deve ser anexado manualmente ao WhatsApp ou e-mail, pois uma página estática não pode inserir automaticamente um anexo em outro serviço.
+O navegador gera o PDF por impressão. O arquivo deve ser anexado manualmente ao WhatsApp ou e-mail; uma página estática não pode inserir silenciosamente um anexo em outro serviço.
 
-## Comunicações
-- abertura de conversa no WhatsApp usando o telefone cadastrado;
-- mensagens de lembrete de sessão;
-- envio assistido de materiais e documentos;
-- abertura do cliente de e-mail usando o endereço cadastrado;
-- registro local das comunicações preparadas.
+## Diagnóstico
+Em `Configurações > Executar diagnóstico`, a plataforma verifica:
+- sessão autenticada;
+- núcleo de renderização;
+- roteamento;
+- presença do relógio;
+- disponibilidade de cada store;
+- acesso ao IndexedDB.
 
-## Interface
-- identidade visual Richelmy Murta;
-- ícones padronizados;
-- data e horário atualizados em tempo real;
-- busca de pacientes;
-- ocultação de informações sensíveis na tela;
-- interface responsiva para desktop e dispositivos móveis.
+Há também `tests/self-test.html`, um autoteste não destrutivo que não abre o banco clínico. Ele verifica criptografia, IndexedDB temporário, schema, store de objetivos, data local, arquivos críticos publicados e ausência dos `MutationObserver` que provocavam o congelamento.
 
-## Segurança operacional
-Não envie para o repositório GitHub backups, PDFs clínicos, fotografias de pacientes, prontuários, capturas de tela com dados identificáveis ou qualquer outro dado clínico real.
+## Qualidade de código
+O repositório contém `.github/workflows/static-integrity.yml`. A cada alteração relevante na branch `main`, o workflow verifica:
+- sintaxe de todos os arquivos JavaScript com Node;
+- existência dos destinos de imports relativos locais.
 
-Mantenha backups periódicos dos dados locais. Como a aplicação é estática e executada no navegador, a senha funciona como controle de acesso local e não substitui autenticação de servidor.
+Isso reduz o risco de publicar novamente um módulo com erro sintático ou import quebrado.
 
 ## Integrações Google
-A arquitetura está preparada para Google Calendar, Google Drive e Gmail por OAuth 2.0. A integração real depende da configuração de um OAuth Client ID autorizado para a origem do GitHub Pages.
+A arquitetura continua preparada para Google Calendar, Google Drive e Gmail por OAuth 2.0. A integração real depende de um OAuth Client ID autorizado para a origem do GitHub Pages; nenhuma integração fictícia é apresentada como funcional.
 
 ## Publicação
 Origem: branch `main`, pasta `/ (root)`, via GitHub Pages.
+
+Versão de interface: `1.5.0`.
