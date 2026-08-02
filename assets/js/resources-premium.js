@@ -1,11 +1,12 @@
 import {data,runtime,preferences,uid,nowISO,patientById,selectedPatient} from './state.js';
 import {putEncrypted} from './database.js';
 import {openWhatsApp,openEmail} from './communications.js';
-import {modal,closeModal,toast,esc,pageHead} from './ui.js';
+import {modal,toast,esc,pageHead} from './ui.js';
 
 const CONTACT='(35) 98464-0729';
 const WA_NUMBER='5535984640729';
 const WA_URL=`https://wa.me/${WA_NUMBER}`;
+const VERSION='150';
 const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
 const q=s=>document.querySelector(s);
 
@@ -31,7 +32,9 @@ function pdfWindow(m,p){const win=window.open('','_blank','noopener,noreferrer,w
 async function associate(m,p){if(!p)throw new Error('Selecione um paciente.');const item={id:uid('mat'),templateId:m.id,patientId:p.id,title:m.title,category:m.category,summary:m.summary,content:m.intro+'\n\n'+m.sections.map(x=>x[0]+': '+x[1]).join('\n\n'),exercise:m.exercise,status:'Associado',createdAt:nowISO(),updatedAt:nowISO()};data.materials||(data.materials=[]);data.materials.push(item);await putEncrypted('materials',item,runtime.key);toast('Material associado ao paciente.','success')}
 function sendWA(m,p){if(!p?.phone)throw new Error('Selecione um paciente com WhatsApp cadastrado.');const msg=`Olá, ${firstName(p)}. Preparei o material “${m.title}” para nosso acompanhamento. O PDF pode ser anexado nesta conversa após ser gerado na plataforma. — ${preferences.professionalName}.`;openWhatsApp(p.phone,msg)}
 function sendEmail(m,p){if(!p?.email)throw new Error('Selecione um paciente com e-mail cadastrado.');openEmail({to:p.email,subject:`Material psicoeducativo — ${m.title}`,body:`Olá, ${firstName(p)}.\n\nPreparei o material “${m.title}” para nosso acompanhamento. Gere o PDF na plataforma e anexe-o antes de enviar esta mensagem.\n\n${preferences.professionalName} — ${preferences.professionalTitle}.`})}
-function paint(){if(runtime.locked||runtime.route!=='resources')return;const main=q('#main-content');if(!main||main.dataset.premiumResources==='138')return;main.innerHTML=renderResources();main.dataset.premiumResources='138'}
+function paint(){if(runtime.locked||runtime.route!=='resources')return;const main=q('#main-content');if(!main||main.dataset.premiumResources===VERSION)return;main.innerHTML=renderResources();main.dataset.premiumResources=VERSION}
 
 document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const a=el.dataset.action;if(!['premium-open','premium-pdf','premium-whatsapp','premium-email','premium-associate','preview-default-material'].includes(a))return;if(a==='preview-default-material'&&!MAP.has(el.dataset.id))return;e.preventDefault();e.stopImmediatePropagation();try{const m=currentMaterial(el.dataset.id);if(a==='premium-open'||a==='preview-default-material')return openMaterial(m.id);const p=selectedFromModal();if(a==='premium-pdf')return pdfWindow(m,p);if(a==='premium-whatsapp')return sendWA(m,p);if(a==='premium-email')return sendEmail(m,p);if(a==='premium-associate')return await associate(m,p)}catch(err){toast(err.message||'Não foi possível concluir a ação.','error')}},true);
-const observer=new MutationObserver(paint);observer.observe(document.documentElement,{subtree:true,childList:true});window.addEventListener('hashchange',()=>setTimeout(paint,0));setTimeout(paint,300);
+document.addEventListener('rm:rendered',()=>setTimeout(paint,0));
+window.addEventListener('hashchange',()=>setTimeout(paint,0));
+setTimeout(paint,80);
