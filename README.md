@@ -1,30 +1,37 @@
-# Plataforma Clínica Richelmy Murta — v1.4.2
+# Plataforma Clínica Richelmy Murta — v1.4.3
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo Richelmy Murta, publicada por GitHub Pages.
 
 ## Acesso
-A plataforma utiliza uma senha local única. A senha não é exibida neste README e não é armazenada em texto claro no arquivo de estado. A autenticação ocorre antes do carregamento dos módulos clínicos.
+A plataforma utiliza uma senha local única. A senha não é exibida neste README e não é armazenada em texto claro no arquivo de estado. A autenticação acontece antes do carregamento da interface clínica.
+
+## Arquitetura estável v1.4.3
+- o arquivo legado `app.js` não participa mais da inicialização;
+- não há transformação dinâmica do código por Blob;
+- não há `repairTail` nem correções de sintaxe em tempo de execução;
+- `bootstrap-v143.js` cuida somente de autenticação, abertura dos dados locais e inicialização;
+- `app-core-v143.js` cuida da interface, rotas, relógio e ações básicas;
+- `clinical-v136.js` complementa cadastro de pacientes, recorrência e agenda;
+- `resources-premium.js` complementa a biblioteca psicoeducativa;
+- a inicialização possui timeout e exibe erro legível se algum módulo não carregar;
+- o service worker permanece desativado para não manter versões antigas da interface presas em cache.
 
 ## Arquitetura de dados
 - dados clínicos armazenados localmente no navegador;
 - criptografia local dos registros persistidos;
 - nenhum prontuário ou cadastro de paciente é publicado no GitHub;
-- service worker desativado para reduzir problemas com versões antigas da interface em cache;
 - exclusão de dados somente por ação explícita do usuário;
 - exclusão individual de paciente preserva os demais cadastros.
 
 ## Navegação e estabilidade
-- supervisor independente para a navegação principal;
-- Hoje, Agenda, Pacientes, Recursos, Financeiro e Configurações são renderizados diretamente quando necessário;
-- roteamento por hash sem recarregar a página;
-- fallback de renderização caso o controlador principal não responda;
-- destaque automático da seção ativa;
-- botões de rota do dashboard usam a mesma navegação;
+- Hoje, Agenda, Pacientes, Recursos, Financeiro e Configurações são rotas do núcleo principal;
+- navegação sem recarregar a página;
+- botões do dashboard usam o mesmo roteamento;
 - relógio do cabeçalho atualizado a cada segundo, com data e horário completos;
-- atualização do relógio após re-renderizações, retorno à aba e mudança de rota;
-- carregador clínico separado da autenticação;
-- ações modernizadas de cadastro e agenda são delegadas ao módulo clínico atual, evitando execução simultânea pelo controlador legado;
-- atualização dos módulos críticos por versão para reduzir inconsistências de cache sem apagar os dados clínicos locais.
+- relógio reiniciado automaticamente após cada renderização;
+- retorno à aba atualiza imediatamente o relógio;
+- ações modernizadas de paciente e agenda permanecem delegadas ao módulo clínico atual;
+- arquivos novos são carregados com versão no URL para reduzir inconsistências de cache sem apagar os dados clínicos.
 
 ## Dashboard
 - próximas sessões;
