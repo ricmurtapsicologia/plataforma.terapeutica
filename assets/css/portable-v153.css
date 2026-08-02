@@ -1,0 +1,18 @@
+/* Ajustes cirúrgicos de UX — v1.5.3 */
+.smart-alert-item.birthday-soon{background:#fff8cf!important;border:1px solid #f0dda1!important;color:#5b4a14!important}
+.smart-alert-item.birthday-today{background:#f39a4a!important;border:1px solid #dc7f31!important;color:#3f2b1d!important}
+.smart-alert-item.birthday-today .muted,.smart-alert-item.birthday-today .small{color:#5b3d2a!important}
+.birthday-popup-list{display:grid;gap:14px}
+.birthday-popup-card{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;background:#f39a4a;border:1px solid #dc7f31;border-radius:18px;padding:18px;color:#38281d}
+.birthday-popup-card .muted{color:#5d402d!important}.birthday-popup-card .eyebrow{color:#704015!important}
+.birthday-popup-card .btn{justify-self:start;background:#fff;color:#9a531c;border-color:#fff}
+.birthday-photo{width:74px;height:74px;border-radius:18px;object-fit:cover;background:#fff;border:3px solid rgba(255,255,255,.8)}
+.birthday-placeholder{display:grid;place-items:center;font-size:1.6rem;font-weight:900;color:#a45b20}
+/* Evita sobreposição em Configurações e formulários compactos */
+.card label.mt-16{display:block;width:100%;margin-bottom:12px}
+.card label.mt-16 + .btn{display:block;margin-top:16px;clear:both}
+.card .flex.wrap{align-items:center;row-gap:10px}
+.grid>*{min-width:0}.content{min-width:0}.main-shell{min-width:0}
+#rm-portable-tools .notice{line-height:1.5}
+#rm-portable-tools code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em}
+@media(max-width:700px){.birthday-popup-card{grid-template-columns:1fr}.birthday-photo{width:64px;height:64px}.smart-alert-item{align-items:flex-start}}
