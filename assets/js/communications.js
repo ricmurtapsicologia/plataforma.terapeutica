@@ -1,5 +1,6 @@
 import {normalizePhone,validEmail,validPhone,assert} from './validation.js';
-export function whatsappUrl(phone,message){assert(validPhone(phone),'Telefone inválido para WhatsApp.');const n=normalizePhone(phone);return`https://wa.me/${n}?text=${encodeURIComponent(message)}`}
+function whatsappNumber(phone){let n=normalizePhone(phone);if(n.length===10||n.length===11)n=`55${n}`;return n}
+export function whatsappUrl(phone,message){assert(validPhone(phone),'Telefone inválido para WhatsApp.');const n=whatsappNumber(phone);return`https://wa.me/${n}?text=${encodeURIComponent(message)}`}
 export function openWhatsApp(phone,message){const url=whatsappUrl(phone,message);const win=window.open(url,'_blank','noopener,noreferrer');if(!win)throw new Error('O navegador bloqueou a abertura do WhatsApp.');return url}
 export function mailtoUrl({to,subject,body,cc=''}){assert(validEmail(to),'E-mail inválido.');if(cc)assert(validEmail(cc),'E-mail de cópia inválido.');const q=new URLSearchParams({subject,body});if(cc)q.set('cc',cc);return`mailto:${encodeURIComponent(to)}?${q.toString()}`}
 export function openEmail(payload){location.href=mailtoUrl(payload);return true}
