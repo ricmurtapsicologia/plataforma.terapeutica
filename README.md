@@ -21,7 +21,10 @@ A plataforma utiliza uma senha local única. A senha não é exibida neste READM
 - destaque automático da seção ativa;
 - botões de rota do dashboard usam a mesma navegação;
 - relógio do cabeçalho atualizado a cada segundo, com data e horário completos;
-- atualização do relógio após re-renderizações, retorno à aba e mudança de rota.
+- atualização do relógio após re-renderizações, retorno à aba e mudança de rota;
+- carregador clínico separado da autenticação;
+- ações modernizadas de cadastro e agenda são delegadas ao módulo clínico atual, evitando execução simultânea pelo controlador legado;
+- atualização dos módulos críticos por versão para reduzir inconsistências de cache sem apagar os dados clínicos locais.
 
 ## Dashboard
 - próximas sessões;
