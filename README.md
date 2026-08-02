@@ -1,4 +1,4 @@
-# Plataforma Clínica Richelmy Murta — v1.4.1
+# Plataforma Clínica Richelmy Murta — v1.4.2
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo Richelmy Murta, publicada por GitHub Pages.
 
@@ -9,16 +9,28 @@ A plataforma utiliza uma senha local única. A senha não é exibida neste READM
 - dados clínicos armazenados localmente no navegador;
 - criptografia local dos registros persistidos;
 - nenhum prontuário ou cadastro de paciente é publicado no GitHub;
-- service worker desativado para evitar versões antigas da interface presas em cache;
+- service worker desativado para reduzir problemas com versões antigas da interface em cache;
 - exclusão de dados somente por ação explícita do usuário;
 - exclusão individual de paciente preserva os demais cadastros.
 
-## Navegação
-- menu lateral independente do controlador clínico;
-- blocos Hoje, Agenda, Pacientes, Recursos, Financeiro e Configurações clicáveis;
+## Navegação e estabilidade
+- supervisor independente para a navegação principal;
+- Hoje, Agenda, Pacientes, Recursos, Financeiro e Configurações são renderizados diretamente quando necessário;
 - roteamento por hash sem recarregar a página;
-- atualização visual automática do item ativo;
-- navegação principal preservada mesmo quando um módulo secundário apresenta falha.
+- fallback de renderização caso o controlador principal não responda;
+- destaque automático da seção ativa;
+- botões de rota do dashboard usam a mesma navegação;
+- relógio do cabeçalho atualizado a cada segundo, com data e horário completos;
+- atualização do relógio após re-renderizações, retorno à aba e mudança de rota.
+
+## Dashboard
+- próximas sessões;
+- registros pendentes;
+- tarefas abertas;
+- pagamentos pendentes;
+- agenda próxima;
+- gráfico de sessões dos próximos sete dias;
+- atalhos para nova sessão, novo paciente, agenda e financeiro.
 
 ## Pacientes
 - cadastro de nome completo e nome preferido;
@@ -27,7 +39,7 @@ A plataforma utiliza uma senha local única. A senha não é exibida neste READM
 - data de nascimento;
 - CPF e RG;
 - endereço completo: CEP, logradouro, número, complemento, bairro, cidade e UF;
-- telefone com máscara brasileira;
+- telefone com máscara brasileira `(XX) XXXXX-XXXX`;
 - e-mail;
 - modalidade de atendimento;
 - canal preferido;
@@ -35,13 +47,16 @@ A plataforma utiliza uma senha local única. A senha não é exibida neste READM
 - frequência usual: avulso, semanal ou quinzenal;
 - síntese clínica objetiva;
 - rascunho automático do cadastro durante a digitação;
-- descarte explícito do rascunho quando desejado.
+- descarte explícito do rascunho quando desejado;
+- exclusão local de um paciente sem apagar os demais cadastros.
 
 ## Agenda
 - visão semanal em grade por dia e horário;
 - navegação entre semana anterior, semana atual e próxima semana;
 - agendamento diretamente pelo paciente ou pela agenda;
 - recorrência avulsa, semanal ou quinzenal;
+- semanal repete no mesmo dia e horário a cada sete dias;
+- quinzenal repete no mesmo dia e horário a cada quatorze dias;
 - geração automática das ocorrências futuras da série;
 - verificação de conflito de horário;
 - edição e exclusão de uma sessão;
@@ -84,7 +99,7 @@ No navegador, use **Gerar PDF** e escolha **Salvar como PDF**. O arquivo deve se
 ## Interface
 - identidade visual Richelmy Murta;
 - ícones padronizados;
-- data e horário atualizados na interface;
+- data e horário atualizados em tempo real;
 - busca de pacientes;
 - ocultação de informações sensíveis na tela;
 - interface responsiva para desktop e dispositivos móveis.
