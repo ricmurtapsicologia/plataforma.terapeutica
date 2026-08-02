@@ -105,7 +105,8 @@ function patchAccessView(source){
   const start=source.indexOf('function vaultView(){');
   const end=source.indexOf('function shell(',start);
   if(start<0||end<0)throw new Error('Tela de acesso interna não localizada.');
-  const replacement=`function vaultView(){return ${JSON.stringify(loginMarkup()).replace(/<\/script/gi,'<\\/script')}}\n`;
+  const safeMarkup=JSON.stringify(loginMarkup()).replace(/<\/script/gi,'<\\/script');
+  const replacement=`function vaultView(){return ${safeMarkup}}\n`;
   source=source.slice(0,start)+replacement+source.slice(end);
   source=source.replace('Dados locais criptografados','Dados locais protegidos');
   source=source.replace('data-action="lock-vault"><span>${ICON.lock}</span>Bloquear','data-action="lock-vault"><span>${ICON.lock}</span>Sair');
