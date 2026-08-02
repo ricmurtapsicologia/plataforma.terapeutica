@@ -16,7 +16,21 @@ async function sha256Hex(value){const digest=await crypto.subtle.digest('SHA-256
 function withTimeout(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${label} excedeu ${Math.round(ms/1000)} segundos.`)),ms))])}
 async function hydrateData(){for(const name of STORE_NAMES){try{setStore(name,await getAllDecrypted(name,runtime.key))}catch(err){console.error('Falha ao carregar store',name,err);setStore(name,[]);window.__rmBootErrors.push(`${name}: ${err.message||err}`)}}try{await runMigrations(runtime.key)}catch(err){console.warn('Migração não aplicada',err);window.__rmBootErrors.push(`migração: ${err.message||err}`)}}
 async function loadOptional(label,url){try{await withTimeout(import(url),10000,label);return true}catch(err){console.error(`Falha em ${label}`,err);window.__rmBootErrors.push(`${label}: ${err.message||err}`);return false}}
-async function startApp(){const core=await withTimeout(import(`./app-core-v150.js?v=${VERSION}`),10000,'Núcleo da interface');if(typeof core.startCoreApp!=='function')throw new Error('Núcleo da interface indisponível.');core.startCoreApp();const results=await Promise.all([loadOptional('Módulo clínico',`./clinical-v136.js?v=${VERSION}`),loadOptional('Ações clínicas',`./actions-v150.js?v=${VERSION}`),loadOptional('Recursos premium',`./resources-premium.js?v=${VERSION}`)]);window.__rmModules={core:true,clinical:results[0],actions:results[1],resources:results[2]};window.__rmRender?.();window.__rmUpdateClock?.();document.dispatchEvent(new CustomEvent('rm:app-ready',{detail:window.__rmModules}))}
+async function startApp(){
+  const core=await withTimeout(import(`./app-core-v150.js?v=${VERSION}`),10000,'Núcleo da interface');
+  if(typeof core.startCoreApp!=='function')throw new Error('Núcleo da interface indisponível.');
+  core.startCoreApp();
+  const results=await Promise.all([
+    loadOptional('Módulo clínico',`./clinical-v136.js?v=${VERSION}`),
+    loadOptional('Ações clínicas',`./actions-v150.js?v=${VERSION}`),
+    loadOptional('Recursos premium',`./resources-premium.js?v=${VERSION}`),
+    loadOptional('Runtime de UX',`./ux-runtime-v150.js?v=${VERSION}`)
+  ]);
+  window.__rmModules={core:true,clinical:results[0],actions:results[1],resources:results[2],ux:results[3]};
+  window.__rmRender?.();
+  window.__rmUpdateClock?.();
+  document.dispatchEvent(new CustomEvent('rm:app-ready',{detail:window.__rmModules}));
+}
 async function authenticate(){if(authenticating)return;const input=document.getElementById('access-password'),pass=input?.value||'';if(!pass){setStatus('Digite a senha.','error');return}authenticating=true;const button=document.querySelector('[data-access-action="login"]');if(button){button.disabled=true;button.textContent='Entrando…'}try{if(await sha256Hex(pass)!==ACCESS_HASH)throw new Error('Senha incorreta.');setStatus('Senha validada. Carregando dados locais…');await withTimeout(openDatabase(),10000,'Abertura do banco local');const v=await withTimeout(unlockVault(pass),10000,'Validação dos dados locais');runtime.key=v.key;runtime.salt=v.salt;runtime.locked=false;runtime.vaultKnown=true;const hash=location.hash.replace(/^#/,'');runtime.route=['today','agenda','patients','resources','financeiro','settings'].includes(hash)?hash:'today';await withTimeout(hydrateData(),15000,'Leitura dos dados clínicos');await startApp()}catch(err){console.error('Falha no acesso',err);showLogin(err?.message||'Não foi possível abrir a plataforma.','error')}finally{authenticating=false;const current=document.querySelector('[data-access-action="login"]');if(current){current.disabled=false;current.textContent='Entrar'}}}
 
 document.addEventListener('click',e=>{const el=e.target.closest?.('[data-access-action]');if(!el)return;const action=el.dataset.accessAction;if(action==='login'){e.preventDefault();e.stopImmediatePropagation();authenticate();return}if(action==='toggle'){e.preventDefault();e.stopImmediatePropagation();const input=document.getElementById('access-password'),mask=document.getElementById('access-mask');if(!input)return;const showing=input.type==='text';input.type=showing?'password':'text';input.style.color=showing?'transparent':'';if(mask)mask.hidden=!input.value||!showing;el.textContent=showing?'Mostrar senha':'Ocultar senha';input.focus();return}if(action==='theme'){e.preventDefault();e.stopImmediatePropagation();document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'}},true);
