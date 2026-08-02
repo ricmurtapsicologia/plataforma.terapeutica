@@ -1,0 +1,54 @@
+name: Static integrity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'assets/js/**'
+      - 'assets/css/**'
+      - 'tests/**'
+      - '.github/workflows/static-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            node --check "$file"
+          done < <(find assets/js -type f -name '*.js' -print0)
+      - name: Check local import targets
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const path=require('path');
+          const files=[];
+          function walk(dir){for(const name of fs.readdirSync(dir)){const p=path.join(dir,name),st=fs.statSync(p);if(st.isDirectory())walk(p);else if(p.endsWith('.js'))files.push(p)}}
+          walk('assets/js');
+          const missing=[];
+          for(const file of files){
+            const src=fs.readFileSync(file,'utf8');
+            const re=/(?:from\s*|import\s*\()\s*['"](\.\.?\/[^'"]+)['"]/g;
+            for(const m of src.matchAll(re)){
+              const spec=m[1].split('?')[0].split('#')[0];
+              const target=path.normalize(path.resolve(path.dirname(file),spec));
+              if(!fs.existsSync(target))missing.push(`${file} -> ${m[1]}`);
+            }
+          }
+          if(missing.length){console.error('Missing local imports:\n'+missing.join('\n'));process.exit(1)}
+          console.log(`Validated local imports in ${files.length} JavaScript files.`);
+          NODE
