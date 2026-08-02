@@ -1,6 +1,6 @@
 export const DEFAULT_VAULT_PASSWORD='';
-export const APP_VERSION='1.3.0';
-export const SCHEMA_VERSION=4;
+export const APP_VERSION='1.5.0';
+export const SCHEMA_VERSION=5;
 export const STORE_NAMES=['patients','appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications','audit','settings'];
 export const CLINICAL_STORES=['patients','appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications'];
 export const runtime={
@@ -18,13 +18,13 @@ export const preferences={
   professionalName:localStorage.getItem('rm.pref.professionalName')||'Richelmy Murta',
   professionalTitle:localStorage.getItem('rm.pref.professionalTitle')||'Psicólogo Clínico',
   crp:localStorage.getItem('rm.pref.crp')||'',
-  contact:localStorage.getItem('rm.pref.contact')||'',
+  contact:localStorage.getItem('rm.pref.contact')||'(35) 98464-0729',
   defaultSessionMinutes:Number(localStorage.getItem('rm.pref.defaultSessionMinutes')||50),
   silentStart:localStorage.getItem('rm.pref.silentStart')||'20:00',
   silentEnd:localStorage.getItem('rm.pref.silentEnd')||'08:00'
 };
 export const uid=(prefix='id')=>`${prefix}_${crypto.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2)}`;
-export const todayISO=()=>new Date().toISOString().slice(0,10);
+export const todayISO=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 export const nowISO=()=>new Date().toISOString();
 export const patientById=id=>data.patients.find(p=>p.id===id)||null;
 export const selectedPatient=()=>patientById(runtime.selectedPatientId);
