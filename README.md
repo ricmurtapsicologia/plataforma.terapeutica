@@ -1,4 +1,4 @@
-# Plataforma Clínica Richelmy Murta — v1.4.0
+# Plataforma Clínica Richelmy Murta — v1.4.1
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo Richelmy Murta, publicada por GitHub Pages.
 
@@ -12,6 +12,13 @@ A plataforma utiliza uma senha local única. A senha não é exibida neste READM
 - service worker desativado para evitar versões antigas da interface presas em cache;
 - exclusão de dados somente por ação explícita do usuário;
 - exclusão individual de paciente preserva os demais cadastros.
+
+## Navegação
+- menu lateral independente do controlador clínico;
+- blocos Hoje, Agenda, Pacientes, Recursos, Financeiro e Configurações clicáveis;
+- roteamento por hash sem recarregar a página;
+- atualização visual automática do item ativo;
+- navegação principal preservada mesmo quando um módulo secundário apresenta falha.
 
 ## Pacientes
 - cadastro de nome completo e nome preferido;
