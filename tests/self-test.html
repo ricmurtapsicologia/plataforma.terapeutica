@@ -1,8 +1,80 @@
 <!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Autoteste — RM Clínica</title><style>body{font:16px/1.5 system-ui;margin:0;background:#f4f8fa;color:#23363e}.shell{max-width:900px;margin:auto;padding:24px}.card{background:#fff;border:1px solid #d6e7ec;border-radius:16px;padding:18px;margin:12px 0}.ok{color:#247c68}.fail{color:#ad4050}button{padding:10px 14px;border:0;border-radius:10px;background:#4ba4c1;color:#fff;font-weight:700}</style></head><body><main class="shell"><h1>Autoteste não destrutivo</h1><p>Verifica recursos básicos do navegador sem acessar o banco clínico principal.</p><button id="run">Executar testes</button><div id="results"></div></main><script type="module">
-import {deriveKey,randomBytes,encryptJson,decryptJson,sha256} from '../assets/js/crypto.js';
-import {validEmail,validPhone,safeJson} from '../assets/js/validation.js';
-const out=document.getElementById('results');const line=(name,ok,details='')=>{const d=document.createElement('div');d.className='card';d.innerHTML=`<strong class="${ok?'ok':'fail'}">${ok?'APROVADO':'FALHOU'}</strong> — ${name}${details?`<div>${details}</div>`:''}`;out.append(d)};
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Autoteste — Plataforma Clínica</title>
+  <style>
+    body{font:16px/1.5 system-ui;margin:0;background:#f4f8fa;color:#23363e}.shell{max-width:980px;margin:auto;padding:24px}.card{background:#fff;border:1px solid #d6e7ec;border-radius:16px;padding:18px;margin:12px 0}.ok{color:#247c68}.fail{color:#ad4050}.warn{color:#8b6414}button{padding:10px 14px;border:0;border-radius:10px;background:#4ba4c1;color:#fff;font-weight:700}.meta{font-size:13px;color:#607780}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.grid .card{margin:0}.summary{font-size:20px;font-weight:700}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <h1>Autoteste não destrutivo — v1.5.0</h1>
+  <p>Verifica navegador, criptografia, IndexedDB de teste, schema, módulos publicados e arquivos críticos. Não lê, altera ou exclui os dados clínicos da plataforma.</p>
+  <button id="run">Executar testes</button>
+  <div id="summary" class="card summary">Aguardando execução.</div>
+  <div id="results" class="grid"></div>
+</main>
+<script type="module">
+import {deriveKey,randomBytes,encryptJson,decryptJson,sha256} from '../assets/js/crypto.js?v=1.5.0';
+import {validEmail,validPhone,safeJson} from '../assets/js/validation.js?v=1.5.0';
+import {STORE_NAMES,SCHEMA_VERSION,APP_VERSION,todayISO} from '../assets/js/state.js?v=1.5.0';
+
+const out=document.getElementById('results');
+const summary=document.getElementById('summary');
+let pass=0,fail=0,warn=0;
+function line(name,status,details=''){
+  if(status==='ok')pass++; else if(status==='fail')fail++; else warn++;
+  const d=document.createElement('div');d.className='card';
+  const label=status==='ok'?'APROVADO':status==='fail'?'FALHOU':'ATENÇÃO';
+  d.innerHTML=`<strong class="${status}">${label}</strong> — ${name}${details?`<div class="meta">${details}</div>`:''}`;out.append(d);
+}
+function localToday(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 async function testIDB(){return new Promise((resolve,reject)=>{const name='rm-clinica-selftest-'+Date.now(),r=indexedDB.open(name,1);r.onupgradeneeded=()=>r.result.createObjectStore('x');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,tx=db.transaction('x','readwrite');tx.objectStore('x').put('ok','a');tx.oncomplete=()=>{const t=db.transaction('x','readonly'),g=t.objectStore('x').get('a');g.onsuccess=()=>{const ok=g.result==='ok';db.close();indexedDB.deleteDatabase(name);resolve(ok)}}}})}
-document.getElementById('run').onclick=async()=>{out.innerHTML='';try{line('Web Crypto API',Boolean(crypto.subtle));const key=await deriveKey('senha-de-teste-segura',randomBytes(16),1000),payload=await encryptJson(key,{teste:'ok'},'selftest'),plain=await decryptJson(key,payload,'selftest');line('Criptografia AES-GCM',plain.teste==='ok');line('SHA-256',(await sha256('abc')).length===64);line('IndexedDB',await testIDB());line('Validação de e-mail',validEmail('teste@example.com')&&!validEmail('invalido'));line('Validação de telefone',validPhone('+55 35 99999-9999'));line('JSON seguro',safeJson('{"ok":true}').ok===true);line('Service Worker','serviceWorker'in navigator,location.protocol==='https:'?'Contexto HTTPS detectado.':'Teste completo requer GitHub Pages ou localhost.');line('Web Share API','share'in navigator,'A ausência não impede o uso: há fallbacks.');line('Notification API','Notification'in window,'A ausência não impede o uso da plataforma.')}catch(e){line('Execução geral',false,e.message)}};
-</script></body></html>
+async function fetchOk(path){const r=await fetch(new URL(path,location.href),{cache:'no-store'});return{ok:r.ok,status:r.status,text:r.ok?await r.text():''}}
+async function moduleExists(path){try{const r=await fetchOk(path);return r.ok}catch{return false}}
+
+async function run(){
+  out.innerHTML='';pass=0;fail=0;warn=0;summary.textContent='Executando…';
+  try{
+    line('Versão do estado',APP_VERSION==='1.5.0'?'ok':'fail',`Detectada: ${APP_VERSION}`);
+    line('Schema de dados',SCHEMA_VERSION>=5?'ok':'fail',`Schema: ${SCHEMA_VERSION}`);
+    line('Store de objetivos',STORE_NAMES.includes('goals')?'ok':'fail',STORE_NAMES.join(', '));
+    line('Data local',todayISO()===localToday()?'ok':'fail',`${todayISO()} / esperado ${localToday()}`);
+    line('Web Crypto API',crypto?.subtle?'ok':'fail');
+    const key=await deriveKey('senha-de-teste-segura',randomBytes(16),1000),payload=await encryptJson(key,{teste:'ok'},'selftest'),plain=await decryptJson(key,payload,'selftest');
+    line('Criptografia AES-GCM',plain.teste==='ok'?'ok':'fail');
+    line('SHA-256',(await sha256('abc')).length===64?'ok':'fail');
+    line('IndexedDB isolado',await testIDB()?'ok':'fail','Banco temporário criado e excluído; banco clínico não foi aberto.');
+    line('Validação de e-mail',validEmail('teste@example.com')&&!validEmail('invalido')?'ok':'fail');
+    line('Validação de telefone',validPhone('+55 35 99999-9999')?'ok':'fail');
+    line('JSON seguro',safeJson('{"ok":true}').ok===true?'ok':'fail');
+
+    const files=[
+      '../assets/js/bootstrap-v150.js?v=1.5.0',
+      '../assets/js/app-core-v150.js?v=1.5.0',
+      '../assets/js/clinical-v136.js?v=1.5.0',
+      '../assets/js/actions-v150.js?v=1.5.0',
+      '../assets/js/resources-premium.js?v=1.5.0',
+      '../assets/js/modules/dashboard.js?v=1.5.0',
+      '../assets/js/modules/appointments.js?v=1.5.0',
+      '../assets/js/modules/patients.js?v=1.5.0',
+      '../assets/js/modules/settings.js?v=1.5.0'
+    ];
+    for(const file of files)line(`Arquivo ${file.split('/').pop().split('?')[0]}`,await moduleExists(file)?'ok':'fail');
+
+    const clinical=await fetchOk('../assets/js/clinical-v136.js?v=1.5.0');
+    line('Sem MutationObserver no módulo clínico',clinical.ok&&!clinical.text.includes('MutationObserver')?'ok':'fail','Previne o loop que congelava cliques e relógio.');
+    const resources=await fetchOk('../assets/js/resources-premium.js?v=1.5.0');
+    line('Sem MutationObserver em Recursos',resources.ok&&!resources.text.includes('MutationObserver')?'ok':'fail');
+    line('Service Worker não obrigatório','serviceWorker'in navigator?'ok':'warn','A plataforma desregistra workers antigos; suporte não é requisito para os dados locais.');
+    line('Notification API','Notification'in window?'ok':'warn','A ausência não impede o funcionamento principal.');
+  }catch(e){line('Execução geral','fail',e.message)}
+  summary.textContent=`Resultado: ${pass} aprovado(s), ${fail} falha(s), ${warn} atenção(ões).`;
+  summary.className='card summary '+(fail?'fail':'ok');
+}
+document.getElementById('run').addEventListener('click',run);
+</script>
+</body>
+</html>
