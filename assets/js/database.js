@@ -49,11 +49,6 @@ export async function getMeta(key){const db=await openDatabase(),tx=db.transacti
 export async function setMeta(key,value){const db=await openDatabase(),tx=db.transaction('meta','readwrite'),done=txDone(tx);tx.objectStore('meta').put({key,value});await done}
 export async function getAllMeta(){const db=await openDatabase(),tx=db.transaction('meta','readonly'),done=txDone(tx),all=await requestAsPromise(tx.objectStore('meta').getAll());await done;return Object.fromEntries(all.map(x=>[x.key,x.value]))}
 
-async function updateTombstones(mutator){
-  const current=Array.isArray(await getMeta('syncTombstones'))?[...(await getMeta('syncTombstones'))]:[];
-  const next=mutator(current)||current;
-  await setMeta('syncTombstones',next.slice(-10000));
-}
 async function clearTombstone(storeName,id){
   if(!id)return;
   const current=await getMeta('syncTombstones');
@@ -62,7 +57,7 @@ async function clearTombstone(storeName,id){
 }
 async function recordTombstone(storeName,id){
   if(!id)return;
-  const current=Array.isArray(await getMeta('syncTombstones'))?[...(await getMeta('syncTombstones'))]:[];
+  const saved=await getMeta('syncTombstones'),current=Array.isArray(saved)?[...saved]:[];
   const deletedAt=new Date().toISOString(),filtered=current.filter(t=>!(t?.storeName===storeName&&t?.id===id));
   filtered.push({storeName,id,deletedAt});await setMeta('syncTombstones',filtered.slice(-10000));
 }
