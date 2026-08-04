@@ -1,0 +1,56 @@
+/* Agenda semanal — legibilidade e ergonomia v1.6.9 */
+.week-calendar{grid-template-columns:72px repeat(7,minmax(168px,1fr));min-width:1248px}
+.week-event{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  grid-template-rows:20px minmax(18px,1fr);
+  column-gap:5px;
+  align-items:center;
+  padding:4px 6px;
+}
+.week-event-time{
+  grid-column:1;
+  grid-row:1;
+  align-self:center;
+  font-size:.67rem;
+  line-height:1;
+  white-space:nowrap;
+}
+.week-event-actions{
+  position:static;
+  grid-column:2;
+  grid-row:1;
+  justify-self:end;
+  align-self:center;
+  display:flex;
+  gap:2px;
+  min-width:0;
+}
+.week-event strong{
+  grid-column:1/-1;
+  grid-row:2;
+  align-self:start;
+  font-size:.78rem;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  padding-top:1px;
+}
+.week-event-meta{display:none}
+.week-mini{
+  min-width:18px;
+  height:18px;
+  padding:0 3px;
+  border-radius:5px;
+  font-size:.52rem;
+  line-height:18px;
+}
+.week-wa{min-width:25px}
+.week-manage{min-width:22px}
+.week-delete{min-width:19px;font-size:.72rem}
+/* A sincronização Google é automática; o botão G continua disponível na lista detalhada abaixo da grade. */
+.week-event-actions [data-action="appointment-google-calendar"]{display:none!important}
+/* O lembrete de 6h continua disponível na lista detalhada, evitando um sexto botão no cartão compacto. */
+.week-event-actions [data-action="appointment-whatsapp-6h"]{display:none!important}
+@media(max-width:700px){.week-calendar{min-width:1248px}}
