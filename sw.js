@@ -1,10 +1,10 @@
-// v1.6.5 — service worker mínimo para compatibilidade OAuth em GitHub Pages.
+// v1.6.6 — service worker mínimo para compatibilidade OAuth em GitHub Pages.
 // Não faz cache clínico nem intercepta APIs externas. Apenas acrescenta COOP às navegações
 // da própria plataforma, preservando a relação segura com o popup do Google Identity Services.
 
-const SW_VERSION='1.6.5';
+const SW_VERSION='1.6.6';
 
-self.addEventListener('install',event=>{
+self.addEventListener('install',()=>{
   self.skipWaiting();
 });
 
@@ -32,7 +32,7 @@ self.addEventListener('fetch',event=>{
     try{
       const response=await fetch(event.request,{cache:'no-store'});
       return withOAuthPopupHeader(response);
-    }catch(err){
+    }catch{
       const fallback=await fetch('./index.html',{cache:'no-store'});
       return withOAuthPopupHeader(fallback);
     }
