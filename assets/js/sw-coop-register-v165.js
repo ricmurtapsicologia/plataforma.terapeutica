@@ -1,44 +1,41 @@
-// v1.6.5 — registra um service worker mínimo para que a navegação da plataforma
-// receba Cross-Origin-Opener-Policy: same-origin-allow-popups mesmo em GitHub Pages.
-// O worker não armazena dados clínicos e não faz cache da aplicação.
+// v1.6.6 — registra o service worker mínimo usado para compatibilidade OAuth no GitHub Pages.
+// O worker não armazena dados clínicos nem faz cache da aplicação.
 
-const RELOAD_KEY='rm.oauth.coop.reload.v165';
+const RELOAD_KEY='rm.oauth.coop.reload.v166';
 let reloading=false;
 
 async function installOAuthBridge(){
   if(!('serviceWorker' in navigator)) return;
   try{
-    // O bootstrap legado remove registros antigos para evitar cache obsoleto.
-    // Atrasamos brevemente este registro para que a limpeza termine primeiro.
-    await new Promise(resolve=>setTimeout(resolve,700));
-    const alreadyControlled=Boolean(navigator.serviceWorker.controller);
-    const registration=await navigator.serviceWorker.register('./sw.js?v=1.6.5',{
+    const registration=await navigator.serviceWorker.register('./sw.js?v=1.6.6',{
       scope:'./',
       updateViaCache:'none'
     });
     try{await registration.update()}catch{}
 
-    if(alreadyControlled || navigator.serviceWorker.controller){
+    if(registration.waiting) registration.waiting.postMessage('SKIP_WAITING');
+
+    // Se esta navegação já está sob controle, o cabeçalho COOP já foi aplicado pelo worker.
+    if(navigator.serviceWorker.controller){
       sessionStorage.removeItem(RELOAD_KEY);
       return;
     }
 
     const reloadOnce=()=>{
-      if(reloading) return;
-      if(sessionStorage.getItem(RELOAD_KEY)==='1') return;
+      if(reloading || sessionStorage.getItem(RELOAD_KEY)==='1') return;
       reloading=true;
       sessionStorage.setItem(RELOAD_KEY,'1');
       location.reload();
     };
 
     navigator.serviceWorker.addEventListener('controllerchange',reloadOnce,{once:true});
-    if(registration.waiting) registration.waiting.postMessage('SKIP_WAITING');
+    await navigator.serviceWorker.ready;
 
-    // clients.claim() normalmente dispara controllerchange. Este fallback cobre navegadores
-    // em que o controle só se torna observável após pequena espera.
+    // clients.claim() deve gerar controllerchange; este fallback cobre navegadores que
+    // só expõem o controller depois que o worker fica completamente ativo.
     setTimeout(()=>{
       if(navigator.serviceWorker.controller) reloadOnce();
-    },1800);
+    },500);
   }catch(err){
     console.warn('Compatibilidade OAuth via service worker não pôde ser ativada.',err);
   }

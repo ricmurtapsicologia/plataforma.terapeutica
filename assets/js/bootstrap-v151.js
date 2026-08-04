@@ -1,15 +1,15 @@
-import {STORE_NAMES,runtime,setStore,APP_VERSION} from './state.js';
+import {STORE_NAMES,runtime,setStore} from './state.js';
 import {openDatabase,unlockVault,getAllDecrypted} from './database.js';
 import {runMigrations} from './migrations.js';
 import {startSyncSession} from './secure-sync-v160.js';
 
-const VERSION=APP_VERSION;
+const VERSION='1.6.6';
 const app=document.getElementById('app');
 let authenticating=false;
 window.__rmBootErrors=[];
 window.__rmDataReady=false;
 
-function esc(value=''){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function esc(value=''){return String(value??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]))}
 function loginMarkup(message='',kind=''){return `<main class="vault"><section class="vault-hero"><div><img class="brand-banner" src="assets/images/brand-banner.png" alt="Richelmy Murta, Psicólogo Clínico"><p class="hero-caption">Plataforma clínica pessoal para uso exclusivo do psicólogo.</p><div class="feature-list"><div class="feature"><span class="dot"></span><span>Dados clínicos cifrados antes do armazenamento.</span></div><div class="feature"><span class="dot"></span><span>Agenda, prontuário, plano, exercícios, materiais, documentos e WhatsApp.</span></div><div class="feature"><span class="dot"></span><span>Sincronização segura opcional entre os dispositivos autorizados.</span></div></div></div></section><section class="vault-panel"><div class="vault-card"><div class="brand-mini"><img src="assets/images/brand-symbol.svg" alt=""><div class="brand-copy"><strong>Richelmy Murta</strong><span>Psicólogo clínico</span></div></div><h1 class="mt-24">Acesso à plataforma</h1><p class="muted">Digite sua senha para abrir o cofre clínico.</p><div class="field"><label>Senha</label><div style="position:relative"><input id="access-password" class="input" type="password" autocomplete="current-password" spellcheck="false" style="color:transparent;caret-color:#20343d"><span id="access-mask" hidden aria-hidden="true" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);pointer-events:none;color:#48636d;font-size:.95rem">Senha inserida</span></div></div><button type="button" class="btn ghost w-full mt-8" data-access-action="toggle">Mostrar senha</button><button type="button" class="btn w-full mt-12" data-access-action="login">Entrar</button><button type="button" class="btn secondary w-full mt-8" data-access-action="theme">Alternar aparência</button><div id="access-status" class="${message?`notice ${kind==='error'?'warning':''} mt-12`:''}" role="status">${message?esc(message):''}</div><div class="tiny muted mt-16">Versão ${VERSION}. A senha não é publicada no código nem enviada ao GitHub.</div></div></section></main>`}
 function showLogin(message='',kind=''){app.innerHTML=loginMarkup(message,kind);queueMicrotask(()=>document.getElementById('access-password')?.focus())}
 function setStatus(message,kind=''){const box=document.getElementById('access-status');if(!box)return;box.className=`notice ${kind==='error'?'warning':''} mt-12`;box.textContent=message}
@@ -69,5 +69,6 @@ document.addEventListener('click',e=>{const el=e.target.closest?.('[data-access-
 document.addEventListener('input',e=>{if(e.target.id!=='access-password')return;const mask=document.getElementById('access-mask');if(mask)mask.hidden=!e.target.value||e.target.type==='text'},true);
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='access-password'){e.preventDefault();authenticate()}},true);
 window.addEventListener('error',e=>{window.__rmBootErrors.push(`erro: ${e.message||'erro desconhecido'}`)});window.addEventListener('unhandledrejection',e=>{window.__rmBootErrors.push(`promise: ${e.reason?.message||e.reason||'falha'}`)});
-if('serviceWorker'in navigator)navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(r=>r.unregister().catch(()=>false)))).catch(()=>{});
+// Não remover o service worker OAuth: ele é necessário para manter a comunicação segura
+// entre esta página do GitHub Pages e o popup do Google Identity Services.
 showLogin();
