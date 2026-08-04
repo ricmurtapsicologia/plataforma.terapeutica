@@ -1,93 +1,95 @@
-# Plataforma Clínica Richelmy Murta — v1.5.3
+# Plataforma Clínica Richelmy Murta — v1.6.0
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.5.3 preserva o núcleo estabilizado das versões anteriores e acrescenta somente ajustes cirúrgicos de agenda, aniversários, PDF, exportação e portabilidade.
+A v1.6.0 mantém o IndexedDB local criptografado e acrescenta sincronização automática entre dispositivos autorizados por meio de um cofre clínico integralmente cifrado.
 
-## Inicialização e estabilidade
-- senha local validada antes da abertura da interface;
-- interface abre sem depender da leitura integral do IndexedDB;
-- dados locais são carregados em segundo plano;
-- relógio pertence ao núcleo e atualiza a cada segundo;
-- não há `MutationObserver` global capaz de congelar a interface;
-- módulos opcionais são isolados para que uma falha localizada não derrube a plataforma;
-- arquivos versionados evitam exigir exclusão manual do IndexedDB.
+## Segurança e acesso
+- a senha não fica mais validada por hash SHA-256 fixo publicado no JavaScript;
+- o acesso depende da abertura bem-sucedida do cofre criptográfico local;
+- novos cofres locais usam PBKDF2-HMAC-SHA256 com 600.000 iterações;
+- registros locais são protegidos por AES-GCM;
+- a chave de criptografia permanece somente na sessão do navegador;
+- bloqueio por inatividade, máscara de privacidade e proteção ao trocar de aba continuam disponíveis.
+
+## Sincronização notebook ↔ celular
+A sincronização usa o mesmo repositório da plataforma, porém os dados ficam isolados na branch `clinic-sync-data`, que não participa da publicação do GitHub Pages.
+
+O arquivo remoto é `.clinic-sync/vault.json` e contém somente um envelope criptográfico. Nenhum dado de paciente é gravado em texto legível no GitHub.
+
+São cifrados em conjunto:
+- nome e dados cadastrais;
+- CPF, RG e endereço;
+- telefone, e-mail e fotografias;
+- agenda e recorrências;
+- prontuários, notas e conceitualizações;
+- objetivos, tarefas e materiais associados;
+- documentos e consentimentos;
+- comunicações e financeiro.
+
+A camada externa usa AES-256-GCM e chave derivada por PBKDF2-HMAC-SHA256 com 600.000 iterações. O token do GitHub é configurado individualmente em cada dispositivo e fica armazenado localmente de forma criptografada; ele não entra no repositório nem no backup clínico.
+
+### Fluxo
+1. alteração é salva primeiro no IndexedDB local;
+2. a plataforma marca a base como pendente;
+3. após pequeno debounce, envia nova revisão criptografada;
+4. o outro dispositivo consulta a revisão remota periodicamente e ao recuperar foco;
+5. alterações de registros diferentes são mescladas por identificador e `updatedAt`;
+6. se o mesmo registro tiver sido alterado nos dois dispositivos desde a última base comum, a sincronização é pausada e o conflito é sinalizado;
+7. exclusões geram tombstones para impedir que um dispositivo antigo ressuscite registros apagados.
+
+A consulta automática ocorre aproximadamente a cada 15 segundos quando a plataforma está aberta e on-line. Alterações locais disparam sincronização antes desse intervalo.
+
+## Proteção da primeira migração
+A criação do primeiro cofre remoto é manual e somente é permitida quando o dispositivo possui dados clínicos. Uma base local vazia não pode inicializar automaticamente o remoto.
+
+Quando um dispositivo local vazio encontra uma base remota válida, a base remota prevalece. Se os cofres locais forem diferentes e ambos contiverem dados clínicos, a sincronização é bloqueada para impedir sobrescrita silenciosa.
 
 ## Agenda
 - visão semanal;
 - semana anterior, atual e seguinte;
 - recorrência avulsa, semanal e quinzenal;
-- clique em horário vazio para abrir uma nova sessão com data/horário preenchidos;
 - edição e exclusão individual;
-- exclusão de série recorrente;
-- registro de sessão pela própria agenda;
-- menu de presença e pagamento diretamente em cada sessão;
-- estados: Presente, Desmarcou e Faltou;
-- registro de pagamento associado à sessão;
-- lembrete via WhatsApp;
-- aviso quando uma sessão entra na janela das próximas 6 horas.
+- registro de sessão pela agenda;
+- presença, pagamento e WhatsApp integrados;
+- lembretes e avisos de proximidade de sessão.
 
-## Aniversários
-- aviso um dia antes do aniversário em amarelo claro;
-- aviso do dia em laranja;
-- popup de aniversário com foto do paciente quando cadastrada;
-- botão para preparar mensagem de feliz aniversário no WhatsApp;
-- popup exibido apenas uma vez por paciente no dia.
-
-## Pacientes
+## Pacientes e atendimento
+- cadastro completo;
 - foto local;
-- CPF e RG;
-- endereço completo;
-- telefone, e-mail e canal preferido;
-- valor de referência;
-- frequência usual;
+- CPF, RG e endereço;
 - síntese clínica;
-- rascunho automático;
-- agendamento diretamente pelo paciente;
-- WhatsApp e e-mail.
-
-## Recursos e PDF
-A biblioteca psicoeducativa possui materiais estruturados com exercício, reflexão, papelaria profissional, texto justificado, contato e QR Code para WhatsApp.
-
-Na v1.5.3 foi corrigida a compatibilidade de abertura da janela de impressão/PDF em navegadores que retornavam `null` quando `window.open` era chamado com `noopener/noreferrer`.
+- prontuário com finalização e adendos;
+- notas restritas;
+- conceitualização;
+- plano e objetivos;
+- tarefas e materiais;
+- documentos;
+- consentimentos;
+- comunicação e financeiro.
 
 ## Backup e exportação
 ### Backup seguro `.rmvault`
-É o formato restaurável da plataforma. Mantém a estrutura criptografada necessária para recuperar o banco local.
+Formato restaurável da plataforma, preservando a estrutura criptografada do banco local. Deve continuar sendo gerado periodicamente mesmo com a sincronização ativa.
 
 ### Exportação Excel
-Em Configurações há também uma exportação legível `.xls`, organizada por áreas: pacientes, agenda, prontuários, notas, conceitualizações, objetivos, tarefas, materiais, documentos, financeiro, consentimentos e comunicações.
+A exportação `.xls` é legível e não criptografada. Deve ser tratada como arquivo sensível e não substitui o `.rmvault`.
 
-O arquivo Excel é destinado a leitura e organização. Ele **não é criptografado** e não substitui o `.rmvault` para restauração integral. Fotografias não são incorporadas ao Excel para evitar arquivos excessivamente grandes.
+## Resolução de concorrência
+O mecanismo mantém uma baseline local por dispositivo. Se notebook e celular alterarem registros distintos, os dados são mesclados. Se ambos alterarem o mesmo registro depois da última sincronização comum, nenhum lado é sobrescrito automaticamente.
 
-## Sincronização entre notebook e celular
-O GitHub Pages distribui e atualiza o **código da aplicação**, mas o IndexedDB clínico continua local a cada navegador.
-
-A plataforma **não grava dados clínicos no repositório público**. CPF, fotos, prontuários, agenda e demais dados não devem ser sincronizados para o repositório público da página, mesmo criptografados com a senha local.
-
-Para sincronização automática entre notebook e celular é necessário um armazenamento privado autenticado, por exemplo:
-- repositório GitHub privado dedicado exclusivamente ao arquivo clínico criptografado; ou
-- Google Drive privado via OAuth.
-
-Todos os repositórios atualmente disponíveis nesta conta estão públicos; portanto a sincronização clínica automática não foi ativada artificialmente nesta versão. Em Configurações há um painel que explica os requisitos para ativar a sincronização privada sem expor dados.
-
-A instalação móvel/PWA continua sendo apenas uma instalação da interface enquanto não houver armazenamento privado configurado. Os dados não são copiados automaticamente do notebook para o celular apenas pela instalação.
-
-## Segurança dos dados
-- IndexedDB local criptografado;
-- nenhum dado clínico é publicado no GitHub;
-- nenhuma rotina automática apaga pacientes;
-- exclusão clínica permanece vinculada ao paciente específico;
-- backup periódico `.rmvault` recomendado;
-- Excel deve ser tratado como arquivo sensível porque é legível.
+## Compatibilidade de navegador
+A correção de `window.open` agora é restrita às janelas auxiliares de impressão/PDF. Links externos continuam preservando `noopener/noreferrer`.
 
 ## Diagnóstico e qualidade
 - diagnóstico interno em Configurações;
 - `tests/self-test.html` não destrutivo;
-- workflow `.github/workflows/static-integrity.yml` para sintaxe e imports locais.
+- workflow `.github/workflows/static-integrity.yml` valida sintaxe e imports em `main` e em pull requests.
 
 ## Publicação
-Origem: branch `main`, pasta `/ (root)`, via GitHub Pages.
+Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
-Versão de interface: `1.5.3`.
+Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
+
+Versão de interface: `1.6.0`.
