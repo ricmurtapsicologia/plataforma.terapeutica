@@ -1,6 +1,44 @@
-const CACHE='rm-clinica-v1.2.0';
-const SHELL=['./','./index.html','./404.html','./manifest.webmanifest','./assets/css/app.css','./assets/js/app.js','./assets/js/state.js','./assets/js/database.js','./assets/js/crypto.js','./assets/js/migrations.js','./assets/js/communications.js','./assets/js/backup.js','./assets/js/calendar.js','./assets/js/notifications.js','./assets/js/audit.js','./assets/js/validation.js','./assets/js/ui.js','./assets/js/modules/dashboard.js','./assets/js/modules/patients.js','./assets/js/modules/appointments.js','./assets/js/modules/sessions.js','./assets/js/modules/records.js','./assets/js/modules/formulation.js','./assets/js/modules/plans.js','./assets/js/modules/tasks.js','./assets/js/modules/materials.js','./assets/js/modules/documents.js','./assets/js/modules/consents.js','./assets/js/modules/finance.js','./assets/js/modules/settings.js','./assets/images/brand-banner.png','./assets/images/brand-symbol.svg','./assets/images/favicon.svg','./assets/images/icon-512.svg'];
-self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));self.skipWaiting()});
-self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
-self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const u=new URL(event.request.url);if(u.origin!==location.origin)return;const dynamic=['script','style','document','manifest'].includes(event.request.destination);if(dynamic){event.respondWith(fetch(event.request).then(r=>{if(r.ok){const clone=r.clone();caches.open(CACHE).then(c=>c.put(event.request,clone))}return r}).catch(()=>caches.match(event.request).then(hit=>hit||caches.match('./index.html'))));return}event.respondWith(caches.match(event.request).then(hit=>hit||fetch(event.request).then(r=>{if(r.ok&&event.request.destination==='image'){const clone=r.clone();caches.open(CACHE).then(c=>c.put(event.request,clone))}return r}).catch(()=>caches.match('./index.html'))))});
-self.addEventListener('message',event=>{if(event.data==='SKIP_WAITING')self.skipWaiting()});
+// v1.6.5 — service worker mínimo para compatibilidade OAuth em GitHub Pages.
+// Não faz cache clínico nem intercepta APIs externas. Apenas acrescenta COOP às navegações
+// da própria plataforma, preservando a relação segura com o popup do Google Identity Services.
+
+const SW_VERSION='1.6.5';
+
+self.addEventListener('install',event=>{
+  self.skipWaiting();
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(self.clients.claim());
+});
+
+function withOAuthPopupHeader(response){
+  if(!response || response.type==='opaque') return response;
+  const headers=new Headers(response.headers);
+  headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
+  headers.set('X-RM-Service-Worker',SW_VERSION);
+  return new Response(response.body,{
+    status:response.status,
+    statusText:response.statusText,
+    headers
+  });
+}
+
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET' || event.request.mode!=='navigate') return;
+  const url=new URL(event.request.url);
+  if(url.origin!==self.location.origin) return;
+  event.respondWith((async()=>{
+    try{
+      const response=await fetch(event.request,{cache:'no-store'});
+      return withOAuthPopupHeader(response);
+    }catch(err){
+      const fallback=await fetch('./index.html',{cache:'no-store'});
+      return withOAuthPopupHeader(fallback);
+    }
+  })());
+});
+
+self.addEventListener('message',event=>{
+  if(event.data==='SKIP_WAITING') self.skipWaiting();
+});
