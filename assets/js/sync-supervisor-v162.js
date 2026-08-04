@@ -22,10 +22,12 @@ function run(){
   if(globalThis.__rmSyncApplying||!globalThis.__rmDataReady){schedule(500,'data-not-ready');return}
   if(lastStatus==='syncing'){return}
   if(lastStatus==='conflict'||lastStatus==='error'){return}
-  if(mutationGeneration<=settledGeneration&&lastReason!=='focus'&&lastReason!=='online')return;
+  if(mutationGeneration<=settledGeneration&&lastReason!=='focus'&&lastReason!=='online'&&lastReason!=='visible')return;
   const button=syncButton();
   if(!button||button.disabled){schedule(700,'sync-control-unavailable');return}
-  activeGeneration=mutationGeneration;
+  // Não marcamos a geração como ativa aqui: se já houver um sync em curso,
+  // o clique será ignorado pelo núcleo. A geração somente é capturada quando
+  // o núcleo realmente emitir status "syncing".
   button.click();
 }
 function rerenderAgenda(){
@@ -46,7 +48,9 @@ document.addEventListener('rm:sync-status',event=>{
   const status=event.detail?.status||'';
   lastStatus=status;
   if(status==='syncing'){
-    activeGeneration=Math.max(activeGeneration,mutationGeneration);
+    // Snapshot da geração existente no instante em que o ciclo realmente começou.
+    // Mutações posteriores permanecerão > activeGeneration e forçarão novo ciclo.
+    activeGeneration=mutationGeneration;
     return;
   }
   if(status==='synced'){
