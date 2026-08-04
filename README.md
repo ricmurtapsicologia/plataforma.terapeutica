@@ -32,7 +32,7 @@ Fluxo:
 A interface do celular não é apenas uma redução da versão desktop. A v1.7.0 acrescenta comportamento específico para telas pequenas:
 
 - topbar compacta, evitando colisão horizontal entre menu, relógio e controles;
-- controles secundários de tema, privacidade e saída retirados da faixa superior no celular e mantidos em locais já existentes da interface;
+- controles secundários de tema e saída são retirados da faixa superior no celular; o atalho de privacidade permanece acessível na topbar;
 - indicadores separados para estado de sincronização de dados e estado conhecido do Google Agenda;
 - cards, formulários e modais ajustados para uma coluna em telas pequenas;
 - modais transformados em painel inferior, com área útil maior;
