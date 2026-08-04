@@ -9,6 +9,14 @@ on:
       - 'assets/css/**'
       - 'tests/**'
       - '.github/workflows/static-integrity.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'assets/js/**'
+      - 'assets/css/**'
+      - 'tests/**'
+      - '.github/workflows/static-integrity.yml'
   workflow_dispatch:
 
 permissions:
