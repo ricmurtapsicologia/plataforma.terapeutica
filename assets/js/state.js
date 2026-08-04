@@ -1,5 +1,5 @@
 export const DEFAULT_VAULT_PASSWORD='';
-export const APP_VERSION='1.6.3';
+export const APP_VERSION='1.6.4';
 export const SCHEMA_VERSION=5;
 export const STORE_NAMES=['patients','appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications','audit','settings'];
 export const CLINICAL_STORES=['patients','appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications'];
