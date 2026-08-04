@@ -77,43 +77,11 @@ function decorateDashboard(){
   const label=metric.querySelector('.metric-label'),value=metric.querySelector('.metric-value');
   if(label)label.textContent='Sessões hoje';if(value)value.textContent=String(count);
 }
-function setAgendaMode(calendar,mode){
-  if(!calendar)return;
-  calendar.classList.remove('rm-mobile-day','rm-mobile-three','rm-mobile-week');
-  calendar.classList.add(mode==='three'?'rm-mobile-three':mode==='week'?'rm-mobile-week':'rm-mobile-day');
-  const heads=[...calendar.querySelectorAll('.week-head:not(.week-time-head)')];
-  const days=[...calendar.querySelectorAll('.week-day-column')];
-  const todayIndex=Math.max(0,heads.findIndex(h=>h.classList.contains('today')));
-  let visible=[];
-  if(mode==='week')visible=heads.map((_,i)=>i);
-  else if(mode==='three'){
-    const start=Math.min(todayIndex,Math.max(0,heads.length-3));visible=[start,start+1,start+2].filter(i=>i<heads.length);
-  }else visible=[todayIndex];
-  heads.forEach((el,i)=>el.hidden=!visible.includes(i));days.forEach((el,i)=>el.hidden=!visible.includes(i));
-  const wrap=calendar.closest('.week-calendar-wrap');if(wrap)wrap.style.overflowX=mode==='week'?'auto':'hidden';
-  document.querySelectorAll('.rm-mobile-agenda-view [data-mobile-agenda-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mobileAgendaMode===mode));
-  try{sessionStorage.setItem('rm.mobile.agenda.mode',mode)}catch{}
-}
-function decorateAgenda(){
-  if(runtime.route!=='agenda')return;
-  const toolbar=document.querySelector('.agenda-toolbar'),calendar=document.querySelector('.week-calendar');if(!toolbar||!calendar)return;
-  let switcher=toolbar.querySelector('.rm-mobile-agenda-view');
-  if(!switcher){
-    switcher=document.createElement('div');switcher.className='rm-mobile-agenda-view';switcher.setAttribute('aria-label','Visualização da agenda no celular');
-    switcher.innerHTML='<button type="button" class="btn secondary" data-mobile-agenda-mode="day">Hoje</button><button type="button" class="btn secondary" data-mobile-agenda-mode="three">3 dias</button><button type="button" class="btn secondary" data-mobile-agenda-mode="week">Semana</button>';
-    toolbar.appendChild(switcher);
-  }
-  if(matchMedia('(max-width:700px)').matches){let mode='day';try{mode=sessionStorage.getItem('rm.mobile.agenda.mode')||'day'}catch{}setAgendaMode(calendar,mode)}
-}
 function decorate(){
   if(runtime.locked)return;
-  ensureMobileStatus();observeSyncChip();decorateGoogleSettings();decoratePatientCards();decorateDashboard();decorateAgenda();paintMobileStatus();
+  ensureMobileStatus();observeSyncChip();decorateGoogleSettings();decoratePatientCards();decorateDashboard();paintMobileStatus();
 }
 
-document.addEventListener('click',e=>{
-  const b=e.target.closest?.('[data-mobile-agenda-mode]');if(!b)return;
-  e.preventDefault();const calendar=document.querySelector('.week-calendar');setAgendaMode(calendar,b.dataset.mobileAgendaMode||'day');
-});
 document.addEventListener('rm:rendered',()=>setTimeout(decorate,0));
 document.addEventListener('rm:data-ready',()=>setTimeout(decorate,60));
 document.addEventListener('rm:sync-status',e=>{
@@ -127,5 +95,4 @@ const toastObserver=new MutationObserver(()=>{
   });paintMobileStatus();
 });
 const toastRoot=document.getElementById('toast-region');if(toastRoot)toastObserver.observe(toastRoot,{childList:true,subtree:true});
-window.addEventListener('resize',()=>{if(runtime.route==='agenda')setTimeout(decorateAgenda,40)});
 setTimeout(decorate,250);

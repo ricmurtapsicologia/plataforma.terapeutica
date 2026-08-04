@@ -1,9 +1,9 @@
-# Plataforma Clínica Richelmy Murta — v1.7.0
+# Plataforma Clínica Richelmy Murta — v1.7.1
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.7.0 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda, acrescentando uma camada mobile-first dedicada para reduzir overflow, ruído visual e carga cognitiva em telas pequenas.
+A v1.7.1 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A camada mobile-first permanece ativa e a agenda foi simplificada para uma única visão semanal, removendo alternâncias redundantes e a lista duplicada de sessões abaixo do calendário.
 
 ## Segurança e acesso
 - autenticação pela abertura real do cofre criptográfico local;
@@ -28,8 +28,8 @@ Fluxo:
 5. alterações surgidas durante o ciclo geram reconciliação subsequente obrigatória;
 6. a agenda é redesenhada após recebimento remoto concluído.
 
-## Camada mobile-first — v1.7.0
-A interface do celular não é apenas uma redução da versão desktop. A v1.7.0 acrescenta comportamento específico para telas pequenas:
+## Camada mobile-first
+A interface do celular possui comportamento específico para telas pequenas:
 
 - topbar compacta, evitando colisão horizontal entre menu, relógio e controles;
 - controles secundários de tema e saída são retirados da faixa superior no celular; o atalho de privacidade permanece acessível na topbar;
@@ -42,21 +42,20 @@ A interface do celular não é apenas uma redução da versão desktop. A v1.7.0
 - botões do contexto e dos cards são redistribuídos para alvos de toque mais consistentes;
 - abas continuam horizontais, mas com rolagem limpa e sem barra visual;
 - cartões de pacientes priorizam a próxima sessão em vez da mensagem repetitiva de ausência de síntese;
-- o indicador inicial do painel `Hoje` passa a destacar `Sessões hoje`;
+- o indicador inicial do painel `Hoje` destaca `Sessões hoje`;
 - detalhes técnicos do Google OAuth ficam recolhidos por padrão em `Detalhes técnicos`.
 
 ## Agenda
-- visão semanal no notebook;
-- no celular, modos `Hoje`, `3 dias` e `Semana`;
-- o modo `Hoje` é o padrão mobile e elimina a necessidade de navegar por uma grade semanal de desktop para a rotina diária;
-- o modo `3 dias` permite planejamento curto sem excesso de largura;
-- o modo `Semana` permanece disponível com rolagem horizontal intencional;
+- visão semanal única no notebook e no celular;
+- no celular, a semana mantém rolagem horizontal controlada para preservar a legibilidade das sete colunas;
+- navegação por semana anterior, semana atual e próxima semana;
 - recorrência avulsa, semanal e quinzenal;
 - inclusão, edição e exclusão;
 - remarcação de data e horário diretamente na própria agenda;
 - presença, pagamento e comunicação integrados;
 - botão de WhatsApp disponível na janela de até 6 horas antes da sessão;
 - somente o primeiro nome/nome preferido aparece nos cartões compactos da agenda;
+- a lista duplicada `Sessões da semana`, anteriormente exibida abaixo do calendário, foi removida;
 - sincronização automática com o Google Agenda quando a integração estiver conectada.
 
 ## Google Agenda — sincronização automática
@@ -116,11 +115,11 @@ A arquitetura foi desenhada para que a exposição do repositório público, iso
 - diagnóstico interno em Configurações;
 - `tests/self-test.html` não destrutivo;
 - workflow `.github/workflows/static-integrity.yml` valida sintaxe JavaScript e imports locais em pull requests e no `main`;
-- a camada mobile v1.7.0 é exclusivamente de apresentação e ergonomia: não modifica IndexedDB, estrutura do cofre, chave de sincronização nem payload clínico remoto.
+- a camada mobile é exclusivamente de apresentação e ergonomia: não modifica IndexedDB, estrutura do cofre, chave de sincronização nem payload clínico remoto.
 
 ## Publicação
 Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.7.0`.
+Versão de interface: `1.7.1`.

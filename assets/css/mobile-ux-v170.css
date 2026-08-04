@@ -1,4 +1,4 @@
-/* v1.7.0 — camada mobile-first, sem alterar dados ou integrações */
+/* v1.7.1 — camada mobile-first, sem alterar dados ou integrações */
 .rm-technical-details{margin-top:12px;border:1px solid var(--line);border-radius:13px;background:var(--surface2);overflow:hidden}
 .rm-technical-details>summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:800;color:var(--primary2);display:flex;align-items:center;justify-content:space-between;gap:10px}
 .rm-technical-details>summary::-webkit-details-marker{display:none}
@@ -11,9 +11,6 @@
 .rm-status-chip.ok{color:var(--green);border-color:color-mix(in srgb,var(--green) 30%,var(--line));background:color-mix(in srgb,var(--surface) 92%,var(--green) 8%)}
 .rm-status-chip.warn{color:#8a6417;border-color:color-mix(in srgb,var(--yellow) 42%,var(--line));background:color-mix(in srgb,var(--surface) 88%,var(--yellow) 12%)}
 .rm-status-chip.error{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 32%,var(--line));background:color-mix(in srgb,var(--surface) 92%,var(--danger) 8%)}
-.rm-mobile-agenda-view{display:none;gap:6px;align-items:center;width:100%;padding-top:4px}
-.rm-mobile-agenda-view .btn{min-height:36px;padding:7px 10px;box-shadow:none;flex:1}
-.rm-mobile-agenda-view .btn.active{background:var(--primary2);color:#fff;border-color:var(--primary2)}
 .patient-card .rm-next-session{margin-top:12px;color:var(--muted);font-size:.82rem}
 .patient-card .rm-next-session strong{color:var(--primary2)}
 
@@ -79,11 +76,8 @@
   .agenda-toolbar>.flex{display:grid;grid-template-columns:1fr 1fr 1fr;width:100%;gap:6px}
   .agenda-toolbar>.flex .btn{min-width:0;padding:8px 5px;font-size:.74rem;min-height:38px}
   .agenda-toolbar>.small{width:100%}
-  .rm-mobile-agenda-view{display:flex}
-  .week-calendar-wrap{overflow-x:hidden;border-radius:14px}
-  .week-calendar.rm-mobile-day{grid-template-columns:54px minmax(0,1fr)!important;min-width:0!important;width:100%}
-  .week-calendar.rm-mobile-three{grid-template-columns:54px repeat(3,minmax(104px,1fr))!important;min-width:0!important;width:100%}
-  .week-calendar.rm-mobile-week{grid-template-columns:54px repeat(7,minmax(150px,1fr))!important;min-width:1110px!important}
+  .week-calendar-wrap{overflow-x:auto!important;overflow-y:hidden;border-radius:14px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .week-calendar{min-width:1110px!important}
   .week-head{height:54px;font-size:.68rem}
   .week-head strong{font-size:.76rem}
   .week-time-column,.week-day-column{height:840px}
@@ -92,10 +86,6 @@
   .week-event strong{font-size:.76rem}
   .week-event-actions{gap:2px}
   .week-mini{min-width:18px;height:18px;font-size:.5rem;padding:0 2px}
-  .agenda-item{grid-template-columns:68px minmax(0,1fr)!important;gap:9px;padding:10px}
-  .agenda-item>:last-child{grid-column:1/-1;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%}
-  .agenda-item>:last-child .badge{grid-column:1/-1;justify-self:start}
-  .agenda-item>:last-child .btn{width:100%;padding:7px 6px;min-height:36px;font-size:.76rem}
 }
 
 @media(max-width:390px){
