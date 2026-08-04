@@ -3,7 +3,7 @@ import {openDatabase,unlockVault,getAllDecrypted} from './database.js';
 import {runMigrations} from './migrations.js';
 import {startSyncSession} from './secure-sync-v160.js';
 
-const VERSION='1.6.6';
+const VERSION='1.6.7';
 const app=document.getElementById('app');
 let authenticating=false;
 window.__rmBootErrors=[];
@@ -70,5 +70,5 @@ document.addEventListener('input',e=>{if(e.target.id!=='access-password')return;
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='access-password'){e.preventDefault();authenticate()}},true);
 window.addEventListener('error',e=>{window.__rmBootErrors.push(`erro: ${e.message||'erro desconhecido'}`)});window.addEventListener('unhandledrejection',e=>{window.__rmBootErrors.push(`promise: ${e.reason?.message||e.reason||'falha'}`)});
 // Não remover o service worker OAuth: ele é necessário para manter a comunicação segura
-// entre esta página do GitHub Pages e o popup do Google Identity Services.
+// entre esta página do GitHub Pages e o Google Identity Services.
 showLogin();
