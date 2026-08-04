@@ -1,9 +1,9 @@
-# Plataforma Clínica Richelmy Murta — v1.6.2
+# Plataforma Clínica Richelmy Murta — v1.6.3
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.6.2 mantém o cofre clínico criptografado e a sincronização notebook ↔ celular, reforçando a fila de sincronização da agenda e acrescentando recursos operacionais de remarcação, WhatsApp e Google Agenda.
+A v1.6.3 mantém o cofre clínico criptografado e a sincronização notebook ↔ celular e torna a integração com o Google Agenda efetivamente automática após a autorização do Google.
 
 ## Segurança e acesso
 - autenticação pela abertura real do cofre criptográfico local;
@@ -16,7 +16,7 @@ A v1.6.2 mantém o cofre clínico criptografado e a sincronização notebook ↔
 ## Sincronização notebook ↔ celular
 A sincronização usa a branch `clinic-sync-data`, fora da publicação do GitHub Pages. O arquivo remoto `.clinic-sync/vault.json` contém somente um envelope AES-256-GCM cifrado.
 
-A v1.6.2 acrescenta uma fila durável baseada no evento emitido somente depois do commit no IndexedDB. Se uma alteração ocorrer enquanto outro ciclo de sincronização estiver em andamento, ela permanece pendente e força um novo ciclo quando o anterior terminar. Isso elimina a dependência do antigo bridge baseado em temporização de cliques da agenda.
+A fila durável é baseada no evento emitido somente depois do commit no IndexedDB. Se uma alteração ocorrer enquanto outro ciclo de sincronização estiver em andamento, ela permanece pendente e força um novo ciclo quando o anterior terminar.
 
 Fluxo:
 1. alteração é persistida localmente;
@@ -33,16 +33,27 @@ Fluxo:
 - remarcação de data e horário diretamente na própria agenda;
 - presença, pagamento e comunicação integrados;
 - botão de WhatsApp disponível na janela de até 6 horas antes da sessão;
-- atualização manual/automática do Google Agenda quando a integração estiver conectada.
+- sincronização automática com o Google Agenda quando a integração estiver conectada.
 
-## Google Agenda
+## Google Agenda — sincronização automática
 A integração é opcional e usa Google Identity Services + Google Calendar API.
 
-Ao salvar ou remarcar uma sessão, a plataforma pode criar ou atualizar um evento privado no calendário principal com:
+Depois de conectado o Google Agenda no dispositivo, a plataforma passa a:
+- criar automaticamente o evento ao cadastrar um agendamento;
+- atualizar automaticamente o evento quando data, horário ou duração forem alterados;
+- remover automaticamente o evento quando o agendamento correspondente for excluído ou cancelado;
+- reconciliar alterações de agenda recebidas pela sincronização notebook ↔ celular;
+- manter uma fila local quando a autorização Google estiver temporariamente expirada;
+- reenviar a fila após nova autorização;
+- conferir automaticamente a agenda ao abrir/retomar a plataforma e após sincronização remota.
+
+Os eventos são privados e contêm:
 - título usando o código interno do paciente, e não o nome;
 - horário e duração da sessão;
 - lembrete `popup` 30 minutos antes;
 - nenhum conteúdo clínico no corpo do evento.
+
+A identificação do evento no Google é determinística a partir do ID interno do agendamento. Isso evita duplicação e permite atualização/exclusão do mesmo evento.
 
 Configuração por dispositivo:
 1. criar um OAuth Client ID para aplicativo Web no Google Cloud;
@@ -50,10 +61,10 @@ Configuração por dispositivo:
 3. informar o Client ID em `Configurações > Google Agenda`;
 4. conectar a conta Google e autorizar somente o escopo de eventos do calendário.
 
-O access token do Google é armazenado localmente de forma cifrada e expira periodicamente. Quando expirar, a plataforma mantém os agendamentos pendentes e solicita nova conexão. A notificação de 30 minutos depende de as notificações do aplicativo Google Agenda estarem habilitadas no celular.
+O Client ID pode ser público, mas não há client secret no repositório. O access token do Google é armazenado localmente de forma cifrada e expira periodicamente. Quando expirar, a plataforma mantém os agendamentos pendentes e solicita nova conexão. A notificação de 30 minutos depende de as notificações do aplicativo Google Agenda estarem habilitadas no celular.
 
 ## Materiais e WhatsApp
-Materiais associados e materiais premium ganham a ação `Enviar conteúdo no WhatsApp` dentro da visualização do próprio material. A mensagem leva o conteúdo textual do material diretamente para a conversa do paciente, além das opções existentes de PDF.
+Materiais associados e materiais premium possuem a ação `Enviar conteúdo no WhatsApp` dentro da visualização do próprio material. A mensagem leva o conteúdo textual do material diretamente para a conversa do paciente, além das opções existentes de PDF.
 
 ## Proteção da primeira migração
 A criação inicial do cofre remoto permanece protegida contra dispositivo local vazio. O notebook que contém a base válida continua sendo a fonte da primeira carga.
@@ -77,4 +88,4 @@ Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.6.2`.
+Versão de interface: `1.6.3`.
