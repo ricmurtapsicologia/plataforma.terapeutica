@@ -1,110 +1,80 @@
-# Plataforma Clínica Richelmy Murta — v1.6.0
+# Plataforma Clínica Richelmy Murta — v1.6.2
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.6.0 mantém o IndexedDB local criptografado e acrescenta sincronização automática entre dispositivos autorizados por meio de um cofre clínico integralmente cifrado.
+A v1.6.2 mantém o cofre clínico criptografado e a sincronização notebook ↔ celular, reforçando a fila de sincronização da agenda e acrescentando recursos operacionais de remarcação, WhatsApp e Google Agenda.
 
 ## Segurança e acesso
-- a senha não fica mais validada por hash SHA-256 fixo no JavaScript ativo;
-- o acesso depende da abertura bem-sucedida do cofre criptográfico local;
-- novos cofres locais usam PBKDF2-HMAC-SHA256 com 600.000 iterações;
-- registros locais são protegidos por AES-GCM;
-- a chave local permanece somente na sessão do navegador;
-- bloqueio por inatividade, máscara de privacidade e proteção ao trocar de aba continuam disponíveis.
+- autenticação pela abertura real do cofre criptográfico local;
+- PBKDF2-HMAC-SHA256 com 600.000 iterações para novos cofres locais;
+- registros locais protegidos por AES-GCM;
+- chave remota aleatória de 256 bits, independente da senha da plataforma;
+- token GitHub e código de sincronização armazenados localmente de forma cifrada;
+- nenhum campo clínico é publicado em texto legível no GitHub.
 
 ## Sincronização notebook ↔ celular
-A sincronização usa o mesmo repositório da plataforma, porém os dados ficam isolados na branch `clinic-sync-data`, que não participa da publicação do GitHub Pages.
+A sincronização usa a branch `clinic-sync-data`, fora da publicação do GitHub Pages. O arquivo remoto `.clinic-sync/vault.json` contém somente um envelope AES-256-GCM cifrado.
 
-O arquivo remoto é `.clinic-sync/vault.json` e contém somente um envelope criptográfico. Nenhum campo de paciente é gravado em texto legível no GitHub.
+A v1.6.2 acrescenta uma fila durável baseada no evento emitido somente depois do commit no IndexedDB. Se uma alteração ocorrer enquanto outro ciclo de sincronização estiver em andamento, ela permanece pendente e força um novo ciclo quando o anterior terminar. Isso elimina a dependência do antigo bridge baseado em temporização de cliques da agenda.
 
-São cifrados em conjunto:
-- nome e dados cadastrais;
-- CPF, RG e endereço;
-- telefone, e-mail e fotografias;
-- agenda e recorrências;
-- prontuários, notas e conceitualizações;
-- objetivos, tarefas e materiais associados;
-- documentos e consentimentos;
-- comunicações e financeiro.
-
-### Chave remota independente
-O cofre remoto usa AES-256-GCM com uma chave aleatória de 256 bits gerada no notebook no momento da primeira inicialização. Essa chave é independente da senha usada para entrar na plataforma.
-
-A chave é apresentada como um `código de sincronização`. No segundo dispositivo, esse código é informado uma única vez. Em cada dispositivo ele passa a ser guardado localmente, cifrado pela chave do cofre local. O código não é incluído no repositório, no arquivo remoto ou no backup clínico.
-
-O GitHub Personal Access Token também é configurado individualmente em cada dispositivo e armazenado localmente de forma criptografada. Token e código de sincronização cumprem funções distintas: o token autoriza leitura/gravação no GitHub; o código descriptografa o cofre clínico.
-
-### Fluxo
-1. uma alteração é salva primeiro no IndexedDB local;
-2. a plataforma marca a base como pendente;
-3. após pequeno debounce, envia uma nova revisão integralmente cifrada;
-4. o outro dispositivo consulta a revisão remota aproximadamente a cada 15 segundos e ao recuperar foco;
-5. alterações de registros diferentes são mescladas por identificador e `updatedAt`;
-6. se o mesmo registro tiver sido alterado nos dois dispositivos desde a última base comum, a sincronização é pausada e o conflito é sinalizado;
-7. exclusões geram tombstones para impedir que um dispositivo antigo ressuscite registros apagados;
-8. sem internet, a plataforma continua trabalhando localmente e retoma a sincronização quando a conexão volta.
-
-## Proteção da primeira migração
-A criação do primeiro cofre remoto é manual e somente é permitida quando o dispositivo possui dados clínicos. Uma base local vazia não pode inicializar automaticamente o remoto.
-
-O notebook que já contém os pacientes deve ser usado como origem da primeira carga. Depois da inicialização, o código de sincronização é guardado e utilizado para autorizar o celular.
-
-Quando um dispositivo local vazio recebe um cofre remoto válido e o código correto, a base remota prevalece. Se os cofres locais forem diferentes e ambos contiverem dados clínicos, a sincronização é bloqueada para impedir sobrescrita silenciosa.
-
-Durante a adoção da base remota, token e código são transportados apenas pela sessão efêmera do navegador durante a recarga necessária e depois são novamente armazenados cifrados com a chave local válida.
+Fluxo:
+1. alteração é persistida localmente;
+2. o banco emite `rm:local-data-changed` após concluir a gravação;
+3. a fila registra a geração da alteração;
+4. o motor de sincronização compara local e remoto;
+5. alterações surgidas durante o ciclo geram reconciliação subsequente obrigatória;
+6. a agenda é redesenhada após recebimento remoto concluído.
 
 ## Agenda
 - visão semanal;
-- semana anterior, atual e seguinte;
 - recorrência avulsa, semanal e quinzenal;
-- edição e exclusão individual;
-- registro de sessão pela agenda;
-- presença, pagamento e WhatsApp integrados;
-- lembretes e avisos de proximidade de sessão.
+- inclusão, edição e exclusão;
+- remarcação de data e horário diretamente na própria agenda;
+- presença, pagamento e comunicação integrados;
+- botão de WhatsApp disponível na janela de até 6 horas antes da sessão;
+- atualização manual/automática do Google Agenda quando a integração estiver conectada.
 
-## Pacientes e atendimento
-- cadastro completo;
-- foto local;
-- CPF, RG e endereço;
-- síntese clínica;
-- prontuário com finalização e adendos;
-- notas restritas;
-- conceitualização;
-- plano e objetivos;
-- tarefas e materiais;
-- documentos;
-- consentimentos;
-- comunicação e financeiro.
+## Google Agenda
+A integração é opcional e usa Google Identity Services + Google Calendar API.
 
-## Backup e exportação
-### Backup seguro `.rmvault`
-Formato restaurável da plataforma, preservando a estrutura criptografada do banco local. Deve continuar sendo gerado periodicamente mesmo com a sincronização ativa.
+Ao salvar ou remarcar uma sessão, a plataforma pode criar ou atualizar um evento privado no calendário principal com:
+- título usando o código interno do paciente, e não o nome;
+- horário e duração da sessão;
+- lembrete `popup` 30 minutos antes;
+- nenhum conteúdo clínico no corpo do evento.
 
-O código de sincronização deve ser guardado separadamente. Se todos os dispositivos e esse código forem perdidos, o cofre remoto não poderá ser recuperado apenas a partir do GitHub.
+Configuração por dispositivo:
+1. criar um OAuth Client ID para aplicativo Web no Google Cloud;
+2. autorizar a origem `https://ricmurtapsicologia.github.io`;
+3. informar o Client ID em `Configurações > Google Agenda`;
+4. conectar a conta Google e autorizar somente o escopo de eventos do calendário.
 
-### Exportação Excel
-A exportação `.xls` é legível e não criptografada. Deve ser tratada como arquivo sensível e não substitui o `.rmvault`.
+O access token do Google é armazenado localmente de forma cifrada e expira periodicamente. Quando expirar, a plataforma mantém os agendamentos pendentes e solicita nova conexão. A notificação de 30 minutos depende de as notificações do aplicativo Google Agenda estarem habilitadas no celular.
+
+## Materiais e WhatsApp
+Materiais associados e materiais premium ganham a ação `Enviar conteúdo no WhatsApp` dentro da visualização do próprio material. A mensagem leva o conteúdo textual do material diretamente para a conversa do paciente, além das opções existentes de PDF.
+
+## Proteção da primeira migração
+A criação inicial do cofre remoto permanece protegida contra dispositivo local vazio. O notebook que contém a base válida continua sendo a fonte da primeira carga.
+
+## Backup
+O `.rmvault` continua sendo o formato restaurável recomendado. O código de sincronização deve permanecer guardado separadamente; se todos os dispositivos e o código forem perdidos, o cofre remoto não pode ser recuperado apenas a partir do GitHub.
 
 ## Resolução de concorrência
-O mecanismo mantém uma baseline local por dispositivo. Se notebook e celular alterarem registros distintos, os dados são mesclados. Se ambos alterarem o mesmo registro depois da última sincronização comum, nenhum lado é sobrescrito automaticamente.
-
-## Compatibilidade de navegador
-A correção de `window.open` é restrita às janelas auxiliares de impressão/PDF. Links externos continuam preservando `noopener/noreferrer`.
+O mecanismo mantém baseline por dispositivo, merge por identificador e `updatedAt`, tombstones para exclusões e bloqueio de conflitos quando o mesmo registro é alterado nos dois dispositivos depois da última base comum.
 
 ## Limites de segurança
-A arquitetura foi desenhada para que a exposição do repositório público, isoladamente, não revele o conteúdo clínico. Isso não equivale a garantia absoluta contra comprometimento do dispositivo, perda de credenciais, código malicioso ou falhas futuras de implementação/plataforma.
-
-O histórico Git pode conservar revisões antigas do ciphertext. Por isso a proteção depende da preservação da chave aleatória de sincronização e das credenciais dos dispositivos.
+A arquitetura foi desenhada para que a exposição do repositório público, isoladamente, não revele conteúdo clínico. Isso não representa garantia absoluta contra comprometimento do dispositivo, perda de credenciais, malware ou falhas futuras da plataforma.
 
 ## Diagnóstico e qualidade
 - diagnóstico interno em Configurações;
 - `tests/self-test.html` não destrutivo;
-- workflow `.github/workflows/static-integrity.yml` valida sintaxe e imports em `main` e em pull requests.
+- workflow `.github/workflows/static-integrity.yml` valida sintaxe JavaScript e imports locais em pull requests e no `main`.
 
 ## Publicação
 Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.6.0`.
+Versão de interface: `1.6.2`.
