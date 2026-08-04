@@ -1,7 +1,7 @@
 import {STORE_NAMES,runtime,setStore,APP_VERSION} from './state.js';
 import {openDatabase,unlockVault,getAllDecrypted} from './database.js';
 import {runMigrations} from './migrations.js';
-import {tryBootstrapFromRemote,startSyncSession} from './secure-sync-v160.js';
+import {startSyncSession} from './secure-sync-v160.js';
 
 const VERSION=APP_VERSION;
 const app=document.getElementById('app');
@@ -55,11 +55,10 @@ async function authenticate(){
   authenticating=true;const button=document.querySelector('[data-access-action="login"]');if(button){button.disabled=true;button.textContent='Entrando…'}
   try{
     setStatus('Validando o cofre clínico…');
-    await withTimeout(tryBootstrapFromRemote(pass),30000,'Consulta da base sincronizada');
     await withTimeout(openDatabase(),8000,'Abertura do banco local');
     const v=await withTimeout(unlockVault(pass),30000,'Validação do cofre local');
     runtime.key=v.key;runtime.salt=v.salt;runtime.vaultKnown=true;runtime.locked=false;runtime.dataReady=false;
-    try{await withTimeout(startSyncSession(pass),30000,'Preparação da sincronização')}catch(err){console.warn('Sincronização não preparada na abertura',err);window.__rmBootErrors.push(`sync: ${err.message||err}`)}
+    try{await withTimeout(startSyncSession(),15000,'Preparação da sincronização')}catch(err){console.warn('Sincronização não preparada na abertura',err);window.__rmBootErrors.push(`sync: ${err.message||err}`)}
     const hash=location.hash.replace(/^#/,'');runtime.route=['today','agenda','patients','resources','financeiro','settings'].includes(hash)?hash:'today';
     setStatus('Cofre validado. Abrindo interface…');await startAppShell();void prepareLocalData(v);
   }catch(err){console.error('Falha no acesso',err);runtime.locked=true;runtime.key=null;runtime.salt=null;showLogin(err?.message||'Não foi possível abrir a plataforma.','error')}
