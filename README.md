@@ -1,9 +1,9 @@
-# Plataforma Clínica Richelmy Murta — v1.7.3
+# Plataforma Clínica Richelmy Murta — v1.7.4
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.7.3 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A área de pacientes permanece separada em `Em acompanhamento` e `Encerrados`, com encerramento controlado sem perda do cadastro ou do histórico clínico. Esta versão também corrige um loop de atualização visual introduzido na v1.7.2 que podia impedir a abertura da plataforma após a senha em navegadores desktop.
+A v1.7.4 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A área de pacientes permanece separada em `Em acompanhamento` e `Encerrados`, com encerramento controlado sem perda do cadastro ou do histórico clínico. Ao encerrar um atendimento, a plataforma passa a retirar da agenda todas as sessões marcadas na própria data de encerramento e em datas posteriores, mantendo apenas o histórico anterior ao encerramento.
 
 ## Segurança e acesso
 - autenticação pela abertura real do cofre criptográfico local;
@@ -27,6 +27,8 @@ Fluxo:
 4. o motor de sincronização compara local e remoto;
 5. alterações surgidas durante o ciclo geram reconciliação subsequente obrigatória;
 6. a agenda é redesenhada após recebimento remoto concluído.
+
+A v1.7.4 também aplica uma verificação de consistência após o carregamento dos dados e após sincronizações concluídas: se um paciente estiver encerrado e possuir agendamentos na data de encerramento ou depois dela, esses agendamentos são removidos automaticamente.
 
 ## Camada mobile-first
 A interface do celular possui comportamento específico para telas pequenas:
@@ -101,7 +103,9 @@ O Client ID pode ser público, mas não há client secret no repositório. Quand
 - seleção da data de encerramento antes da confirmação;
 - ao encerrar, o cadastro do paciente e todo o histórico já registrado permanecem preservados;
 - o status passa para `Encerrado`, com registro da data de encerramento;
-- somente agendamentos com data posterior à data de encerramento são removidos; sessões anteriores e da própria data de encerramento permanecem no histórico;
+- todas as sessões agendadas na data de encerramento e em datas posteriores são removidas da agenda;
+- somente sessões anteriores à data de encerramento permanecem no histórico de agenda;
+- a regra é reaplicada automaticamente após o carregamento do cofre e após sincronizações, evitando que agendamentos posteriores reapareçam para pacientes encerrados;
 - pacientes encerrados deixam de exibir a ação rápida de novo agendamento na listagem e no contexto selecionado;
 - a busca e o filtro por status continuam funcionando sobre as duas listagens;
 - dados sensíveis permanecem sujeitos à máscara de privacidade da plataforma.
@@ -129,4 +133,4 @@ Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.7.3`.
+Versão de interface: `1.7.4`.
