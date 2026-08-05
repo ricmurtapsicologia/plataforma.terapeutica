@@ -1,8 +1,8 @@
-const VERSION='1.7.1';
+const VERSION='1.7.2';
 function applyVersion(){
   document.querySelectorAll('.tiny').forEach(el=>{
     const text=el.textContent||'';
-    if(/^Versão\s+1\.6\.(7|8|9)\./.test(text))el.textContent=text.replace(/^Versão\s+1\.6\.(7|8|9)\./,`Versão ${VERSION}.`);
+    if(/^Versão\s+\d+\.\d+\.\d+\./.test(text))el.textContent=text.replace(/^Versão\s+\d+\.\d+\.\d+\./,`Versão ${VERSION}.`);
   });
 }
 applyVersion();
