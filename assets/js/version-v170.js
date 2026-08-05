@@ -1,4 +1,4 @@
-const VERSION='1.7.3';
+const VERSION='1.7.4';
 const VERSION_RE=/^Versão\s+\d+\.\d+\.\d+\./;
 
 function applyVersion(){
