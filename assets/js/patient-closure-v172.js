@@ -8,6 +8,7 @@ const q=s=>document.querySelector(s);
 
 function patientIdFromCard(card){return card?.querySelector('[data-id]')?.dataset.id||''}
 function patientForCard(card){const id=patientIdFromCard(card);return arr(data.patients).find(p=>p?.id===id)||null}
+function patientByIdLocal(id){return arr(data.patients).find(p=>p?.id===id)||null}
 function isClosed(p){return p?.status==='Encerrado'}
 function futureAppointments(patientId,endDate){return arr(data.appointments).filter(a=>a?.patientId===patientId&&a?.date&&a.date>endDate)}
 
@@ -35,7 +36,7 @@ async function endPatientCare(){
   assert(/^\d{4}-\d{2}-\d{2}$/.test(endDate),'Informe uma data de encerramento válida.');
   const future=[...futureAppointments(p.id,endDate)];
   const updated={...p,status:'Encerrado',careEndedAt:endDate,careEndedRecordedAt:nowISO(),updatedAt:nowISO()};
-  const i=arr(data.patients).findIndex(x=>x?.id===p.id);
+  const i=Array.isArray(data.patients)?data.patients.findIndex(x=>x?.id===p.id):-1;
   if(i>=0)data.patients[i]=updated;
   await putEncrypted('patients',updated,runtime.key);
   for(const appointment of future){
@@ -121,6 +122,41 @@ function decorateSelectedPatient(){
   }
 }
 
+function protectPatientStatusModal(){
+  const select=q('#p-status');
+  if(!select)return;
+  const id=q('#p-id')?.value||'',p=id?patientByIdLocal(id):null;
+  const closedOption=[...select.options].find(option=>option.value==='Encerrado');
+  if(isClosed(p)){
+    select.value='Encerrado';
+    select.disabled=true;
+    if(!select.closest('.field')?.querySelector('[data-closure-status-note]')){
+      const note=document.createElement('div');
+      note.className='tiny muted mt-8';
+      note.dataset.closureStatusNote='true';
+      note.textContent='Status definido pelo fluxo de encerramento do atendimento.';
+      select.insertAdjacentElement('afterend',note);
+    }
+  }else closedOption?.remove();
+}
+
+function restrictClosedPatientsInAppointmentModal(){
+  const select=q('#a-patient');
+  if(!select)return;
+  const appointmentId=q('#a-id')?.value||'',current=select.value;
+  [...select.options].forEach(option=>{
+    if(!option.value)return;
+    const p=patientByIdLocal(option.value);
+    if(isClosed(p)&&!(appointmentId&&option.value===current))option.remove();
+  });
+  if(!appointmentId&&isClosed(patientByIdLocal(select.value)))select.value='';
+}
+
+function enhanceTransientModals(){
+  protectPatientStatusModal();
+  restrictClosedPatientsInAppointmentModal();
+}
+
 function refreshListVisibility(){
   const term=(q('#patient-search')?.value||'').trim();
   const status=q('#patient-status-filter')?.value||'';
@@ -134,12 +170,17 @@ function refreshListVisibility(){
 function applyPatientClosureUi(){
   organizePatientLists();
   decorateSelectedPatient();
+  enhanceTransientModals();
   setTimeout(refreshListVisibility,0);
 }
 
 document.addEventListener('click',async e=>{
   const el=e.target.closest?.('[data-action]');
   if(!el)return;
+  if(['new-patient','edit-patient','new-appointment','edit-appointment'].includes(el.dataset.action)){
+    setTimeout(enhanceTransientModals,0);
+    setTimeout(enhanceTransientModals,120);
+  }
   if(el.dataset.action==='end-patient-care'){
     e.preventDefault();e.stopImmediatePropagation();
     try{showClosureModal()}catch(err){toast(err.message||'Não foi possível abrir o encerramento.','error')}
@@ -156,4 +197,6 @@ document.addEventListener('input',e=>{if(e.target.id==='patient-search')setTimeo
 document.addEventListener('rm:rendered',applyPatientClosureUi);
 document.addEventListener('rm:data-ready',()=>setTimeout(applyPatientClosureUi,0));
 document.addEventListener('rm:app-ready',()=>setTimeout(applyPatientClosureUi,0));
+const modalRoot=document.getElementById('modal-root');
+if(modalRoot)new MutationObserver(()=>setTimeout(enhanceTransientModals,0)).observe(modalRoot,{childList:true,subtree:true});
 setTimeout(applyPatientClosureUi,100);
