@@ -17,7 +17,7 @@ function nextAppointmentFor(patientId){
 function ensureMobileStatus(){
   const top=document.querySelector('.top-actions');if(!top)return null;
   let box=document.getElementById('rm-mobile-status');
-  if(!box){box=document.createElement('div');box.id='rm-mobile-status';box.className='rm-mobile-status';top.insertBefore(box,top.firstChild)}
+  if(!box){box=document.createElement('div');box.id='rm-mobile-status';box.className='rm-mobile-status';box.setAttribute('aria-label','Estado da plataforma');top.insertBefore(box,top.firstChild)}
   return box;
 }
 function statusClass(status){return status==='ok'?'ok':status==='error'?'error':'warn'}
@@ -25,9 +25,26 @@ function paintMobileStatus(){
   const box=ensureMobileStatus();if(!box)return;
   const ds=dataStatus==='synced'?'ok':dataStatus==='error'||dataStatus==='conflict'?'error':'warn';
   const dLabel=dataStatus==='synced'?'Dados ✓':dataStatus==='syncing'?'Dados ↻':dataStatus==='error'||dataStatus==='conflict'?'Dados !':'Dados •';
-  const gs=googleStatus==='connected'?'ok':googleStatus==='disconnected'?'warn':'warn';
-  const gLabel=googleStatus==='connected'?'G ✓':googleStatus==='disconnected'?'G !':'G •';
-  box.innerHTML=`<span class="rm-status-chip ${statusClass(ds)}" title="${dataSyncedAt?`Dados sincronizados às ${dataSyncedAt}`:'Estado da sincronização de dados'}">${dLabel}</span><span class="rm-status-chip ${statusClass(gs)}" title="Google Agenda">${gLabel}</span>`;
+  const gs=googleStatus==='connected'?'ok':'warn';
+  const gLabel=googleStatus==='connected'?'Agenda ✓':googleStatus==='disconnected'?'Agenda !':'Agenda •';
+  const dTitle=dataSyncedAt?`Dados sincronizados às ${dataSyncedAt}`:'Estado da sincronização dos dados';
+  const gTitle=googleStatus==='connected'?'Google Agenda conectado':googleStatus==='disconnected'?'Google Agenda desconectado':'Estado do Google Agenda';
+  box.innerHTML=`<span class="rm-status-chip ${statusClass(ds)}" title="${dTitle}">${dLabel}</span><span class="rm-status-chip ${statusClass(gs)}" title="${gTitle}">${gLabel}</span>`;
+}
+function privacyIcon(masked){
+  if(masked)return '<svg class="rm-topbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.7a2 2 0 0 0 2.7 2.7"/><path d="M9.9 4.3A10.8 10.8 0 0 1 12 4c5.5 0 9 5 9 5a15.4 15.4 0 0 1-2.1 2.6"/><path d="M6.6 6.6C4.4 8.1 3 10 3 10s3.5 5 9 5c1 0 1.9-.2 2.8-.5"/></svg>';
+  return '<svg class="rm-topbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+}
+function decorateTopbar(){
+  const privacy=document.querySelector('.top-actions [data-action="privacy-mask"]');
+  if(privacy){
+    const masked=Boolean(runtime.privacyMask);
+    privacy.innerHTML=privacyIcon(masked);
+    privacy.setAttribute('aria-label',masked?'Mostrar informações sensíveis':'Ocultar informações sensíveis');
+    privacy.title=masked?'Mostrar informações sensíveis':'Ocultar informações sensíveis';
+  }
+  const menu=document.querySelector('.mobile-menu');
+  if(menu){menu.setAttribute('aria-label','Abrir menu principal');menu.title='Menu principal'}
 }
 function observeSyncChip(){
   const chip=document.getElementById('rm-sync-chip');if(!chip)return;
@@ -79,20 +96,20 @@ function decorateDashboard(){
 }
 function decorate(){
   if(runtime.locked)return;
-  ensureMobileStatus();observeSyncChip();decorateGoogleSettings();decoratePatientCards();decorateDashboard();paintMobileStatus();
+  ensureMobileStatus();observeSyncChip();decorateGoogleSettings();decoratePatientCards();decorateDashboard();paintMobileStatus();decorateTopbar();
 }
 
 document.addEventListener('rm:rendered',()=>setTimeout(decorate,0));
 document.addEventListener('rm:data-ready',()=>setTimeout(decorate,60));
 document.addEventListener('rm:sync-status',e=>{
-  const s=e.detail?.status||'';dataStatus=s||dataStatus;if(s==='synced')dataSyncedAt=fmtTime();paintMobileStatus();
+  const s=e.detail?.status||'';dataStatus=s||dataStatus;if(s==='synced')dataSyncedAt=fmtTime();paintMobileStatus();decorateTopbar();
 });
 const toastObserver=new MutationObserver(()=>{
   document.querySelectorAll('#toast-region .toast').forEach(t=>{
     const tx=(t.textContent||'').toLowerCase();
     if(tx.includes('google agenda conectado')||tx.includes('google agenda atualizado'))googleStatus='connected';
     if(tx.includes('google agenda precisa ser reconectado')||tx.includes('autorização do google agenda expirou'))googleStatus='disconnected';
-  });paintMobileStatus();
+  });paintMobileStatus();decorateTopbar();
 });
 const toastRoot=document.getElementById('toast-region');if(toastRoot)toastObserver.observe(toastRoot,{childList:true,subtree:true});
 setTimeout(decorate,250);
