@@ -1,9 +1,9 @@
-# Plataforma Clínica Richelmy Murta — v1.7.1
+# Plataforma Clínica Richelmy Murta — v1.7.2
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.7.1 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A camada mobile-first permanece ativa e a agenda foi simplificada para uma única visão semanal, removendo alternâncias redundantes e a lista duplicada de sessões abaixo do calendário.
+A v1.7.2 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A camada mobile-first permanece ativa, a agenda usa uma única visão semanal e a área de pacientes passa a separar os atendimentos em `Em acompanhamento` e `Encerrados`, com encerramento controlado sem perda do cadastro ou do histórico clínico.
 
 ## Segurança e acesso
 - autenticação pela abertura real do cofre criptográfico local;
@@ -96,7 +96,14 @@ O Client ID pode ser público, mas não há client secret no repositório. Quand
 - nome preferido e código interno;
 - telefone, e-mail, modalidade, recorrência e valor de referência;
 - síntese clínica, prontuário, notas restritas, formulação, planos, tarefas, materiais, documentos, comunicações, consentimentos e financeiro;
-- na grade de pacientes, a interface prioriza a próxima sessão agendada;
+- listagens separadas em `Em acompanhamento` e `Encerrados`;
+- opção `Encerrar atendimento` no contexto do paciente selecionado;
+- seleção da data de encerramento antes da confirmação;
+- ao encerrar, o cadastro do paciente e todo o histórico já registrado permanecem preservados;
+- o status passa para `Encerrado`, com registro da data de encerramento;
+- somente agendamentos com data posterior à data de encerramento são removidos; sessões anteriores e da própria data de encerramento permanecem no histórico;
+- pacientes encerrados deixam de exibir a ação rápida de novo agendamento na listagem e no contexto selecionado;
+- a busca e o filtro por status continuam funcionando sobre as duas listagens;
 - dados sensíveis permanecem sujeitos à máscara de privacidade da plataforma.
 
 ## Materiais e WhatsApp
@@ -122,4 +129,4 @@ Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.7.1`.
+Versão de interface: `1.7.2`.
