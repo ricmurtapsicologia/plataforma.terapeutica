@@ -1,11 +1,14 @@
 import {STORE_NAMES,runtime,setStore} from './state.js';
+import {APP_VERSION} from './version.js';
 import {openDatabase,unlockVault,getAllDecrypted} from './database.js';
 import {runMigrations} from './migrations.js';
 import {startSyncSession} from './secure-sync-v160.js';
 
-const VERSION='1.6.7';
+const VERSION=APP_VERSION;
 const app=document.getElementById('app');
 let authenticating=false;
+let authFailureCount=0;
+let authBlockedUntil=0;
 window.__rmBootErrors=[];
 window.__rmDataReady=false;
 
@@ -51,17 +54,28 @@ async function prepareLocalData(v){
   }catch(err){console.error('Falha ao preparar dados locais',err);window.__rmBootErrors.push(`dados locais: ${err.message||err}`);runtime.dataReady=false;window.__rmDataReady=false;dataBanner(`A interface está disponível, mas os dados locais não puderam ser carregados: ${err.message||err}`,'error')}
 }
 async function authenticate(){
-  if(authenticating)return;const input=document.getElementById('access-password'),pass=input?.value||'';if(!pass){setStatus('Digite a senha.','error');return}
+  if(authenticating)return;
+  const remaining=authBlockedUntil-Date.now();
+  if(remaining>0){setStatus(`Aguarde ${Math.ceil(remaining/1000)} segundo(s) antes de tentar novamente.`,'error');return}
+  const input=document.getElementById('access-password'),pass=input?.value||'';if(!pass){setStatus('Digite a senha.','error');return}
   authenticating=true;const button=document.querySelector('[data-access-action="login"]');if(button){button.disabled=true;button.textContent='Entrando…'}
   try{
     setStatus('Validando o cofre clínico…');
     await withTimeout(openDatabase(),8000,'Abertura do banco local');
     const v=await withTimeout(unlockVault(pass),30000,'Validação do cofre local');
+    authFailureCount=0;authBlockedUntil=0;
     runtime.key=v.key;runtime.salt=v.salt;runtime.vaultKnown=true;runtime.locked=false;runtime.dataReady=false;
     try{await withTimeout(startSyncSession(),15000,'Preparação da sincronização')}catch(err){console.warn('Sincronização não preparada na abertura',err);window.__rmBootErrors.push(`sync: ${err.message||err}`)}
     const hash=location.hash.replace(/^#/,'');runtime.route=['today','agenda','patients','resources','financeiro','settings'].includes(hash)?hash:'today';
     setStatus('Cofre validado. Abrindo interface…');await startAppShell();void prepareLocalData(v);
-  }catch(err){console.error('Falha no acesso',err);runtime.locked=true;runtime.key=null;runtime.salt=null;showLogin(err?.message||'Não foi possível abrir a plataforma.','error')}
+  }catch(err){
+    console.error('Falha no acesso',err);runtime.locked=true;runtime.key=null;runtime.salt=null;
+    authFailureCount+=1;
+    const delay=authFailureCount>=3?Math.min(8000,1000*(2**(authFailureCount-3))):0;
+    authBlockedUntil=Date.now()+delay;
+    const suffix=delay?` Aguarde ${Math.ceil(delay/1000)} segundo(s) para nova tentativa.`:'';
+    showLogin(`${err?.message||'Não foi possível abrir a plataforma.'}${suffix}`,'error')
+  }
   finally{authenticating=false;const current=document.querySelector('[data-access-action="login"]');if(current){current.disabled=false;current.textContent='Entrar'}}
 }
 
