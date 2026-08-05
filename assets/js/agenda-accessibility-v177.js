@@ -93,7 +93,18 @@ function improveAgendaCopy(){
   summary.innerHTML=`<strong>${count}</strong> ${singular?'compromisso agendado':'compromissos agendados'} nesta semana. Toque em um horário vazio para criar uma nova sessão.`;
 }
 
-function enhanceAgenda(){
+function improveConfirmationCopy(){
+  document.querySelectorAll('[data-action="session-reminder-whatsapp"]:not(.week-mini)').forEach(button=>{
+    button.textContent='Confirmar sessão';
+    button.setAttribute('title','Confirmar sessão pelo WhatsApp');
+  });
+  document.querySelectorAll('.smart-alert-item.session-soon .small.muted').forEach(text=>{
+    text.textContent=text.textContent.replace(/lembrete disponível para envio\.?/i,'confirmação disponível para envio.');
+  });
+}
+
+function enhanceInterface(){
+  improveConfirmationCopy();
   if(!document.querySelector('.week-calendar-wrap'))return;
   cleanActionButtons();
   enhanceActionButtons();
@@ -114,8 +125,8 @@ document.addEventListener('click',e=>{
   }
 },true);
 
-document.addEventListener('rm:rendered',()=>queueMicrotask(enhanceAgenda));
-document.addEventListener('rm:app-ready',()=>setTimeout(enhanceAgenda,80));
-document.addEventListener('rm:data-ready',()=>setTimeout(enhanceAgenda,80));
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(enhanceAgenda,120));
-else setTimeout(enhanceAgenda,120);
+document.addEventListener('rm:rendered',()=>queueMicrotask(enhanceInterface));
+document.addEventListener('rm:app-ready',()=>setTimeout(enhanceInterface,80));
+document.addEventListener('rm:data-ready',()=>setTimeout(enhanceInterface,80));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(enhanceInterface,120));
+else setTimeout(enhanceInterface,120);
