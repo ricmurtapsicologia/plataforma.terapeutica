@@ -1,9 +1,9 @@
-# Plataforma Clínica Richelmy Murta — v1.7.4
+# Plataforma Clínica Richelmy Murta — v1.7.6
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.7.4 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A área de pacientes permanece separada em `Em acompanhamento` e `Encerrados`, com encerramento controlado sem perda do cadastro ou do histórico clínico. Ao encerrar um atendimento, a plataforma passa a retirar da agenda todas as sessões marcadas na própria data de encerramento e em datas posteriores, mantendo apenas o histórico anterior ao encerramento.
+A v1.7.6 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular, a integração automática com o Google Agenda e o encerramento controlado de pacientes. A aba Financeiro passa a incluir visão mensal comparando receita recebida e receita estimada dos atendimentos, além do valor estimado do mês corrente em destaque numérico.
 
 ## Segurança e acesso
 - autenticação pela abertura real do cofre criptográfico local;
@@ -28,7 +28,7 @@ Fluxo:
 5. alterações surgidas durante o ciclo geram reconciliação subsequente obrigatória;
 6. a agenda é redesenhada após recebimento remoto concluído.
 
-A v1.7.4 também aplica uma verificação de consistência após o carregamento dos dados e após sincronizações concluídas: se um paciente estiver encerrado e possuir agendamentos na data de encerramento ou depois dela, esses agendamentos são removidos automaticamente.
+Pacientes encerrados passam por verificação de consistência após carregamento e sincronização. Agendamentos na data de encerramento ou posteriores são removidos automaticamente.
 
 ## Camada mobile-first
 A interface do celular possui comportamento específico para telas pequenas:
@@ -57,7 +57,6 @@ A interface do celular possui comportamento específico para telas pequenas:
 - presença, pagamento e comunicação integrados;
 - botão de WhatsApp disponível na janela de até 6 horas antes da sessão;
 - somente o primeiro nome/nome preferido aparece nos cartões compactos da agenda;
-- a lista duplicada `Sessões da semana`, anteriormente exibida abaixo do calendário, foi removida;
 - sincronização automática com o Google Agenda quando a integração estiver conectada.
 
 ## Google Agenda — sincronização automática
@@ -78,8 +77,6 @@ Os eventos são privados e contêm:
 - lembrete `popup` 30 minutos antes;
 - nenhum conteúdo clínico no corpo do evento.
 
-A identificação do evento no Google é determinística a partir do ID interno do agendamento. Isso evita duplicação e permite atualização/exclusão do mesmo evento.
-
 ### Configuração do OAuth
 Cliente OAuth Web no Google Cloud:
 
@@ -87,11 +84,7 @@ Cliente OAuth Web no Google Cloud:
 - URI de redirecionamento autorizada: `https://ricmurtapsicologia.github.io/plataforma.terapeutica/`
 - escopo utilizado: `https://www.googleapis.com/auth/calendar.events`
 
-A conexão usa redirecionamento da página inteira. Depois da autorização, o Google devolve o token à plataforma; o token é retirado da URL e cifrado localmente após o desbloqueio do cofre.
-
 Cada dispositivo precisa autorizar o Google Agenda separadamente. O token do notebook não é sincronizado para o celular e vice-versa.
-
-O Client ID pode ser público, mas não há client secret no repositório. Quando o token expira, a plataforma mantém os agendamentos pendentes e solicita nova conexão. A notificação de 30 minutos depende de as notificações do aplicativo Google Agenda estarem habilitadas no celular.
 
 ## Pacientes
 - cadastro e edição;
@@ -101,14 +94,21 @@ O Client ID pode ser público, mas não há client secret no repositório. Quand
 - listagens separadas em `Em acompanhamento` e `Encerrados`;
 - opção `Encerrar atendimento` no contexto do paciente selecionado;
 - seleção da data de encerramento antes da confirmação;
-- ao encerrar, o cadastro do paciente e todo o histórico já registrado permanecem preservados;
-- o status passa para `Encerrado`, com registro da data de encerramento;
+- ao encerrar, o cadastro e o histórico clínico permanecem preservados;
 - todas as sessões agendadas na data de encerramento e em datas posteriores são removidas da agenda;
-- somente sessões anteriores à data de encerramento permanecem no histórico de agenda;
-- a regra é reaplicada automaticamente após o carregamento do cofre e após sincronizações, evitando que agendamentos posteriores reapareçam para pacientes encerrados;
-- pacientes encerrados deixam de exibir a ação rápida de novo agendamento na listagem e no contexto selecionado;
-- a busca e o filtro por status continuam funcionando sobre as duas listagens;
-- dados sensíveis permanecem sujeitos à máscara de privacidade da plataforma.
+- pacientes encerrados deixam de exibir ação de novo agendamento.
+
+## Financeiro
+- total recebido e total pendente;
+- valor estimado do mês corrente em destaque numérico;
+- quantidade de sessões previstas no mês corrente;
+- gráfico de colunas agrupadas, mês a mês, para o ano corrente;
+- comparação entre `Recebido` e `Estimado` em cada mês;
+- `Recebido` é calculado pelos lançamentos financeiros com status `Pago` e pela data do pagamento;
+- `Estimado` é calculado pelas sessões da agenda que não estejam canceladas/desmarcadas, multiplicadas pelo valor de referência cadastrado do paciente;
+- sessões incompatíveis com a data de encerramento de um paciente não entram na estimativa;
+- o mesmo painel funciona no financeiro global e no financeiro individual do paciente;
+- layout com rolagem horizontal controlada no celular para manter os 12 meses legíveis.
 
 ## Materiais e WhatsApp
 Materiais associados e materiais premium possuem a ação `Enviar conteúdo no WhatsApp` dentro da visualização do próprio material. A mensagem leva o conteúdo textual do material diretamente para a conversa do paciente, além das opções existentes de PDF.
@@ -125,12 +125,11 @@ A arquitetura foi desenhada para que a exposição do repositório público, iso
 ## Diagnóstico e qualidade
 - diagnóstico interno em Configurações;
 - `tests/self-test.html` não destrutivo;
-- workflow `.github/workflows/static-integrity.yml` valida sintaxe JavaScript e imports locais em pull requests e no `main`;
-- a camada mobile é exclusivamente de apresentação e ergonomia: não modifica IndexedDB, estrutura do cofre, chave de sincronização nem payload clínico remoto.
+- workflow `.github/workflows/static-integrity.yml` valida sintaxe JavaScript e imports locais em pull requests e no `main`.
 
 ## Publicação
 Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.7.4`.
+Versão de interface: `1.7.6`.
