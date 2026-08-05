@@ -1,8 +1,8 @@
-// v1.6.6 — service worker mínimo para compatibilidade OAuth em GitHub Pages.
+// v1.8.0 — service worker mínimo para compatibilidade OAuth em GitHub Pages.
 // Não faz cache clínico nem intercepta APIs externas. Apenas acrescenta COOP às navegações
 // da própria plataforma, preservando a relação segura com o popup do Google Identity Services.
 
-const SW_VERSION='1.6.6';
+const SW_VERSION='1.8.0';
 
 self.addEventListener('install',()=>{
   self.skipWaiting();
