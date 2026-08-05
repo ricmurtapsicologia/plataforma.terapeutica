@@ -3,7 +3,7 @@ import {putEncrypted} from './database.js';
 import {openWhatsApp} from './communications.js';
 import {fmtDate,toast} from './ui.js';
 
-/* Agenda — ergonomia, clareza e ações mobile-first v1.7.8 */
+/* Agenda — ergonomia, clareza e ações mobile-first v1.7.9 */
 const ACTIONS=[
   {
     selector:'.week-wa',
@@ -14,9 +14,9 @@ const ACTIONS=[
   },
   {
     selector:'.week-manage',
-    label:'Gerenciar sessão: presença, pagamento e registro',
+    label:'Gerenciar sessão: remarcar, presença, pagamento e registro',
     short:'Gerenciar',
-    detail:'Presença e pagamento',
+    detail:'Remarcar e administrar',
     icon:'<svg class="week-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="m3.5 6 1 1 2-2"/><path d="m3.5 12 1 1 2-2"/><path d="m3.5 18 1 1 2-2"/></svg>'
   },
   {
@@ -76,7 +76,7 @@ function enhanceActionButtons(root=document){
 }
 
 function legendMarkup(){
-  return `<section class="agenda-action-legend" id="agenda-action-legend" aria-label="Ações disponíveis nos horários"><div class="agenda-action-legend-head"><strong>Ações do horário</strong><span>Use os ícones do cartão para agir rapidamente.</span></div><div class="agenda-action-list">${ACTIONS.map(action=>`<div class="agenda-action-key ${action.selector.slice(1)}"><span class="agenda-action-icon">${action.icon}</span><span class="agenda-action-copy"><strong>${action.short}</strong><span>${action.detail}</span></span></div>`).join('')}</div></section>`;
+  return `<section class="agenda-action-legend" id="agenda-action-legend" aria-label="Ações disponíveis nos horários"><div class="agenda-action-legend-head"><strong>Ações do horário</strong><span>Use os ícones do cartão para confirmar, gerenciar ou excluir. Para remarcar, abra Gerenciar ou toque no cartão.</span></div><div class="agenda-action-list">${ACTIONS.map(action=>`<div class="agenda-action-key ${action.selector.slice(1)}"><span class="agenda-action-icon">${action.icon}</span><span class="agenda-action-copy"><strong>${action.short}</strong><span>${action.detail}</span></span></div>`).join('')}</div></section>`;
 }
 
 function ensureLegend(){
