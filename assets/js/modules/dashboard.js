@@ -17,6 +17,7 @@ export function renderDashboard(){
   const upcoming=appointments
     .filter(a=>a.date>=today&&a.status!=='Cancelada'&&validForPatient(a))
     .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const sessionsToday=upcoming.filter(a=>a.date===today);
   const pendingRecords=records.filter(r=>r.status==='Rascunho').length;
   const pendingTasks=tasks.filter(t=>!['Concluída','Respondida'].includes(t.status)).length;
   const pendingPayments=payments.filter(p=>p.status==='Pendente');
@@ -30,7 +31,7 @@ export function renderDashboard(){
   }
 
   return pageHead('Hoje','Prioridades clínicas e administrativas do dia.',`<button class="btn" data-action="new-appointment">Nova sessão</button><button class="btn secondary" data-action="new-patient">Novo paciente</button>`)+
-  `<section class="grid grid-4">${metric('Próximas sessões',upcoming.length)}${metric('Registros pendentes',pendingRecords)}${metric('Tarefas abertas',pendingTasks)}${metric('Pagamentos pendentes',pendingPayments.length)}</section>
+  `<section class="grid grid-4">${metric('Sessões hoje',sessionsToday.length)}${metric('Registros pendentes',pendingRecords)}${metric('Tarefas abertas',pendingTasks)}${metric('Pagamentos pendentes',pendingPayments.length)}</section>
   <section class="grid grid-2 mt-16">
     <div class="card"><div class="card-title"><h3 class="mb-0">Agenda próxima</h3><button class="btn ghost" data-route="agenda">Abrir agenda</button></div>${upcoming.length?`<div class="list">${upcoming.slice(0,6).map(a=>{const p=patientById(a.patientId);return`<div class="list-item"><div><strong data-sensitive>${esc(p?.name||a.title||'Compromisso')}</strong><div class="small muted">${fmtDate(a.date)} · ${esc(a.time)} · ${esc(a.modality||'')}</div></div><div class="flex gap-8 items-center">${badge(a.status)}${p?`<button class="btn ghost" data-action="select-patient" data-id="${p.id}" data-target="atendimento">Preparar</button>`:''}</div></div>`}).join('')}</div>`:empty('Agenda livre','Nenhuma sessão futura cadastrada.')}</div>
     <div class="card"><div class="card-title"><h3 class="mb-0">Sessões nos próximos 7 dias</h3></div>${barChart(week,['Hoje','D+1','D+2','D+3','D+4','D+5','D+6'])}</div>

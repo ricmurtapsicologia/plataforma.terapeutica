@@ -1,0 +1,183 @@
+/* Plataforma Clínica — camada consolidada de UX, contraste e mobile-first v1.8.0 */
+:root{
+  --text:#20343d;
+  --muted:#526b75;
+  --primary:#3f98b6;
+  --primary2:#25677d;
+  --line:#c9dde4;
+  --green:#247c68;
+  --danger:#9f2f40;
+  --warning-text:#72520d;
+  --touch:44px;
+}
+[data-theme=dark]{
+  --text:#eef7f9;
+  --muted:#b9ccd2;
+  --primary:#77c8df;
+  --primary2:#a7deed;
+  --line:#3b555e;
+  --green:#70cbb3;
+  --danger:#ff91a1;
+  --warning-text:#f3cf78;
+}
+
+/* Legibilidade e hierarquia */
+body{overflow-x:hidden;text-rendering:optimizeLegibility}
+.muted{color:var(--muted)}
+.small{font-size:.9rem;line-height:1.45}
+.tiny{font-size:.79rem;line-height:1.4}
+.field label{font-size:.9rem;color:var(--text)}
+.input,.textarea,.select{border-color:var(--line)}
+.input:focus-visible,.textarea:focus-visible,.select:focus-visible,.btn:focus-visible,.icon-btn:focus-visible,.tab:focus-visible,.nav-link:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 50%,transparent);outline-offset:2px;box-shadow:none}
+.btn.secondary{color:var(--primary2);border-color:var(--line)}
+.btn.ghost{color:var(--primary2)}
+.badge.warning{color:var(--warning-text)}
+.notice,.card,.metric{border-color:var(--line)}
+
+/* Topbar: menos ruído e controles com alvos consistentes */
+.topbar{gap:12px}
+.top-actions{gap:7px}
+.top-actions .icon-btn{width:42px;height:42px}
+.clock-chip{border-color:var(--line)}
+.sync-chip{min-height:38px!important;font-size:.76rem!important}
+
+/* Agenda — cartões compactos permanecem eficientes no desktop */
+.week-calendar-wrap{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:auto;overscroll-behavior:contain}
+.week-calendar{grid-template-columns:72px repeat(7,minmax(150px,1fr));min-width:1122px}
+.week-event{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;grid-template-rows:20px 28px!important;column-gap:6px!important;row-gap:2px!important;align-items:center!important;padding:4px 6px!important;border-radius:12px!important;overflow:hidden}
+.week-event-time{grid-column:1!important;grid-row:1!important;font-size:.76rem!important;line-height:1!important;font-weight:850!important;color:#174f63!important;white-space:nowrap}
+.week-event strong{grid-column:2!important;grid-row:1!important;min-width:0;font-size:.84rem!important;line-height:1.05!important;font-weight:850!important;color:#173541!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme=dark] .week-event-time,[data-theme=dark] .week-event strong{color:var(--text)!important}
+.week-event-meta{display:none!important}
+.week-event-actions{position:static!important;grid-column:1/-1!important;grid-row:2!important;justify-self:end!important;display:flex!important;align-items:center!important;gap:4px!important;min-width:0}
+.week-register{display:none!important}
+.week-mini{width:26px!important;min-width:26px!important;height:26px!important;padding:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border:1px solid transparent!important;color:#fff!important;font-size:0!important;line-height:1!important;box-shadow:0 1px 3px rgba(15,35,45,.2)!important}
+.week-mini .week-action-icon{width:15px!important;height:15px!important;fill:none!important;stroke:currentColor!important;stroke-width:2.1!important;stroke-linecap:round!important;stroke-linejoin:round!important;pointer-events:none}
+.week-wa{background:#075e54!important;border-color:#05493f!important}
+.week-manage{background:#5b3aa5!important;border-color:#472d82!important}
+.week-delete{background:#a61b29!important;border-color:#7f1520!important}
+.week-mini:focus-visible{outline:3px solid #f4c95d!important;outline-offset:2px!important}
+.agenda-action-legend{display:none!important}
+.agenda-toolbar{gap:12px}
+.agenda-toolbar>.small{color:var(--muted);line-height:1.45}
+
+/* Agenda mobile: Dia é a visão operacional principal; Semana continua disponível */
+.agenda-mobile-controls{display:none}
+.rm-day-agenda{display:none}
+.rm-day-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.rm-day-nav{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:8px;align-items:center}
+.rm-day-nav .icon-btn{width:44px;height:44px}
+.rm-day-date{text-align:center;font-weight:850;color:var(--text);font-size:.98rem}
+.rm-day-list{display:grid;gap:10px;margin-top:10px}
+.rm-day-card{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px;display:grid;gap:10px;box-shadow:var(--shadow-sm)}
+.rm-day-card-main{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:start}
+.rm-day-time{font-size:1.05rem;font-weight:900;color:var(--primary2)}
+.rm-day-name{font-size:1rem;font-weight:850;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rm-day-meta{font-size:.84rem;color:var(--muted);margin-top:2px}
+.rm-day-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rm-day-actions .btn{min-height:44px;width:100%;padding:9px 10px}
+.rm-day-empty{background:var(--surface);border:1px dashed var(--line);border-radius:15px;padding:22px 16px;text-align:center;color:var(--muted)}
+.rm-day-new{width:100%;min-height:44px;margin-top:10px}
+
+/* Navegação do prontuário por macroáreas */
+.patient-nav-groups{display:flex;gap:7px;overflow:auto;padding:2px 0 9px;margin-bottom:4px;scrollbar-width:none}
+.patient-nav-groups::-webkit-scrollbar{display:none}
+.patient-nav-group{border:1px solid var(--line);background:var(--surface);color:var(--primary2);border-radius:999px;min-height:40px;padding:8px 13px;white-space:nowrap;font-weight:800}
+.patient-nav-group.active{background:var(--primary2);color:#fff;border-color:var(--primary2)}
+.tabs .tab[hidden]{display:none!important}
+.tabs{scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+
+/* Dashboard: próxima sessão como primeiro elemento decisório */
+.rm-next-appointment{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;margin-bottom:16px;border-left:4px solid var(--primary)}
+.rm-next-appointment .eyebrow{margin-bottom:4px}
+.rm-next-time{font-size:1.7rem;font-weight:900;line-height:1;color:var(--primary2)}
+.rm-next-name{font-size:1.08rem;font-weight:850;margin-top:5px}
+.rm-next-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+/* Segurança visual de ações destrutivas */
+.btn.danger{background:#9f2f40;color:#fff}
+.danger-zone{border-color:color-mix(in srgb,var(--danger) 28%,var(--line))}
+
+/* Modal e formulários */
+.modal-foot .btn{min-height:44px}
+.modal-body{overflow-wrap:anywhere}
+.rm-form-help{font-size:.8rem;color:var(--muted);line-height:1.4}
+
+/* Evita overflow global: rolagem fica no componente que precisa dela */
+.content,.card,.metric,.page-head,.patient-context,.list-item{min-width:0}
+.table-wrap,.tabs,.week-calendar-wrap{max-width:100%}
+
+@media(max-width:1050px){
+  .content{width:100%;max-width:100%;overflow-x:clip}
+}
+
+@media(max-width:700px){
+  :root{--topbar:64px}
+  html{font-size:16px}
+  .content{padding:13px 11px 24px}
+  .card{padding:14px;border-radius:15px}
+  .topbar{padding:0 9px;min-height:64px}
+  .topbar .search{display:none}
+  .top-actions>[data-action="toggle-theme"],.top-actions>[data-action="lock-app"],#rm-sync-chip{display:none!important}
+  .top-actions>[data-action="privacy-mask"]{width:42px;height:42px;flex:0 0 42px}
+  .clock-chip{display:none!important}
+  .page-head{margin-bottom:13px;gap:9px}
+  .page-head h1{font-size:1.68rem;margin-bottom:5px}
+  .page-head p{font-size:.9rem;margin-bottom:0}
+  .page-actions{width:100%;display:grid;grid-template-columns:1fr;gap:8px}
+  .page-actions .btn{width:100%;min-height:44px}
+  .tiny{font-size:.8rem}
+  .small{font-size:.88rem}
+
+  .agenda-toolbar{padding:11px;margin-bottom:10px}
+  .agenda-toolbar>.flex{display:grid;grid-template-columns:1fr 1fr 1fr;width:100%;gap:6px}
+  .agenda-toolbar>.flex .btn{min-width:0;min-height:42px;padding:7px 5px;font-size:.74rem;line-height:1.16}
+  .agenda-toolbar>.small{font-size:.84rem;width:100%}
+  .agenda-mobile-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 10px;padding:4px;background:var(--surface2);border:1px solid var(--line);border-radius:13px}
+  .agenda-mobile-controls button{min-height:40px;border:0;border-radius:10px;background:transparent;color:var(--primary2);font-weight:850}
+  .agenda-mobile-controls button.active{background:var(--surface);box-shadow:var(--shadow-sm);color:var(--text)}
+  body.rm-agenda-day .week-calendar-wrap{display:none!important}
+  body.rm-agenda-day .rm-day-agenda{display:block}
+  body.rm-agenda-week .week-calendar-wrap{display:block}
+  body.rm-agenda-week .rm-day-agenda{display:none}
+  .week-calendar{min-width:1040px!important}
+  .week-delete{display:none!important}
+
+  .patient-context{position:static;display:grid;grid-template-columns:1fr;align-items:start;padding:12px;margin-bottom:12px}
+  .patient-context>.flex{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .patient-context>.flex .btn{width:100%;min-height:42px;padding:8px 9px}
+  .patient-context>.flex .btn:first-child{grid-column:1/-1}
+  .patient-nav-groups{margin-left:-2px;margin-right:-2px}
+  .patient-nav-group{min-height:42px;font-size:.86rem}
+  .tabs{margin-bottom:10px}
+  .tab{min-height:40px;font-size:.86rem}
+
+  .rm-next-appointment{grid-template-columns:1fr;padding:14px}
+  .rm-next-actions{display:grid;grid-template-columns:1fr 1fr;justify-content:stretch}
+  .rm-next-actions .btn{width:100%;min-height:44px}
+
+  .modal-backdrop{padding:8px;align-items:end}
+  .modal{width:100%;max-height:94dvh;border-radius:18px 18px 0 0}
+  .modal-head,.modal-foot{padding:13px 14px}
+  .modal-body{padding:14px}
+  .modal-foot .btn{flex:1;min-width:120px}
+
+  .toast-region{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));width:auto;max-width:none}
+  #rm-data-status{left:10px!important;right:10px!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;max-width:none!important}
+
+  .bar-chart{min-width:520px}
+  .card:has(.bar-chart){overflow-x:auto}
+}
+
+@media(max-width:390px){
+  .content{padding-left:9px;padding-right:9px}
+  .agenda-toolbar>.flex .btn{font-size:.69rem}
+  .rm-day-card-main{grid-template-columns:64px minmax(0,1fr)}
+  .rm-day-actions{grid-template-columns:1fr}
+  .rm-next-actions{grid-template-columns:1fr}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}

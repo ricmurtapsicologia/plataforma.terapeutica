@@ -2,7 +2,7 @@ name: Static integrity
 
 on:
   push:
-    branches: [main]
+    branches: [main, refactor-v1.8.0]
     paths:
       - 'index.html'
       - 'assets/js/**'
@@ -59,4 +59,31 @@ jobs:
           }
           if(missing.length){console.error('Missing local imports:\n'+missing.join('\n'));process.exit(1)}
           console.log(`Validated local imports in ${files.length} JavaScript files.`);
+          NODE
+      - name: Check index local assets
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const index=fs.readFileSync('index.html','utf8');
+          const refs=[...index.matchAll(/(?:src|href)="(assets\/[^"?#]+|manifest\.webmanifest|sw\.js)/g)].map(m=>m[1]);
+          const missing=refs.filter(ref=>!fs.existsSync(ref));
+          if(missing.length){console.error('Missing assets referenced by index.html:\n'+missing.join('\n'));process.exit(1)}
+          for(const retired of ['agenda-accessibility-v177','agenda-clarity-v169']){
+            if(index.includes(retired)){console.error(`Retired patch still referenced: ${retired}`);process.exit(1)}
+          }
+          console.log(`Validated ${refs.length} local index assets.`);
+          NODE
+      - name: Check application version consistency
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const version=fs.readFileSync('assets/js/version.js','utf8').match(/APP_VERSION='([^']+)'/)?.[1];
+          if(!version)throw new Error('APP_VERSION not found');
+          const index=fs.readFileSync('index.html','utf8');
+          const test=fs.readFileSync('tests/self-test.html','utf8');
+          if(!index.includes(`v=${version}`))throw new Error(`index.html does not reference v=${version}`);
+          if(!test.includes(`v${version}`))throw new Error(`self-test does not identify v${version}`);
+          console.log(`Application version validated: ${version}`);
           NODE

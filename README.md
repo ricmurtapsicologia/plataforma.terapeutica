@@ -1,11 +1,42 @@
-# Plataforma Clínica Richelmy Murta — v1.7.6
+# Plataforma Clínica Richelmy Murta — v1.8.0
 
-Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
+Aplicação clínica local-first, de uso exclusivo do psicólogo, publicada por GitHub Pages. A v1.8.0 é uma refatoração controlada: preserva o modelo de dados, o cofre criptográfico, a sincronização notebook ↔ celular, o Google Agenda, o financeiro e os fluxos clínicos, reduzindo dívida visual e melhorando legibilidade e ergonomia.
 
-## Estado atual
-A v1.7.6 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular, a integração automática com o Google Agenda e o encerramento controlado de pacientes. A aba Financeiro passa a incluir visão mensal comparando receita recebida e receita estimada dos atendimentos, além do valor estimado do mês corrente em destaque numérico.
+## Estado da versão 1.8.0
+
+Principais mudanças:
+
+- versão da aplicação centralizada em `assets/js/version.js`;
+- contraste e tipografia revisados para notebook e celular;
+- remoção dos patches antigos `agenda-clarity-v169` e `agenda-accessibility-v177`;
+- nova camada consolidada `clinical-ui-v180.css`;
+- nova camada de comportamento `optimization-v180.js`;
+- Agenda mobile com visualização `Dia` como padrão e `Semana` opcional;
+- botões compactos da grade semanal preservados, com ações grandes na visualização diária;
+- ação destrutiva de exclusão retirada do cartão semanal no celular;
+- legenda permanente de ações removida da Agenda;
+- navegação do paciente organizada em macroáreas: Visão geral, Clínica, Intervenções, Documentos e Administrativo;
+- painel `Hoje` prioriza `Sessões hoje` e destaca a próxima sessão;
+- atraso progressivo temporário após tentativas repetidas de senha incorreta;
+- autoteste e workflow de integridade atualizados para a versão 1.8.0.
+
+## Arquitetura
+
+A aplicação continua em JavaScript ES Modules, sem migração para framework. A separação principal é:
+
+- `assets/js/database.js`: IndexedDB e persistência criptografada;
+- `assets/js/crypto.js`: derivação de chave e AES-GCM;
+- `assets/js/secure-sync-v160.js`: sincronização cifrada e resolução de concorrência;
+- `assets/js/google-calendar-v168.js`: integração com Google Calendar;
+- `assets/js/modules/*`: módulos de domínio e apresentação clínica;
+- `assets/js/optimization-v180.js`: ergonomia e apresentação adaptativa sem alterar o modelo de dados;
+- `assets/css/app.css`: base visual;
+- `assets/css/clinical-ui-v180.css`: tokens, contraste, agenda mobile e ergonomia consolidada.
+
+A v1.8.0 não altera `SCHEMA_VERSION` nem o formato do cofre clínico.
 
 ## Segurança e acesso
+
 - autenticação pela abertura real do cofre criptográfico local;
 - PBKDF2-HMAC-SHA256 com 600.000 iterações para novos cofres locais;
 - registros locais protegidos por AES-GCM;
@@ -13,123 +44,123 @@ A v1.7.6 mantém o cofre clínico criptografado, a sincronização notebook ↔ 
 - token GitHub e código de sincronização armazenados localmente de forma cifrada;
 - token do Google Agenda armazenado localmente de forma cifrada e com duração limitada;
 - nenhum campo clínico é publicado em texto legível no GitHub;
-- o repositório público contém somente código e ativos da interface.
+- o repositório público contém código, ativos e somente ciphertext no branch de sincronização;
+- após tentativas repetidas de senha incorreta, a interface aplica atraso temporário progressivo, sem bloqueio permanente do cofre.
+
+### Limites do modelo
+
+A criptografia protege o conteúdo clínico, mas não substitui a segurança do dispositivo. Malware, perda de credenciais, engenharia social, extensões maliciosas ou comprometimento físico do navegador permanecem riscos externos.
+
+O IndexedDB mantém alguns metadados estruturais fora do ciphertext (`id`, `patientId`, `updatedAt`) para indexação e sincronização. Eles não contêm o conteúdo textual do prontuário, mas podem revelar relações estruturais entre registros em um dispositivo já comprometido.
 
 ## Sincronização notebook ↔ celular
-A sincronização usa a branch `clinic-sync-data`, fora da publicação do GitHub Pages. O arquivo remoto `.clinic-sync/vault.json` contém somente um envelope AES-256-GCM cifrado.
 
-A fila durável é baseada no evento emitido somente depois do commit no IndexedDB. Se uma alteração ocorrer enquanto outro ciclo de sincronização estiver em andamento, ela permanece pendente e força um novo ciclo quando o anterior terminar.
+A sincronização usa a branch `clinic-sync-data`, fora da publicação do GitHub Pages. O arquivo remoto `.clinic-sync/vault.json` contém um envelope AES-256-GCM cifrado.
 
 Fluxo:
+
 1. alteração é persistida localmente;
-2. o banco emite `rm:local-data-changed` após concluir a gravação;
-3. a fila registra a geração da alteração;
-4. o motor de sincronização compara local e remoto;
-5. alterações surgidas durante o ciclo geram reconciliação subsequente obrigatória;
-6. a agenda é redesenhada após recebimento remoto concluído.
+2. o banco emite `rm:local-data-changed` somente após concluir a gravação;
+3. a fila marca a base como pendente;
+4. o motor compara local e remoto;
+5. alterações concorrentes são avaliadas por baseline, identificador e `updatedAt`;
+6. tombstones preservam exclusões;
+7. conflito real nos dois dispositivos bloqueia sobrescrita silenciosa;
+8. após reconciliação, a memória e a interface são redesenhadas.
 
-Pacientes encerrados passam por verificação de consistência após carregamento e sincronização. Agendamentos na data de encerramento ou posteriores são removidos automaticamente.
-
-## Camada mobile-first
-A interface do celular possui comportamento específico para telas pequenas:
-
-- topbar compacta, evitando colisão horizontal entre menu, relógio e controles;
-- controles secundários de tema e saída são retirados da faixa superior no celular; o atalho de privacidade permanece acessível na topbar;
-- indicadores separados para estado de sincronização de dados e estado conhecido do Google Agenda;
-- cards, formulários e modais ajustados para uma coluna em telas pequenas;
-- modais transformados em painel inferior, com área útil maior;
-- toasts e avisos posicionados respeitando `safe-area` do celular;
-- textos técnicos longos, URLs e códigos passam a quebrar linha sem gerar overflow X;
-- contexto do paciente deixa de permanecer sticky no celular, reduzindo congestionamento vertical;
-- botões do contexto e dos cards são redistribuídos para alvos de toque mais consistentes;
-- abas continuam horizontais, mas com rolagem limpa e sem barra visual;
-- cartões de pacientes priorizam a próxima sessão em vez da mensagem repetitiva de ausência de síntese;
-- o indicador inicial do painel `Hoje` destaca `Sessões hoje`;
-- detalhes técnicos do Google OAuth ficam recolhidos por padrão em `Detalhes técnicos`.
+O código de sincronização deve permanecer guardado separadamente. Se todos os dispositivos e esse código forem perdidos, o cofre remoto não pode ser recuperado apenas a partir do GitHub.
 
 ## Agenda
-- visão semanal única no notebook e no celular;
-- no celular, a semana mantém rolagem horizontal controlada para preservar a legibilidade das sete colunas;
-- navegação por semana anterior, semana atual e próxima semana;
-- recorrência avulsa, semanal e quinzenal;
-- inclusão, edição e exclusão;
-- remarcação de data e horário diretamente na própria agenda;
-- presença, pagamento e comunicação integrados;
-- botão de WhatsApp disponível na janela de até 6 horas antes da sessão;
-- somente o primeiro nome/nome preferido aparece nos cartões compactos da agenda;
-- sincronização automática com o Google Agenda quando a integração estiver conectada.
 
-## Google Agenda — sincronização automática
+### Notebook
+
+- visão semanal de sete dias;
+- semana anterior, atual e próxima;
+- recorrência avulsa, semanal e quinzenal;
+- inclusão, edição, remarcação e exclusão;
+- confirmação por WhatsApp;
+- presença, pagamento e registro integrados;
+- primeiro nome/nome preferido nos cartões compactos.
+
+### Celular
+
+A visualização padrão passa a ser `Dia`, com leitura vertical e alvos de toque maiores. A visualização `Semana` continua disponível quando necessária.
+
+Na visão diária:
+
+- navegação por dia dentro da semana exibida;
+- cartões verticais com horário, paciente, estado e modalidade;
+- `Confirmar` e `Gerenciar` com alvos de toque adequados;
+- `Nova sessão neste dia` preenche a data automaticamente.
+
+Na visão semanal:
+
+- a grade preserva sete colunas com rolagem horizontal controlada;
+- `Excluir` não fica exposto no cartão compacto em telas pequenas, reduzindo toque destrutivo acidental.
+
+## Google Agenda
+
 A integração é opcional e usa Google Calendar API com OAuth do Google.
 
-Depois de conectado o Google Agenda no dispositivo, a plataforma passa a:
-- criar automaticamente o evento ao cadastrar um agendamento;
-- atualizar automaticamente o evento quando data, horário ou duração forem alterados;
-- remover automaticamente o evento quando o agendamento correspondente for excluído ou cancelado;
-- reconciliar alterações de agenda recebidas pela sincronização notebook ↔ celular;
-- manter uma fila local quando a autorização Google estiver temporariamente expirada;
-- reenviar a fila após nova autorização;
-- conferir automaticamente a agenda ao abrir/retomar a plataforma e após sincronização remota.
+Quando conectado, a plataforma:
 
-Os eventos são privados e contêm:
-- título usando o código interno do paciente, e não o nome;
-- horário e duração da sessão;
-- lembrete `popup` 30 minutos antes;
-- nenhum conteúdo clínico no corpo do evento.
+- cria evento ao cadastrar agendamento;
+- atualiza data, horário ou duração;
+- remove evento quando o agendamento correspondente é excluído/cancelado;
+- reconcilia alterações recebidas pela sincronização entre dispositivos;
+- mantém fila local quando a autorização Google expira;
+- tenta reenviar após nova autorização.
 
-### Configuração do OAuth
-Cliente OAuth Web no Google Cloud:
+Os eventos são privados e usam código interno do paciente, sem conteúdo clínico no corpo do evento.
 
-- origem JavaScript autorizada: `https://ricmurtapsicologia.github.io`
-- URI de redirecionamento autorizada: `https://ricmurtapsicologia.github.io/plataforma.terapeutica/`
-- escopo utilizado: `https://www.googleapis.com/auth/calendar.events`
+Cada dispositivo autoriza o Google separadamente. O token do notebook não é sincronizado para o celular e vice-versa.
 
-Cada dispositivo precisa autorizar o Google Agenda separadamente. O token do notebook não é sincronizado para o celular e vice-versa.
+## Pacientes e organização clínica
 
-## Pacientes
-- cadastro e edição;
-- nome preferido e código interno;
-- telefone, e-mail, modalidade, recorrência e valor de referência;
-- síntese clínica, prontuário, notas restritas, formulação, planos, tarefas, materiais, documentos, comunicações, consentimentos e financeiro;
-- listagens separadas em `Em acompanhamento` e `Encerrados`;
-- opção `Encerrar atendimento` no contexto do paciente selecionado;
-- seleção da data de encerramento antes da confirmação;
-- ao encerrar, o cadastro e o histórico clínico permanecem preservados;
-- todas as sessões agendadas na data de encerramento e em datas posteriores são removidas da agenda;
-- pacientes encerrados deixam de exibir ação de novo agendamento.
+As funções existentes permanecem preservadas. A navegação visual foi reduzida a cinco macroáreas:
+
+- Visão geral;
+- Clínica;
+- Intervenções;
+- Documentos;
+- Administrativo.
+
+As abas originais continuam existindo internamente e são apenas filtradas pela macroárea, evitando migração de dados ou mudança de rotas clínicas.
+
+O cadastro e o histórico de pacientes encerrados permanecem preservados. Agendamentos na data de encerramento ou posteriores são removidos conforme a regra clínica já existente.
+
+## Minimização de dados
+
+A plataforma deve armazenar somente dados necessários ao cuidado ou à administração legítima da clínica. Campos como CPF, RG, endereço e foto devem ser usados apenas quando houver necessidade concreta. O fato de um campo existir no sistema não torna seu preenchimento obrigatório.
 
 ## Financeiro
-- total recebido e total pendente;
-- valor estimado do mês corrente em destaque numérico;
-- quantidade de sessões previstas no mês corrente;
-- gráfico de colunas agrupadas, mês a mês, para o ano corrente;
-- comparação entre `Recebido` e `Estimado` em cada mês;
-- `Recebido` é calculado pelos lançamentos financeiros com status `Pago` e pela data do pagamento;
-- `Estimado` é calculado pelas sessões da agenda que não estejam canceladas/desmarcadas, multiplicadas pelo valor de referência cadastrado do paciente;
-- sessões incompatíveis com a data de encerramento de um paciente não entram na estimativa;
-- o mesmo painel funciona no financeiro global e no financeiro individual do paciente;
-- layout com rolagem horizontal controlada no celular para manter os 12 meses legíveis.
 
-## Materiais e WhatsApp
-Materiais associados e materiais premium possuem a ação `Enviar conteúdo no WhatsApp` dentro da visualização do próprio material. A mensagem leva o conteúdo textual do material diretamente para a conversa do paciente, além das opções existentes de PDF.
+- total recebido e pendente;
+- valor estimado do mês corrente;
+- quantidade de sessões previstas;
+- comparação mensal entre `Recebido` e `Estimado`;
+- sessões incompatíveis com encerramento do paciente não entram na estimativa;
+- funcionamento global e individual por paciente.
 
 ## Backup
-O `.rmvault` continua sendo o formato restaurável recomendado. O código de sincronização deve permanecer guardado separadamente; se todos os dispositivos e o código forem perdidos, o cofre remoto não pode ser recuperado apenas a partir do GitHub.
 
-## Resolução de concorrência
-O mecanismo mantém baseline por dispositivo, merge por identificador e `updatedAt`, tombstones para exclusões e bloqueio de conflitos quando o mesmo registro é alterado nos dois dispositivos depois da última base comum.
+O `.rmvault` permanece o formato restaurável recomendado. Antes de alterações estruturais, deve ser mantido um backup verificável do cofre e uma referência Git conhecida do código funcional.
 
-## Limites de segurança
-A arquitetura foi desenhada para que a exposição do repositório público, isoladamente, não revele conteúdo clínico. Isso não representa garantia absoluta contra comprometimento do dispositivo, perda de credenciais, malware, engenharia social ou falhas futuras da plataforma.
+Para a refatoração 1.8.0 foram criadas branches separadas:
+
+- `backup-pre-v1.8.0`: referência de rollback do código anterior;
+- `refactor-v1.8.0`: desenvolvimento e validação antes do merge.
 
 ## Diagnóstico e qualidade
-- diagnóstico interno em Configurações;
-- `tests/self-test.html` não destrutivo;
-- workflow `.github/workflows/static-integrity.yml` valida sintaxe JavaScript e imports locais em pull requests e no `main`.
+
+- `tests/self-test.html`: teste não destrutivo de navegador, criptografia, IndexedDB temporário, schema, versão e arquivos críticos;
+- `.github/workflows/static-integrity.yml`: valida sintaxe JavaScript, imports locais, arquivos referenciados no `index.html`, remoção de patches antigos e consistência de versão;
+- nenhuma rotina de teste abre ou altera o banco clínico real.
 
 ## Publicação
+
 Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.7.6`.
+Versão de interface: `1.8.0`.
