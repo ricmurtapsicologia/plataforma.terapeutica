@@ -1,6 +1,9 @@
 import {data,todayISO,patientById} from '../state.js';
 import {pageHead,metric,fmtDate,badge,empty,money,barChart,esc} from '../ui.js';
 
+function datePart(value=''){const m=String(value||'').match(/^(\d{4}-\d{2}-\d{2})/);return m?.[1]||''}
+function validForPatient(a){const p=patientById(a?.patientId);if(!p||p.status!=='Encerrado')return true;const end=datePart(p.careEndedAt)||datePart(p.careEndedRecordedAt)||datePart(p.updatedAt);return !end||!a?.date||a.date<end}
+
 export function renderDashboard(){
   const today=todayISO();
   const appointments=Array.isArray(data.appointments)?data.appointments:[];
@@ -12,7 +15,7 @@ export function renderDashboard(){
   const responses=Array.isArray(data.responses)?data.responses:[];
 
   const upcoming=appointments
-    .filter(a=>a.date>=today&&a.status!=='Cancelada')
+    .filter(a=>a.date>=today&&a.status!=='Cancelada'&&validForPatient(a))
     .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const pendingRecords=records.filter(r=>r.status==='Rascunho').length;
   const pendingTasks=tasks.filter(t=>!['Concluída','Respondida'].includes(t.status)).length;
