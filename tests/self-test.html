@@ -5,21 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Autoteste — Plataforma Clínica</title>
   <style>
-    body{font:16px/1.5 system-ui;margin:0;background:#f4f8fa;color:#23363e}.shell{max-width:980px;margin:auto;padding:24px}.card{background:#fff;border:1px solid #d6e7ec;border-radius:16px;padding:18px;margin:12px 0}.ok{color:#247c68}.fail{color:#ad4050}.warn{color:#8b6414}button{padding:10px 14px;border:0;border-radius:10px;background:#4ba4c1;color:#fff;font-weight:700}.meta{font-size:13px;color:#607780}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.grid .card{margin:0}.summary{font-size:20px;font-weight:700}
+    body{font:16px/1.5 system-ui;margin:0;background:#f4f8fa;color:#20343d}.shell{max-width:980px;margin:auto;padding:24px}.card{background:#fff;border:1px solid #c9dde4;border-radius:16px;padding:18px;margin:12px 0}.ok{color:#247c68}.fail{color:#9f2f40}.warn{color:#72520d}button{padding:10px 14px;border:0;border-radius:10px;background:#3f98b6;color:#fff;font-weight:700;min-height:44px}.meta{font-size:13px;color:#526b75}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.grid .card{margin:0}.summary{font-size:20px;font-weight:700}
   </style>
 </head>
 <body>
 <main class="shell">
-  <h1>Autoteste não destrutivo — v1.5.0</h1>
-  <p>Verifica navegador, criptografia, IndexedDB de teste, schema, módulos publicados e arquivos críticos. Não lê, altera ou exclui os dados clínicos da plataforma.</p>
+  <h1>Autoteste não destrutivo — v1.8.0</h1>
+  <p>Verifica navegador, criptografia, IndexedDB de teste, schema, versão, módulos publicados e referências críticas. Não lê, altera ou exclui os dados clínicos da plataforma.</p>
   <button id="run">Executar testes</button>
   <div id="summary" class="card summary">Aguardando execução.</div>
   <div id="results" class="grid"></div>
 </main>
 <script type="module">
-import {deriveKey,randomBytes,encryptJson,decryptJson,sha256} from '../assets/js/crypto.js?v=1.5.0';
-import {validEmail,validPhone,safeJson} from '../assets/js/validation.js?v=1.5.0';
-import {STORE_NAMES,SCHEMA_VERSION,APP_VERSION,todayISO} from '../assets/js/state.js?v=1.5.0';
+import {deriveKey,randomBytes,encryptJson,decryptJson,sha256} from '../assets/js/crypto.js?v=1.8.0';
+import {validEmail,validPhone,safeJson} from '../assets/js/validation.js?v=1.8.0';
+import {STORE_NAMES,SCHEMA_VERSION,APP_VERSION,todayISO} from '../assets/js/state.js?v=1.8.0';
 
 const out=document.getElementById('results');
 const summary=document.getElementById('summary');
@@ -38,9 +38,9 @@ async function moduleExists(path){try{const r=await fetchOk(path);return r.ok}ca
 async function run(){
   out.innerHTML='';pass=0;fail=0;warn=0;summary.textContent='Executando…';
   try{
-    line('Versão do estado',APP_VERSION==='1.5.0'?'ok':'fail',`Detectada: ${APP_VERSION}`);
-    line('Schema de dados',SCHEMA_VERSION>=5?'ok':'fail',`Schema: ${SCHEMA_VERSION}`);
-    line('Store de objetivos',STORE_NAMES.includes('goals')?'ok':'fail',STORE_NAMES.join(', '));
+    line('Versão centralizada',APP_VERSION==='1.8.0'?'ok':'fail',`Detectada: ${APP_VERSION}`);
+    line('Schema de dados preservado',SCHEMA_VERSION>=5?'ok':'fail',`Schema: ${SCHEMA_VERSION}`);
+    line('Stores clínicas preservadas',STORE_NAMES.includes('patients')&&STORE_NAMES.includes('appointments')&&STORE_NAMES.includes('records')&&STORE_NAMES.includes('payments')?'ok':'fail',STORE_NAMES.join(', '));
     line('Data local',todayISO()===localToday()?'ok':'fail',`${todayISO()} / esperado ${localToday()}`);
     line('Web Crypto API',crypto?.subtle?'ok':'fail');
     const key=await deriveKey('senha-de-teste-segura',randomBytes(16),1000),payload=await encryptJson(key,{teste:'ok'},'selftest'),plain=await decryptJson(key,payload,'selftest');
@@ -52,23 +52,29 @@ async function run(){
     line('JSON seguro',safeJson('{"ok":true}').ok===true?'ok':'fail');
 
     const files=[
-      '../assets/js/bootstrap-v150.js?v=1.5.0',
-      '../assets/js/app-core-v150.js?v=1.5.0',
-      '../assets/js/clinical-v136.js?v=1.5.0',
-      '../assets/js/actions-v150.js?v=1.5.0',
-      '../assets/js/resources-premium.js?v=1.5.0',
-      '../assets/js/modules/dashboard.js?v=1.5.0',
-      '../assets/js/modules/appointments.js?v=1.5.0',
-      '../assets/js/modules/patients.js?v=1.5.0',
-      '../assets/js/modules/settings.js?v=1.5.0'
+      '../assets/js/version.js?v=1.8.0',
+      '../assets/js/bootstrap-v151.js?v=1.8.0',
+      '../assets/js/app-core-v150.js?v=1.8.0',
+      '../assets/js/clinical-v136.js?v=1.8.0',
+      '../assets/js/actions-v150.js?v=1.8.0',
+      '../assets/js/resources-premium.js?v=1.8.0',
+      '../assets/js/optimization-v180.js?v=1.8.0',
+      '../assets/js/modules/dashboard.js?v=1.8.0',
+      '../assets/js/modules/appointments.js?v=1.8.0',
+      '../assets/js/modules/patients.js?v=1.8.0',
+      '../assets/js/modules/settings.js?v=1.8.0',
+      '../assets/css/clinical-ui-v180.css?v=1.8.0'
     ];
     for(const file of files)line(`Arquivo ${file.split('/').pop().split('?')[0]}`,await moduleExists(file)?'ok':'fail');
 
-    const clinical=await fetchOk('../assets/js/clinical-v136.js?v=1.5.0');
+    const index=await fetchOk('../index.html?v=1.8.0');
+    line('Index usa a camada v1.8.0',index.ok&&index.text.includes('clinical-ui-v180.css')&&index.text.includes('optimization-v180.js')?'ok':'fail');
+    line('Patches antigos da agenda não são carregados',index.ok&&!index.text.includes('agenda-accessibility-v177')&&!index.text.includes('agenda-clarity-v169')?'ok':'fail');
+    const clinical=await fetchOk('../assets/js/clinical-v136.js?v=1.8.0');
     line('Sem MutationObserver no módulo clínico',clinical.ok&&!clinical.text.includes('MutationObserver')?'ok':'fail','Previne o loop que congelava cliques e relógio.');
-    const resources=await fetchOk('../assets/js/resources-premium.js?v=1.5.0');
+    const resources=await fetchOk('../assets/js/resources-premium.js?v=1.8.0');
     line('Sem MutationObserver em Recursos',resources.ok&&!resources.text.includes('MutationObserver')?'ok':'fail');
-    line('Service Worker não obrigatório','serviceWorker'in navigator?'ok':'warn','A plataforma desregistra workers antigos; suporte não é requisito para os dados locais.');
+    line('Service Worker disponível','serviceWorker'in navigator?'ok':'warn','Usado apenas como bridge OAuth; não armazena dados clínicos.');
     line('Notification API','Notification'in window?'ok':'warn','A ausência não impede o funcionamento principal.');
   }catch(e){line('Execução geral','fail',e.message)}
   summary.textContent=`Resultado: ${pass} aprovado(s), ${fail} falha(s), ${warn} atenção(ões).`;
