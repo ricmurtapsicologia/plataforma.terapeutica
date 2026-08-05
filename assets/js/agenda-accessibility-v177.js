@@ -1,9 +1,9 @@
 import {data,runtime,patientById,nowISO} from './state.js';
 import {putEncrypted} from './database.js';
 import {openWhatsApp} from './communications.js';
-import {fmtDate,toast} from './ui.js';
+import {toast} from './ui.js';
 
-/* Agenda — ergonomia, clareza e ações mobile-first v1.7.9 */
+/* Agenda — ergonomia, clareza e ações mobile-first v1.7.10 */
 const ACTIONS=[
   {
     selector:'.week-wa',
@@ -34,9 +34,34 @@ const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
 function appointmentById(id){return arr(data.appointments).find(a=>a?.id===id)||null}
 function patientForAppointment(a){return a?patientById(a.patientId):null}
 function firstName(p){return String(p?.preferredName||p?.name||'').trim().split(/\s+/)[0]||'Olá'}
+function dateOnly(value){return new Date(`${value}T12:00:00`)}
+function dayDiff(value){
+  const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),target=dateOnly(value);
+  const localTarget=new Date(target.getFullYear(),target.getMonth(),target.getDate());
+  return Math.round((localTarget-today)/86400000);
+}
+function shortDate(value){
+  const d=dateOnly(value);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+}
+function longWeekday(value){
+  const d=dateOnly(value);
+  const name=d.toLocaleDateString('pt-BR',{weekday:'long'});
+  return name.charAt(0).toUpperCase()+name.slice(1);
+}
+function naturalDate(value){
+  const diff=dayDiff(value),date=shortDate(value);
+  if(diff===0)return `hoje, ${date}`;
+  if(diff===1)return `amanhã, ${date}`;
+  return `${longWeekday(value)}, ${date}`;
+}
+function naturalTime(value=''){
+  const [h='00',m='00']=String(value).split(':');
+  return m==='00'?`${Number(h)}h`:`${h}:${m}`;
+}
 
 function confirmationMessage(a,p){
-  return `Olá, ${firstName(p)}. Confirmando nossa sessão marcada para ${fmtDate(a.date)}, às ${a.time}. Nosso horário está reservado.\n\nPor gentileza, confirme o recebimento desta mensagem.\n\nRichelmy Murta — Psicólogo Clínico.`;
+  return `Olá, ${firstName(p)}!\n\nSua sessão está agendada para:\n${naturalDate(a.date)}, às ${naturalTime(a.time)}.\n\nPara confirmar sua presença, responda: *Confirmo*.\n\nRichelmy Murta — Psicólogo Clínico`;
 }
 
 function sendSessionConfirmation(id){
