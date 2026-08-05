@@ -1,9 +1,9 @@
-# Plataforma Clínica Richelmy Murta — v1.7.2
+# Plataforma Clínica Richelmy Murta — v1.7.3
 
 Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
 ## Estado atual
-A v1.7.2 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A camada mobile-first permanece ativa, a agenda usa uma única visão semanal e a área de pacientes passa a separar os atendimentos em `Em acompanhamento` e `Encerrados`, com encerramento controlado sem perda do cadastro ou do histórico clínico.
+A v1.7.3 mantém o cofre clínico criptografado, a sincronização notebook ↔ celular e a integração automática com o Google Agenda. A área de pacientes permanece separada em `Em acompanhamento` e `Encerrados`, com encerramento controlado sem perda do cadastro ou do histórico clínico. Esta versão também corrige um loop de atualização visual introduzido na v1.7.2 que podia impedir a abertura da plataforma após a senha em navegadores desktop.
 
 ## Segurança e acesso
 - autenticação pela abertura real do cofre criptográfico local;
@@ -129,4 +129,4 @@ Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.7.2`.
+Versão de interface: `1.7.3`.
