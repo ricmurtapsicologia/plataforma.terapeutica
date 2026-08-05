@@ -5,26 +5,50 @@ import {assert} from './validation.js';
 
 const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
 const q=s=>document.querySelector(s);
+let enforcingClosedSchedules=false;
 
 function patientIdFromCard(card){return card?.querySelector('[data-id]')?.dataset.id||''}
 function patientForCard(card){const id=patientIdFromCard(card);return arr(data.patients).find(p=>p?.id===id)||null}
 function patientByIdLocal(id){return arr(data.patients).find(p=>p?.id===id)||null}
 function isClosed(p){return p?.status==='Encerrado'}
-function futureAppointments(patientId,endDate){return arr(data.appointments).filter(a=>a?.patientId===patientId&&a?.date&&a.date>endDate)}
+function appointmentsFromClosure(patientId,endDate){return arr(data.appointments).filter(a=>a?.patientId===patientId&&a?.date&&a.date>=endDate)}
 
 function updateClosureCount(){
   const p=selectedPatient(),date=q('#patient-end-date')?.value||todayISO(),box=q('#patient-end-count');
   if(!p||!box)return;
-  const count=futureAppointments(p.id,date).length;
-  box.textContent=count?`${count} sessão(ões) posterior(es) a ${fmtDate(date)} será(ão) removida(s) da agenda.`:`Não há sessões posteriores a ${fmtDate(date)} para remover.`;
+  const count=appointmentsFromClosure(p.id,date).length;
+  box.textContent=count?`${count} sessão(ões) agendada(s) em ${fmtDate(date)} ou depois será(ão) removida(s) da agenda.`:`Não há sessões agendadas em ${fmtDate(date)} ou depois para remover.`;
 }
 
 function showClosureModal(){
   const p=selectedPatient();
   assert(p,'Selecione um paciente.');
   if(isClosed(p)){toast('Este atendimento já está encerrado.','info');return}
-  modal('Encerrar atendimento',`<div class="notice warning">O paciente será movido para a listagem de encerrados. Cadastro, prontuário, histórico clínico, documentos e demais dados serão preservados. Somente sessões com data posterior ao encerramento serão removidas da agenda.</div><div class="field mt-16"><label>Data de encerramento</label><input id="patient-end-date" class="input" type="date" value="${todayISO()}"></div><div id="patient-end-count" class="small muted mt-12"></div>`,`<button class="btn secondary" data-action="close-modal">Cancelar</button><button class="btn" data-action="confirm-end-patient-care">Encerrar atendimento</button>`);
+  modal('Encerrar atendimento',`<div class="notice warning">O paciente será movido para a listagem de encerrados. Cadastro, prontuário, histórico clínico, documentos e demais dados serão preservados. As sessões agendadas na data do encerramento e em datas posteriores serão removidas da agenda.</div><div class="field mt-16"><label>Data de encerramento</label><input id="patient-end-date" class="input" type="date" value="${todayISO()}"></div><div id="patient-end-count" class="small muted mt-12"></div>`,`<button class="btn secondary" data-action="close-modal">Cancelar</button><button class="btn" data-action="confirm-end-patient-care">Encerrar atendimento</button>`);
   updateClosureCount();
+}
+
+async function removeAppointmentsFromClosure(patientId,endDate){
+  const appointments=[...appointmentsFromClosure(patientId,endDate)];
+  for(const appointment of appointments){
+    data.appointments=arr(data.appointments).filter(x=>x?.id!==appointment.id);
+    await deleteRecord('appointments',appointment.id);
+  }
+  return appointments.length;
+}
+
+async function enforceClosedPatientScheduleInvariant(){
+  if(enforcingClosedSchedules||!runtime.key||runtime.locked)return 0;
+  enforcingClosedSchedules=true;
+  let removed=0;
+  try{
+    for(const p of arr(data.patients)){
+      if(!isClosed(p)||!/^\d{4}-\d{2}-\d{2}$/.test(p.careEndedAt||''))continue;
+      removed+=await removeAppointmentsFromClosure(p.id,p.careEndedAt);
+    }
+    if(removed)window.__rmRender?.();
+    return removed;
+  }finally{enforcingClosedSchedules=false}
 }
 
 async function endPatientCare(){
@@ -34,19 +58,15 @@ async function endPatientCare(){
   if(isClosed(p)){closeModal();return}
   const endDate=q('#patient-end-date')?.value||todayISO();
   assert(/^\d{4}-\d{2}-\d{2}$/.test(endDate),'Informe uma data de encerramento válida.');
-  const future=[...futureAppointments(p.id,endDate)];
   const updated={...p,status:'Encerrado',careEndedAt:endDate,careEndedRecordedAt:nowISO(),updatedAt:nowISO()};
   const i=Array.isArray(data.patients)?data.patients.findIndex(x=>x?.id===p.id):-1;
   if(i>=0)data.patients[i]=updated;
   await putEncrypted('patients',updated,runtime.key);
-  for(const appointment of future){
-    data.appointments=arr(data.appointments).filter(x=>x?.id!==appointment.id);
-    await deleteRecord('appointments',appointment.id);
-  }
+  const removed=await removeAppointmentsFromClosure(p.id,endDate);
   closeModal();
   runtime.patientTab='summary';
   window.__rmRender?.();
-  toast(future.length?`Atendimento encerrado. ${future.length} sessão(ões) futura(s) removida(s).`:'Atendimento encerrado.','success');
+  toast(removed?`Atendimento encerrado. ${removed} sessão(ões) a partir de ${fmtDate(endDate)} removida(s) da agenda.`:'Atendimento encerrado.','success');
 }
 
 function closedMeta(p){return p?.careEndedAt?`Encerrado em ${fmtDate(p.careEndedAt)}`:'Atendimento encerrado'}
@@ -195,8 +215,9 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{if(e.target.id==='patient-end-date')updateClosureCount();if(e.target.id==='patient-status-filter')setTimeout(refreshListVisibility,0)},true);
 document.addEventListener('input',e=>{if(e.target.id==='patient-search')setTimeout(refreshListVisibility,0)},true);
 document.addEventListener('rm:rendered',applyPatientClosureUi);
-document.addEventListener('rm:data-ready',()=>setTimeout(applyPatientClosureUi,0));
+document.addEventListener('rm:data-ready',()=>setTimeout(()=>enforceClosedPatientScheduleInvariant().catch(console.error),0));
 document.addEventListener('rm:app-ready',()=>setTimeout(applyPatientClosureUi,0));
+document.addEventListener('rm:sync-status',e=>{if(e.detail?.status==='synced')setTimeout(()=>enforceClosedPatientScheduleInvariant().catch(console.error),120)});
 const modalRoot=document.getElementById('modal-root');
 if(modalRoot)new MutationObserver(()=>setTimeout(enhanceTransientModals,0)).observe(modalRoot,{childList:true,subtree:true});
 setTimeout(applyPatientClosureUi,100);
