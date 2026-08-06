@@ -1,4 +1,4 @@
-/* Plataforma Clínica — camada consolidada de UX, contraste e mobile-first v1.8.0 */
+/* Plataforma Clínica — camada consolidada de UX, contraste e mobile-first v1.8.1 */
 :root{
   --text:#20343d;
   --muted:#526b75;
@@ -28,22 +28,26 @@ body{overflow-x:hidden;text-rendering:optimizeLegibility}
 .tiny{font-size:.79rem;line-height:1.4}
 .field label{font-size:.9rem;color:var(--text)}
 .input,.textarea,.select{border-color:var(--line)}
-.input:focus-visible,.textarea:focus-visible,.select:focus-visible,.btn:focus-visible,.icon-btn:focus-visible,.tab:focus-visible,.nav-link:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 50%,transparent);outline-offset:2px;box-shadow:none}
+.input:focus-visible,.textarea:focus-visible,.select:focus-visible,.btn:focus-visible,.icon-btn:focus-visible,.tab:focus-visible,.nav-link:focus-visible,.rm-status-chip:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 50%,transparent);outline-offset:2px;box-shadow:none}
 .btn.secondary{color:var(--primary2);border-color:var(--line)}
 .btn.ghost{color:var(--primary2)}
 .badge.warning{color:var(--warning-text)}
 .notice,.card,.metric{border-color:var(--line)}
 
-/* Topbar: menos ruído e controles com alvos consistentes */
+/* Topbar: estado de Dados e Google Agenda visível em notebook e celular */
 .topbar{gap:12px}
 .top-actions{gap:7px}
 .top-actions .icon-btn{width:42px;height:42px}
 .clock-chip{border-color:var(--line)}
-.sync-chip{min-height:38px!important;font-size:.76rem!important}
+#rm-sync-chip{display:none!important}
+.rm-mobile-status{display:flex!important;align-items:center;gap:6px;min-width:0}
+.rm-status-chip{appearance:none;-webkit-appearance:none;cursor:pointer;font-family:inherit;margin:0}
+.rm-status-chip:disabled{cursor:default}
 
 /* Agenda — cartões compactos permanecem eficientes no desktop */
-.week-calendar-wrap{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:auto;overscroll-behavior:contain}
+.week-calendar-wrap{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:auto;overscroll-behavior:contain;max-height:none}
 .week-calendar{grid-template-columns:72px repeat(7,minmax(150px,1fr));min-width:1122px}
+.week-time-column,.week-day-column{height:1080px!important}
 .week-event{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;grid-template-rows:20px 28px!important;column-gap:6px!important;row-gap:2px!important;align-items:center!important;padding:4px 6px!important;border-radius:12px!important;overflow:hidden}
 .week-event-time{grid-column:1!important;grid-row:1!important;font-size:.76rem!important;line-height:1!important;font-weight:850!important;color:#174f63!important;white-space:nowrap}
 .week-event strong{grid-column:2!important;grid-row:1!important;min-width:0;font-size:.84rem!important;line-height:1.05!important;font-weight:850!important;color:#173541!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -119,9 +123,11 @@ body{overflow-x:hidden;text-rendering:optimizeLegibility}
   .card{padding:14px;border-radius:15px}
   .topbar{padding:0 9px;min-height:64px}
   .topbar .search{display:none}
-  .top-actions>[data-action="toggle-theme"],.top-actions>[data-action="lock-app"],#rm-sync-chip{display:none!important}
+  .top-actions>[data-action="toggle-theme"],.top-actions>[data-action="lock-app"]{display:none!important}
   .top-actions>[data-action="privacy-mask"]{width:42px;height:42px;flex:0 0 42px}
   .clock-chip{display:none!important}
+  .rm-mobile-status{gap:4px!important}
+  .rm-status-chip{height:32px;padding:0 8px;font-size:.67rem}
   .page-head{margin-bottom:13px;gap:9px}
   .page-head h1{font-size:1.68rem;margin-bottom:5px}
   .page-head p{font-size:.9rem;margin-bottom:0}
@@ -142,6 +148,7 @@ body{overflow-x:hidden;text-rendering:optimizeLegibility}
   body.rm-agenda-week .week-calendar-wrap{display:block}
   body.rm-agenda-week .rm-day-agenda{display:none}
   .week-calendar{min-width:1040px!important}
+  .week-time-column,.week-day-column{height:1080px!important}
   .week-delete{display:none!important}
 
   .patient-context{position:static;display:grid;grid-template-columns:1fr;align-items:start;padding:12px;margin-bottom:12px}
@@ -176,6 +183,7 @@ body{overflow-x:hidden;text-rendering:optimizeLegibility}
   .rm-day-card-main{grid-template-columns:64px minmax(0,1fr)}
   .rm-day-actions{grid-template-columns:1fr}
   .rm-next-actions{grid-template-columns:1fr}
+  .rm-status-chip{padding:0 6px;font-size:.62rem}
 }
 
 @media(prefers-reduced-motion:reduce){
