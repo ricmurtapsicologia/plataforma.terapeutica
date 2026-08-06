@@ -1,8 +1,8 @@
-# Plataforma Clínica Richelmy Murta — v1.8.1
+# Plataforma Clínica Richelmy Murta — v1.8.2
 
-Aplicação clínica local-first, de uso exclusivo do psicólogo, publicada por GitHub Pages. A v1.8.1 preserva a refatoração controlada da série 1.8.x e corrige a faixa visível da Agenda e a apresentação dos estados de sincronização sem alterar o modelo de dados, o cofre criptográfico, a sincronização notebook ↔ celular, o Google Agenda, o financeiro ou os fluxos clínicos.
+Aplicação clínica local-first, de uso exclusivo do psicólogo, publicada por GitHub Pages. A v1.8.2 preserva a refatoração controlada da série 1.8.x e corrige três pontos operacionais: cartões da Agenda sem ícones cortados, faixa semanal móvel integral de 06:00 a 23:00 e supervisão automática contínua da sincronização, sem alterar o modelo de dados, o cofre criptográfico, o Google Agenda, o financeiro ou os fluxos clínicos.
 
-## Estado da versão 1.8.1
+## Estado da versão 1.8.2
 
 Principais mudanças acumuladas na série 1.8.x:
 
@@ -14,7 +14,12 @@ Principais mudanças acumuladas na série 1.8.x:
 - Agenda mobile com visualização `Dia` como padrão e `Semana` opcional;
 - Agenda semanal ampliada para a faixa de 06:00 a 23:00, em notebook e celular;
 - clique em horário vazio calculado de forma coerente com a faixa 06:00–23:00;
+- cartões semanais ajustados para manter os ícones integralmente visíveis;
+- ação manual individual do Google Agenda retirada do cartão compacto, pois a integração permanece automática;
+- visualização semanal móvel deixa de truncar a grade vertical e preserva as 18 horas completas;
 - indicadores separados `Dados` e `Agenda` visíveis na topbar tanto no notebook quanto no celular;
+- sincronização de dados com fila por alteração, polling do motor e watchdog de recuperação automática;
+- retry progressivo automático quando ocorre falha transitória de sincronização;
 - botões compactos da grade semanal preservados, com ações grandes na visualização diária;
 - ação destrutiva de exclusão retirada do cartão semanal no celular;
 - legenda permanente de ações removida da Agenda;
@@ -30,13 +35,15 @@ A aplicação continua em JavaScript ES Modules, sem migração para framework. 
 - `assets/js/database.js`: IndexedDB e persistência criptografada;
 - `assets/js/crypto.js`: derivação de chave e AES-GCM;
 - `assets/js/secure-sync-v160.js`: sincronização cifrada e resolução de concorrência;
+- `assets/js/sync-supervisor-v162.js`: fila pós-commit, recuperação e watchdog da sincronização;
 - `assets/js/google-calendar-v168.js`: integração com Google Calendar;
 - `assets/js/modules/*`: módulos de domínio e apresentação clínica;
 - `assets/js/optimization-v180.js`: ergonomia e apresentação adaptativa sem alterar o modelo de dados;
 - `assets/css/app.css`: base visual;
-- `assets/css/clinical-ui-v180.css`: tokens, contraste, agenda mobile e ergonomia consolidada.
+- `assets/css/clinical-ui-v180.css`: tokens, contraste, agenda mobile e ergonomia consolidada;
+- `assets/css/agenda-sync-fix-v182.css`: correção cirúrgica dos cartões e da rolagem integral da agenda semanal móvel.
 
-A v1.8.1 não altera `SCHEMA_VERSION` nem o formato do cofre clínico.
+A v1.8.2 não altera `SCHEMA_VERSION` nem o formato do cofre clínico.
 
 ## Segurança e acesso
 
@@ -69,9 +76,14 @@ Fluxo:
 5. alterações concorrentes são avaliadas por baseline, identificador e `updatedAt`;
 6. tombstones preservam exclusões;
 7. conflito real nos dois dispositivos bloqueia sobrescrita silenciosa;
-8. após reconciliação, a memória e a interface são redesenhadas.
+8. após reconciliação, a memória e a interface são redesenhadas;
+9. o motor mantém polling automático enquanto a aplicação está visível e conectada;
+10. o supervisor verifica a saúde da sincronização e força nova tentativa quando não há conclusão recente;
+11. falhas transitórias recebem retry progressivo automático, sem sobrescrever conflitos reais.
 
 Na topbar, `Dados ✓` representa o estado da sincronização do cofre entre dispositivos e `Agenda ✓` representa o estado conhecido da integração local com o Google Agenda. Os dois indicadores são exibidos em notebook e celular.
+
+A integração do Google Agenda continua automática para criação, remarcação, cancelamento e alterações recebidas da sincronização. A reconciliação do Google também é acionada após a conclusão da sincronização dos dados, enquanto a autorização OAuth estiver válida.
 
 O código de sincronização deve permanecer guardado separadamente. Se todos os dispositivos e esse código forem perdidos, o cofre remoto não pode ser recuperado apenas a partir do GitHub.
 
@@ -83,6 +95,7 @@ A grade semanal reserva 18 faixas horárias completas, de 06:00 a 23:00. Cada ho
 
 - visão semanal de sete dias, preservando o modelo anterior;
 - horários visíveis de 06:00 a 23:00;
+- cartões compactos com ações sem recorte dos ícones;
 - semana anterior, atual e próxima;
 - recorrência avulsa, semanal e quinzenal;
 - inclusão, edição, remarcação e exclusão;
@@ -104,7 +117,9 @@ Na visão diária:
 Na visão semanal:
 
 - a grade preserva sete colunas com rolagem horizontal controlada;
-- a faixa horária completa de 06:00 a 23:00 permanece disponível por rolagem vertical da página;
+- a faixa horária completa de 06:00 a 23:00 permanece disponível sem truncamento vertical;
+- o componente admite rolagem nos dois eixos quando necessária;
+- os cartões mantêm os ícones essenciais integralmente visíveis;
 - `Excluir` não fica exposto no cartão compacto em telas pequenas, reduzindo toque destrutivo acidental.
 
 ## Google Agenda
@@ -122,7 +137,7 @@ Quando conectado, a plataforma:
 
 Os eventos são privados e usam código interno do paciente, sem conteúdo clínico no corpo do evento.
 
-Cada dispositivo autoriza o Google separadamente. O token do notebook não é sincronizado para o celular e vice-versa.
+Cada dispositivo autoriza o Google separadamente. O token do notebook não é sincronizado para o celular e vice-versa. Quando a autorização OAuth expira, o Google exige nova autorização do usuário; essa limitação não é contornada pela plataforma.
 
 ## Pacientes e organização clínica
 
@@ -159,11 +174,12 @@ Branches de referência da série 1.8.x:
 
 - `backup-pre-v1.8.0`: referência de rollback do código anterior à refatoração;
 - `refactor-v1.8.0`: refatoração principal;
-- `hotfix-v1.8.1-agenda-status`: correção da faixa horária e estados da topbar antes do merge.
+- `hotfix-v1.8.1-agenda-status`: correção da faixa horária e estados da topbar;
+- `hotfix-v1.8.2-agenda-sync`: correção dos cartões, grade móvel integral e supervisão automática da sincronização.
 
 ## Diagnóstico e qualidade
 
-- `tests/self-test.html`: teste não destrutivo de navegador, criptografia, IndexedDB temporário, schema, versão, faixa da Agenda, status da topbar e arquivos críticos;
+- `tests/self-test.html`: teste não destrutivo de navegador, criptografia, IndexedDB temporário, schema, versão, faixa da Agenda, cartões, status da topbar, watchdog e arquivos críticos;
 - `.github/workflows/static-integrity.yml`: valida sintaxe JavaScript, imports locais, arquivos referenciados no `index.html`, remoção de patches antigos e consistência de versão;
 - nenhuma rotina de teste abre ou altera o banco clínico real.
 
@@ -173,4 +189,4 @@ Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.8.1`.
+Versão de interface: `1.8.2`.
