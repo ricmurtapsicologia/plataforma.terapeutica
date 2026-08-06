@@ -3,7 +3,10 @@ import {putEncrypted} from './database.js';
 import {openWhatsApp} from './communications.js';
 import {esc,fmtDate,toast} from './ui.js';
 
-/* v1.8.0 — otimização controlada de UX sem alterar o modelo de dados */
+/* v1.8.1 — otimização controlada de UX sem alterar o modelo de dados */
+const WEEK_START_HOUR=6;
+const WEEK_END_HOUR=23;
+const SLOT_MINUTES=30;
 const ACTIONS=[
   {
     selector:'.week-wa',
@@ -45,14 +48,15 @@ function confirmationMessage(a,p){return`Olá, ${firstName(p)}!\n\nSua sessão e
 function sendSessionConfirmation(id){const a=appointmentById(id),p=patientForAppointment(a);if(!a||!p?.phone)throw new Error('Paciente ou telefone não localizado.');openWhatsApp(p.phone,confirmationMessage(a,p));a.reminderPreparedAt=nowISO();a.confirmationPreparedAt=a.reminderPreparedAt;if(runtime.key)putEncrypted('appointments',a,runtime.key).catch(console.error)}
 function triggerCoreAction(action,id=''){const button=document.createElement('button');button.type='button';button.dataset.action=action;if(id)button.dataset.id=id;button.hidden=true;document.body.appendChild(button);button.click();button.remove()}
 function setField(selector,value){const el=document.querySelector(selector);if(!el||value===undefined||value===null)return;el.value=String(value);el.dispatchEvent(new Event('change',{bubbles:true}))}
-function openAppointmentAt(date){triggerCoreAction('new-appointment');const fill=()=>setField('#a-date',date);setTimeout(fill,0);setTimeout(fill,90)}
+function openAppointmentAt(date,time=''){triggerCoreAction('new-appointment');const fill=()=>{setField('#a-date',date);if(time)setField('#a-time',time)};setTimeout(fill,0);setTimeout(fill,90)}
+function slotFromWeekClick(column,event){const rect=column.getBoundingClientRect(),y=Math.max(0,Math.min(rect.height-1,event.clientY-rect.top));let minutes=WEEK_START_HOUR*60+Math.round(y/SLOT_MINUTES)*SLOT_MINUTES;minutes=Math.max(WEEK_START_HOUR*60,Math.min(WEEK_END_HOUR*60,minutes));return`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`}
 
 function enhanceWeekActions(){
   document.getElementById('agenda-action-legend')?.remove();
   document.querySelectorAll('.week-event-actions .week-register').forEach(button=>{button.hidden=true;button.setAttribute('aria-hidden','true');button.tabIndex=-1});
   ACTIONS.forEach(action=>document.querySelectorAll(action.selector).forEach(button=>{button.innerHTML=action.icon;button.setAttribute('aria-label',action.label);button.setAttribute('title',action.label)}));
   document.querySelectorAll('.week-event').forEach(card=>card.setAttribute('title','Abrir ou remarcar sessão'));
-  const summary=document.querySelector('.agenda-toolbar>.small');if(summary){const count=String(summary.querySelector('strong')?.textContent||'0').trim();summary.innerHTML=`<strong>${esc(count)}</strong> ${count==='1'?'compromisso agendado':'compromissos agendados'} nesta semana. No celular, use a visão Dia para leitura e toque mais confortáveis.`}
+  const summary=document.querySelector('.agenda-toolbar>.small');if(summary){const count=String(summary.querySelector('strong')?.textContent||'0').trim();summary.innerHTML=`<strong>${esc(count)}</strong> ${count==='1'?'compromisso agendado':'compromissos agendados'} nesta semana · horários das 06:00 às 23:00.`}
 }
 
 function agendaWeekBounds(){const offset=Number(localStorage.getItem('rm.agenda.weekOffset')||0),monday=addDays(mondayOf(todayISO()),offset*7);return{first:isoDate(monday),last:isoDate(addDays(monday,6))}}
@@ -64,7 +68,7 @@ function renderDayAgenda(){
   let day=document.getElementById('rm-day-agenda');if(!day){day=document.createElement('section');day.id='rm-day-agenda';day.className='rm-day-agenda';wrap.insertAdjacentElement('beforebegin',day)}
   const selected=selectedAgendaDay(),{first,last}=agendaWeekBounds();
   const list=arr(data.appointments).filter(a=>a?.date===selected&&a.status!=='Cancelada'&&validForPatient(a)).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
-  day.innerHTML=`<div class="rm-day-nav"><button class="icon-btn" type="button" data-rm-day-shift="-1" ${selected<=first?'disabled':''} aria-label="Dia anterior">←</button><div class="rm-day-date">${esc(dayTitle(selected))}</div><button class="icon-btn" type="button" data-rm-day-shift="1" ${selected>=last?'disabled':''} aria-label="Próximo dia">→</button></div><div class="rm-day-list">${list.length?list.map(a=>{const p=patientForAppointment(a),name=firstName(p)||'Compromisso';return`<article class="rm-day-card"><div class="rm-day-card-main"><div class="rm-day-time">${esc(a.time||'—')}</div><div><div class="rm-day-name" data-sensitive>${esc(name)}</div><div class="rm-day-meta">${esc(sessionState(a))} · ${esc(a.modality||'')}</div></div></div><div class="rm-day-actions">${p?.phone?`<button class="btn secondary" type="button" data-action="appointment-whatsapp" data-id="${esc(a.id)}">Confirmar</button>`:''}<button class="btn" type="button" data-action="appointment-manage" data-id="${esc(a.id)}">Gerenciar</button></div></article>`}).join(''):`<div class="rm-day-empty"><strong>Sem sessões neste dia.</strong><div class="small">Use o botão abaixo para criar um horário.</div></div>`}</div><button class="btn rm-day-new" type="button" data-rm-day-new="${esc(selected)}">Nova sessão neste dia</button>`;
+  day.innerHTML=`<div class="rm-day-nav"><button class="icon-btn" type="button" data-rm-day-shift="-1" ${selected<=first?'disabled':''} aria-label="Dia anterior">←</button><div class="rm-day-date">${esc(dayTitle(selected))}</div><button class="icon-btn" type="button" data-rm-day-shift="1" ${selected>=last?'disabled':''} aria-label="Próximo dia">→</button></div><div class="rm-day-list">${list.length?list.map(a=>{const p=patientForAppointment(a),name=firstName(p)||'Compromisso';return`<article class="rm-day-card"><div class="rm-day-card-main"><div class="rm-day-time">${esc(a.time||'—')}</div><div><div class="rm-day-name" data-sensitive>${esc(name)}</div><div class="rm-day-meta">${esc(sessionState(a))} · ${esc(a.modality||'')}</div></div></div><div class="rm-day-actions">${p?.phone?`<button class="btn secondary" type="button" data-action="appointment-whatsapp" data-id="${esc(a.id)}">Confirmar</button>`:''}<button class="btn" type="button" data-action="appointment-manage" data-id="${esc(a.id)}">Gerenciar</button></div></article>`}).join(''):`<div class="rm-day-empty"><strong>Sem sessões neste dia.</strong><div class="small">A agenda semanal permanece disponível das 06:00 às 23:00.</div></div>`}</div><button class="btn rm-day-new" type="button" data-rm-day-new="${esc(selected)}">Nova sessão neste dia</button>`;
 }
 function ensureAgendaMode(){
   if(runtime.route!=='agenda'){document.body.classList.remove('rm-agenda-day','rm-agenda-week');return}
@@ -90,6 +94,8 @@ function ensureNextAppointment(){
 function optimize(){if(runtime.locked)return;if(runtime.route==='agenda'){enhanceWeekActions();ensureAgendaMode()}else document.body.classList.remove('rm-agenda-day','rm-agenda-week');ensurePatientGroupNav();ensureNextAppointment()}
 
 document.addEventListener('click',e=>{
+  const weekColumn=runtime.route==='agenda'?e.target.closest?.('.week-day-column[data-agenda-date]'):null;
+  if(weekColumn&&!e.target.closest('.week-event')&&!e.target.closest('button')){e.preventDefault();e.stopImmediatePropagation();openAppointmentAt(weekColumn.dataset.agendaDate,slotFromWeekClick(weekColumn,e));return}
   const wa=e.target.closest?.('[data-action]');if(wa&&WHATSAPP_ACTIONS.has(wa.dataset.action)){
     e.preventDefault();e.stopImmediatePropagation();try{sendSessionConfirmation(wa.dataset.id)}catch(err){toast(err.message||'Não foi possível preparar a confirmação.','error');console.error(err)}return
   }
