@@ -1,0 +1,394 @@
+/* Agenda mobile v1.8.3 — timeline vertical inspirada em agendas clínicas profissionais.
+   Escopo restrito a telas <= 700px; desktop permanece inalterado. */
+
+@media (max-width:700px){
+  body.rm-agenda-v183 .content{
+    padding-left:0!important;
+    padding-right:0!important;
+    padding-top:0!important;
+    overflow-x:hidden!important;
+  }
+
+  body.rm-agenda-v183 .content>.page-head,
+  body.rm-agenda-v183 .content>.agenda-toolbar,
+  body.rm-agenda-v183 .content>.agenda-mobile-controls,
+  body.rm-agenda-v183 .content>.rm-day-agenda,
+  body.rm-agenda-v183 .content>.week-calendar-wrap{
+    display:none!important;
+  }
+
+  #rm-mobile-timeline-v183{
+    display:block;
+    width:100%;
+    min-width:0;
+    background:var(--surface,#fff);
+    color:var(--text,#20343d);
+    padding-bottom:calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .rm-cal-top{
+    position:sticky;
+    top:var(--topbar,64px);
+    z-index:14;
+    background:linear-gradient(180deg,#3f4ca8 0%,#34459a 100%);
+    color:#fff;
+    border-radius:0 0 26px 26px;
+    box-shadow:0 7px 18px rgba(26,39,98,.18);
+    overflow:hidden;
+  }
+
+  .rm-cal-toolbar{
+    min-height:74px;
+    display:grid;
+    grid-template-columns:46px minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+    padding:10px 12px 8px;
+  }
+
+  .rm-cal-navbtn,
+  .rm-cal-today,
+  .rm-cal-viewbtn{
+    appearance:none;
+    -webkit-appearance:none;
+    border:0;
+    font:inherit;
+    cursor:pointer;
+  }
+
+  .rm-cal-navbtn{
+    width:44px;
+    height:44px;
+    border-radius:12px;
+    background:transparent;
+    color:#fff;
+    font-size:1.9rem;
+    line-height:1;
+    display:grid;
+    place-items:center;
+  }
+
+  .rm-cal-month{
+    min-width:0;
+    font-size:1.13rem;
+    font-weight:850;
+    letter-spacing:-.01em;
+    text-transform:capitalize;
+  }
+
+  .rm-cal-actions{
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+
+  .rm-cal-today,
+  .rm-cal-viewbtn{
+    min-height:42px;
+    padding:0 12px;
+    border-radius:9px;
+    background:#fff;
+    color:#51606a;
+    font-size:.83rem;
+    font-weight:850;
+    box-shadow:0 1px 2px rgba(0,0,0,.08);
+  }
+
+  .rm-cal-viewbtn{
+    width:42px;
+    padding:0;
+    display:grid;
+    place-items:center;
+    font-size:1rem;
+  }
+
+  .rm-cal-week{
+    display:grid;
+    grid-template-columns:repeat(7,minmax(0,1fr));
+    background:#fff;
+    color:#52616a;
+    padding:8px 8px 13px;
+    border-radius:0 0 24px 24px;
+  }
+
+  .rm-cal-day{
+    border:0;
+    background:transparent;
+    min-width:0;
+    min-height:67px;
+    padding:4px 1px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:5px;
+    color:inherit;
+    font:inherit;
+    cursor:pointer;
+  }
+
+  .rm-cal-day-name{
+    font-size:.75rem;
+    line-height:1;
+    font-weight:700;
+    color:#6d777d;
+  }
+
+  .rm-cal-day-number{
+    width:34px;
+    height:34px;
+    border-radius:999px;
+    display:grid;
+    place-items:center;
+    font-size:.94rem;
+    font-weight:760;
+    color:#66727a;
+  }
+
+  .rm-cal-day.is-selected .rm-cal-day-name{
+    color:#384a9b;
+    font-weight:900;
+  }
+
+  .rm-cal-day.is-selected .rm-cal-day-number{
+    background:#3d4ba6;
+    color:#fff;
+    box-shadow:0 3px 9px rgba(61,75,166,.24);
+  }
+
+  .rm-cal-day.is-today:not(.is-selected) .rm-cal-day-number{
+    box-shadow:inset 0 0 0 2px #3d4ba6;
+    color:#3d4ba6;
+  }
+
+  .rm-cal-all-day{
+    height:48px;
+    display:grid;
+    grid-template-columns:72px 1fr;
+    align-items:center;
+    background:#fff;
+    border-bottom:1px solid #dfe4e7;
+    color:#5e696f;
+    font-size:.81rem;
+  }
+
+  .rm-cal-all-day span{
+    padding-left:14px;
+    font-weight:700;
+  }
+
+  .rm-cal-all-day::after{
+    content:"";
+    height:1px;
+    background:#dfe4e7;
+  }
+
+  .rm-cal-day-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:13px 14px 10px;
+    background:#fff;
+    border-bottom:1px solid #eef1f2;
+  }
+
+  .rm-cal-day-title strong{
+    font-size:.93rem;
+    color:#3b4850;
+    text-transform:capitalize;
+  }
+
+  .rm-cal-day-title span{
+    font-size:.77rem;
+    color:#7a878d;
+  }
+
+  .rm-cal-timeline{
+    position:relative;
+    height:1080px;
+    min-height:1080px;
+    background:#fff;
+    overflow:visible;
+  }
+
+  .rm-cal-hour,
+  .rm-cal-half{
+    position:absolute;
+    left:0;
+    right:0;
+    pointer-events:none;
+  }
+
+  .rm-cal-hour{
+    height:1px;
+    border-top:1px solid #d9dfe2;
+  }
+
+  .rm-cal-half{
+    left:72px;
+    border-top:1px solid #edf0f1;
+  }
+
+  .rm-cal-hour-label{
+    position:absolute;
+    left:0;
+    width:64px;
+    transform:translateY(-50%);
+    text-align:right;
+    padding-right:8px;
+    font-size:.73rem;
+    line-height:1;
+    color:#9aa4a9;
+    font-variant-numeric:tabular-nums;
+    background:#fff;
+  }
+
+  .rm-cal-axis{
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:72px;
+    width:1px;
+    background:#e2e6e8;
+    pointer-events:none;
+  }
+
+  .rm-cal-event{
+    position:absolute;
+    left:74px;
+    right:10px;
+    z-index:4;
+    min-height:42px;
+    border:0;
+    border-radius:4px;
+    padding:5px 8px;
+    overflow:hidden;
+    background:#c71f91;
+    color:#fff;
+    text-align:left;
+    font:inherit;
+    box-shadow:0 2px 6px rgba(51,44,67,.14);
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+
+  .rm-cal-event.confirmed{background:#3e4da8}
+  .rm-cal-event.done{background:#2d8a73}
+  .rm-cal-event.missed{background:#ba7b12}
+  .rm-cal-event.cancelled{background:#a64d58}
+
+  .rm-cal-event-time{
+    display:block;
+    font-size:.72rem;
+    font-weight:900;
+    line-height:1.05;
+    opacity:.95;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .rm-cal-event-name{
+    display:block;
+    margin-top:2px;
+    font-size:.79rem;
+    line-height:1.12;
+    font-weight:850;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .rm-cal-event-meta{
+    display:block;
+    margin-top:2px;
+    font-size:.67rem;
+    line-height:1.1;
+    opacity:.9;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .rm-cal-now{
+    position:absolute;
+    left:66px;
+    right:0;
+    height:2px;
+    background:#d34848;
+    z-index:6;
+    pointer-events:none;
+  }
+
+  .rm-cal-now::before{
+    content:"";
+    position:absolute;
+    left:1px;
+    top:50%;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:#d34848;
+    transform:translate(-50%,-50%);
+  }
+
+  .rm-cal-empty-note{
+    position:absolute;
+    top:20px;
+    left:92px;
+    right:22px;
+    z-index:2;
+    color:#8b969b;
+    font-size:.82rem;
+    pointer-events:none;
+  }
+
+  .rm-cal-add{
+    position:fixed;
+    right:18px;
+    bottom:calc(22px + env(safe-area-inset-bottom));
+    z-index:25;
+    width:58px;
+    height:58px;
+    border:0;
+    border-radius:50%;
+    background:#3d4ba6;
+    color:#fff;
+    display:grid;
+    place-items:center;
+    font-size:2rem;
+    line-height:1;
+    font-weight:500;
+    box-shadow:0 7px 18px rgba(37,52,136,.28);
+    cursor:pointer;
+  }
+
+  .rm-cal-add:focus-visible,
+  .rm-cal-day:focus-visible,
+  .rm-cal-navbtn:focus-visible,
+  .rm-cal-today:focus-visible,
+  .rm-cal-viewbtn:focus-visible,
+  .rm-cal-event:focus-visible{
+    outline:3px solid #f1cb65;
+    outline-offset:2px;
+  }
+
+  [data-theme=dark] #rm-mobile-timeline-v183,
+  [data-theme=dark] .rm-cal-week,
+  [data-theme=dark] .rm-cal-all-day,
+  [data-theme=dark] .rm-cal-day-title,
+  [data-theme=dark] .rm-cal-timeline,
+  [data-theme=dark] .rm-cal-hour-label{
+    background:#16242a;
+  }
+
+  [data-theme=dark] .rm-cal-week{color:#c9d5da}
+  [data-theme=dark] .rm-cal-day-name{color:#aebdc3}
+  [data-theme=dark] .rm-cal-day-title strong{color:#edf5f7}
+  [data-theme=dark] .rm-cal-day-title span{color:#aebdc3}
+  [data-theme=dark] .rm-cal-all-day{color:#c7d4d9;border-bottom-color:#33464e}
+  [data-theme=dark] .rm-cal-all-day::after,
+  [data-theme=dark] .rm-cal-hour{border-color:#31464f}
+  [data-theme=dark] .rm-cal-half{border-color:#24383f}
+  [data-theme=dark] .rm-cal-axis{background:#31464f}
+  [data-theme=dark] .rm-cal-hour-label{color:#8fa1a8}
+}
