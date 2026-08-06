@@ -1,6 +1,27 @@
-# Plataforma Clínica Richelmy Murta — v1.8.3
+# Plataforma Clínica Richelmy Murta — v1.8.4
 
-Aplicação clínica local-first, de uso exclusivo do psicólogo, publicada por GitHub Pages. A versão 1.8.3 preserva o modelo de dados, o cofre criptográfico, a sincronização entre dispositivos, a integração com Google Agenda e os fluxos clínicos existentes, concentrando a alteração na experiência da Agenda em celular.
+Aplicação clínica local-first, de uso exclusivo do psicólogo, publicada por GitHub Pages. A versão 1.8.4 preserva o modelo de dados, o cofre criptográfico, a sincronização entre dispositivos, a integração com Google Agenda e os fluxos clínicos existentes, acrescentando um histórico visual de sessões dentro da área de cada paciente.
+
+## v1.8.4 — Sessões no perfil do paciente
+
+A área do paciente passa a ter a aba `Sessões`, com organização visual inspirada em agendas clínicas profissionais, sem copiar componentes proprietários.
+
+Principais mudanças:
+
+- a antiga aba visual `Timeline` passa a se apresentar como `Sessões`;
+- histórico de agendamentos do paciente em ordem cronológica decrescente;
+- cada sessão mostra data, horário inicial e final, dia da semana e modalidade;
+- frequência destacada por situação: `Presente`, `Ausente`, `Cancelada`, `Confirmada`, `Realizada` ou `Agendada`;
+- contadores rápidos de sessões totais, presentes, ausentes e canceladas;
+- ações diretas `Gerenciar` e `Editar` em cada sessão;
+- botão `Agendar sessão` disponível no próprio histórico;
+- demais registros clínicos da antiga timeline permanecem preservados em uma área recolhível, evitando perda funcional;
+- experiência responsiva para celular, com trilho cronológico vertical e cartões compactos;
+- nenhuma alteração em `SCHEMA_VERSION`, no formato do cofre ou na estrutura dos agendamentos.
+
+Arquivo visual adicionado:
+
+- `assets/css/patient-sessions-v184.css` — timeline de sessões, badges de frequência e responsividade mobile.
 
 ## v1.8.3 — Agenda mobile
 
@@ -41,6 +62,7 @@ Arquivos adicionados:
 - cartões semanais sem recorte de ícones;
 - integração com Google Agenda automática;
 - navegação do paciente organizada em macroáreas;
+- histórico visual de sessões por paciente;
 - painel `Hoje` com priorização da próxima sessão;
 - proteção adicional contra tentativas repetidas de senha incorreta;
 - autoteste e workflow de integridade estática.
@@ -59,12 +81,14 @@ Arquivos principais:
 - `assets/js/modules/*`: módulos de domínio e apresentação clínica;
 - `assets/js/optimization-v180.js`: ergonomia e apresentação adaptativa;
 - `assets/js/agenda-mobile-v183.js`: agenda diária mobile em timeline;
+- `assets/js/modules/patients.js`: cadastro, contexto do paciente e histórico de sessões;
 - `assets/css/app.css`: base visual;
 - `assets/css/clinical-ui-v180.css`: tokens, contraste e ergonomia consolidada;
+- `assets/css/patient-sessions-v184.css`: histórico visual de sessões do paciente;
 - `assets/css/agenda-sync-fix-v182.css`: correções da agenda semanal;
 - `assets/css/agenda-mobile-v183.css`: agenda mobile v1.8.3.
 
-A v1.8.3 não altera `SCHEMA_VERSION` nem o formato do cofre clínico.
+A v1.8.4 não altera `SCHEMA_VERSION` nem o formato do cofre clínico.
 
 ## Segurança e acesso
 
@@ -169,6 +193,8 @@ A navegação visual permanece organizada em cinco macroáreas:
 - Documentos;
 - Administrativo.
 
+Na área individual do paciente, a aba `Sessões` mostra o histórico completo de agendamentos com os estados de frequência. Os registros clínicos não relacionados diretamente a uma sessão permanecem acessíveis na mesma área, em bloco recolhível.
+
 O cadastro e o histórico de pacientes encerrados permanecem preservados. Agendamentos na data de encerramento ou posteriores são removidos conforme a regra clínica existente.
 
 ## Minimização de dados
@@ -197,7 +223,7 @@ Referências anteriores da série 1.8.x:
 
 ## Diagnóstico e qualidade
 
-- `tests/self-test.html`: teste não destrutivo de navegador, criptografia, IndexedDB temporário, schema, versão, faixa da Agenda, timeline móvel, status da topbar, watchdog e arquivos críticos;
+- `tests/self-test.html`: teste não destrutivo de navegador, criptografia, IndexedDB temporário, schema, versão, histórico de sessões, faixa da Agenda, timeline móvel, status da topbar, watchdog e arquivos críticos;
 - `.github/workflows/static-integrity.yml`: valida sintaxe JavaScript, imports locais, arquivos referenciados no `index.html`, remoção de patches antigos e consistência de versão;
 - nenhuma rotina de teste abre ou altera o banco clínico real.
 
@@ -207,4 +233,4 @@ Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.8.3`.
+Versão de interface: `1.8.4`.
