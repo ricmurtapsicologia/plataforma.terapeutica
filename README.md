@@ -1,24 +1,27 @@
-# Plataforma Clínica Richelmy Murta — v1.8.0
+# Plataforma Clínica Richelmy Murta — v1.8.1
 
-Aplicação clínica local-first, de uso exclusivo do psicólogo, publicada por GitHub Pages. A v1.8.0 é uma refatoração controlada: preserva o modelo de dados, o cofre criptográfico, a sincronização notebook ↔ celular, o Google Agenda, o financeiro e os fluxos clínicos, reduzindo dívida visual e melhorando legibilidade e ergonomia.
+Aplicação clínica local-first, de uso exclusivo do psicólogo, publicada por GitHub Pages. A v1.8.1 preserva a refatoração controlada da série 1.8.x e corrige a faixa visível da Agenda e a apresentação dos estados de sincronização sem alterar o modelo de dados, o cofre criptográfico, a sincronização notebook ↔ celular, o Google Agenda, o financeiro ou os fluxos clínicos.
 
-## Estado da versão 1.8.0
+## Estado da versão 1.8.1
 
-Principais mudanças:
+Principais mudanças acumuladas na série 1.8.x:
 
 - versão da aplicação centralizada em `assets/js/version.js`;
 - contraste e tipografia revisados para notebook e celular;
 - remoção dos patches antigos `agenda-clarity-v169` e `agenda-accessibility-v177`;
-- nova camada consolidada `clinical-ui-v180.css`;
-- nova camada de comportamento `optimization-v180.js`;
+- camada consolidada `clinical-ui-v180.css`;
+- camada de comportamento `optimization-v180.js`;
 - Agenda mobile com visualização `Dia` como padrão e `Semana` opcional;
+- Agenda semanal ampliada para a faixa de 06:00 a 23:00, em notebook e celular;
+- clique em horário vazio calculado de forma coerente com a faixa 06:00–23:00;
+- indicadores separados `Dados` e `Agenda` visíveis na topbar tanto no notebook quanto no celular;
 - botões compactos da grade semanal preservados, com ações grandes na visualização diária;
 - ação destrutiva de exclusão retirada do cartão semanal no celular;
 - legenda permanente de ações removida da Agenda;
 - navegação do paciente organizada em macroáreas: Visão geral, Clínica, Intervenções, Documentos e Administrativo;
 - painel `Hoje` prioriza `Sessões hoje` e destaca a próxima sessão;
 - atraso progressivo temporário após tentativas repetidas de senha incorreta;
-- autoteste e workflow de integridade atualizados para a versão 1.8.0.
+- autoteste e workflow de integridade atualizados.
 
 ## Arquitetura
 
@@ -33,7 +36,7 @@ A aplicação continua em JavaScript ES Modules, sem migração para framework. 
 - `assets/css/app.css`: base visual;
 - `assets/css/clinical-ui-v180.css`: tokens, contraste, agenda mobile e ergonomia consolidada.
 
-A v1.8.0 não altera `SCHEMA_VERSION` nem o formato do cofre clínico.
+A v1.8.1 não altera `SCHEMA_VERSION` nem o formato do cofre clínico.
 
 ## Segurança e acesso
 
@@ -68,13 +71,18 @@ Fluxo:
 7. conflito real nos dois dispositivos bloqueia sobrescrita silenciosa;
 8. após reconciliação, a memória e a interface são redesenhadas.
 
+Na topbar, `Dados ✓` representa o estado da sincronização do cofre entre dispositivos e `Agenda ✓` representa o estado conhecido da integração local com o Google Agenda. Os dois indicadores são exibidos em notebook e celular.
+
 O código de sincronização deve permanecer guardado separadamente. Se todos os dispositivos e esse código forem perdidos, o cofre remoto não pode ser recuperado apenas a partir do GitHub.
 
 ## Agenda
 
+A grade semanal reserva 18 faixas horárias completas, de 06:00 a 23:00. Cada hora mantém 60 px de altura na grade, resultando em 1080 px de área vertical útil e preservando o posicionamento dos compromissos pelo horário real.
+
 ### Notebook
 
-- visão semanal de sete dias;
+- visão semanal de sete dias, preservando o modelo anterior;
+- horários visíveis de 06:00 a 23:00;
 - semana anterior, atual e próxima;
 - recorrência avulsa, semanal e quinzenal;
 - inclusão, edição, remarcação e exclusão;
@@ -84,7 +92,7 @@ O código de sincronização deve permanecer guardado separadamente. Se todos os
 
 ### Celular
 
-A visualização padrão passa a ser `Dia`, com leitura vertical e alvos de toque maiores. A visualização `Semana` continua disponível quando necessária.
+A visualização padrão permanece `Dia`, com leitura vertical e alvos de toque maiores. A visualização `Semana` continua disponível quando necessária.
 
 Na visão diária:
 
@@ -96,6 +104,7 @@ Na visão diária:
 Na visão semanal:
 
 - a grade preserva sete colunas com rolagem horizontal controlada;
+- a faixa horária completa de 06:00 a 23:00 permanece disponível por rolagem vertical da página;
 - `Excluir` não fica exposto no cartão compacto em telas pequenas, reduzindo toque destrutivo acidental.
 
 ## Google Agenda
@@ -146,14 +155,15 @@ A plataforma deve armazenar somente dados necessários ao cuidado ou à administ
 
 O `.rmvault` permanece o formato restaurável recomendado. Antes de alterações estruturais, deve ser mantido um backup verificável do cofre e uma referência Git conhecida do código funcional.
 
-Para a refatoração 1.8.0 foram criadas branches separadas:
+Branches de referência da série 1.8.x:
 
-- `backup-pre-v1.8.0`: referência de rollback do código anterior;
-- `refactor-v1.8.0`: desenvolvimento e validação antes do merge.
+- `backup-pre-v1.8.0`: referência de rollback do código anterior à refatoração;
+- `refactor-v1.8.0`: refatoração principal;
+- `hotfix-v1.8.1-agenda-status`: correção da faixa horária e estados da topbar antes do merge.
 
 ## Diagnóstico e qualidade
 
-- `tests/self-test.html`: teste não destrutivo de navegador, criptografia, IndexedDB temporário, schema, versão e arquivos críticos;
+- `tests/self-test.html`: teste não destrutivo de navegador, criptografia, IndexedDB temporário, schema, versão, faixa da Agenda, status da topbar e arquivos críticos;
 - `.github/workflows/static-integrity.yml`: valida sintaxe JavaScript, imports locais, arquivos referenciados no `index.html`, remoção de patches antigos e consistência de versão;
 - nenhuma rotina de teste abre ou altera o banco clínico real.
 
@@ -163,4 +173,4 @@ Código: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
 Cofre sincronizado: branch `clinic-sync-data`, arquivo `.clinic-sync/vault.json`.
 
-Versão de interface: `1.8.0`.
+Versão de interface: `1.8.1`.
