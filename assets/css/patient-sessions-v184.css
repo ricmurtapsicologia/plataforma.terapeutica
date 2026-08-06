@@ -1,0 +1,57 @@
+/* v1.8.4 — histórico de sessões no prontuário do paciente */
+.patient-sessions-panel{display:block;min-width:0}
+.patient-sessions-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.patient-sessions-heading h3{margin:2px 0 4px}
+.patient-session-stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.patient-session-stats>span{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:7px 11px;border:1px solid var(--border,#d7e4e9);border-radius:999px;background:var(--surface,#fff);font-size:.84rem;color:var(--muted,#647982)}
+.patient-session-stats>span strong{color:var(--text,#20343d)}
+.patient-session-stats .present{border-color:#bfe8d0;background:#eefaf2;color:#28784b}
+.patient-session-stats .absent{border-color:#eedca5;background:#fff9e7;color:#8a6a0a}
+.patient-session-stats .cancelled{border-color:#efc9c9;background:#fff3f2;color:#b44848}
+.patient-session-list{position:relative;display:flex;flex-direction:column;gap:0}
+.patient-session-list:before{content:"";position:absolute;left:39px;top:24px;bottom:24px;width:2px;background:#d9e3e8}
+.patient-session-row{position:relative;display:grid;grid-template-columns:82px minmax(0,1fr);gap:14px;padding:0 0 18px;min-width:0}
+.patient-session-date-rail{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:center}
+.patient-session-date{width:76px;min-height:70px;padding:8px 6px;border:2px solid #3556a8;border-radius:12px;background:var(--surface,#fff);text-align:center;box-shadow:0 3px 10px rgba(35,63,82,.06)}
+.patient-session-date strong{display:block;font-size:1.02rem;line-height:1.05;color:#284791}
+.patient-session-date span{display:block;margin-top:7px;padding-top:6px;border-top:1px solid #9eb0d4;font-size:.78rem;font-weight:700;color:#284791}
+.patient-session-rail-dot{position:absolute;right:-14px;top:32px;width:12px;height:12px;border:3px solid var(--surface,#fff);border-radius:50%;background:#3556a8;box-shadow:0 0 0 2px #3556a8}
+.patient-session-card{min-width:0;border:1px solid var(--border,#d7e4e9);border-radius:14px;background:var(--surface,#fff);box-shadow:0 4px 16px rgba(35,63,82,.05);overflow:hidden}
+.patient-session-main{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px}
+.patient-session-time{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.patient-session-time strong{display:block;font-size:1rem;color:var(--text,#20343d)}
+.patient-session-mode{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:0 0 30px;border-radius:50%;background:#f1f5f7;color:#7e9097;font-size:.58rem}
+.patient-session-statuses{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+.patient-session-status,.patient-session-recurrence{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 9px;border-radius:999px;font-size:.82rem;font-weight:700;white-space:nowrap}
+.patient-session-status.present,.patient-session-status.done{background:#e6f8ec;color:#269451}
+.patient-session-status.absent{background:#fff6d8;color:#9b7800}
+.patient-session-status.cancelled{background:#fff0ef;color:#cf4b4b}
+.patient-session-status.confirmed{background:#eaf4ff;color:#3187bc}
+.patient-session-status.scheduled{background:#f1f4f6;color:#61747c}
+.patient-session-recurrence{background:#eef7fb;color:#39758a;font-weight:600}
+.patient-session-actions{display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;border-top:1px solid var(--border,#e2eaed);background:rgba(247,250,251,.72)}
+.patient-session-actions .btn{min-height:38px}
+.patient-other-events summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-weight:700;color:var(--text,#20343d)}
+
+@media (max-width:700px){
+  .patient-sessions-heading{align-items:stretch;flex-direction:column}
+  .patient-sessions-heading>.btn{width:100%}
+  .patient-session-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .patient-session-stats>span{justify-content:center;padding-inline:8px}
+  .patient-session-list:before{left:28px}
+  .patient-session-row{grid-template-columns:62px minmax(0,1fr);gap:9px;padding-bottom:14px}
+  .patient-session-date{width:58px;min-height:62px;padding:7px 4px;border-radius:10px}
+  .patient-session-date strong{font-size:.92rem}
+  .patient-session-date span{font-size:.7rem;margin-top:6px;padding-top:5px}
+  .patient-session-rail-dot{right:-10px;top:28px;width:10px;height:10px}
+  .patient-session-main{display:block;padding:13px}
+  .patient-session-statuses{justify-content:flex-start;margin-top:11px}
+  .patient-session-actions{justify-content:stretch;padding:9px 11px}
+  .patient-session-actions .btn{flex:1;min-width:0;padding-inline:8px}
+}
+
+@media (max-width:420px){
+  .patient-session-stats{grid-template-columns:1fr 1fr}
+  .patient-session-status,.patient-session-recurrence{font-size:.76rem}
+  .patient-session-time strong{font-size:.94rem}
+}
