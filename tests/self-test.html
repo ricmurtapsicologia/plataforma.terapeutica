@@ -10,16 +10,16 @@
 </head>
 <body>
 <main class="shell">
-  <h1>Autoteste não destrutivo — v1.8.3</h1>
-  <p>Verifica navegador, criptografia, IndexedDB de teste, schema, versão, arquivos publicados, faixa horária da agenda, timeline móvel e supervisão automática da sincronização. Não lê, altera ou exclui os dados clínicos da plataforma.</p>
+  <h1>Autoteste não destrutivo — v1.8.4</h1>
+  <p>Verifica navegador, criptografia, IndexedDB de teste, schema, versão, arquivos publicados, histórico de sessões do paciente, faixa horária da agenda, timeline móvel e supervisão automática da sincronização. Não lê, altera ou exclui os dados clínicos da plataforma.</p>
   <button id="run">Executar testes</button>
   <div id="summary" class="card summary">Aguardando execução.</div>
   <div id="results" class="grid"></div>
 </main>
 <script type="module">
-import {deriveKey,randomBytes,encryptJson,decryptJson,sha256} from '../assets/js/crypto.js?v=1.8.3';
-import {validEmail,validPhone,safeJson} from '../assets/js/validation.js?v=1.8.3';
-import {STORE_NAMES,SCHEMA_VERSION,APP_VERSION,todayISO} from '../assets/js/state.js?v=1.8.3';
+import {deriveKey,randomBytes,encryptJson,decryptJson,sha256} from '../assets/js/crypto.js?v=1.8.4';
+import {validEmail,validPhone,safeJson} from '../assets/js/validation.js?v=1.8.4';
+import {STORE_NAMES,SCHEMA_VERSION,APP_VERSION,todayISO} from '../assets/js/state.js?v=1.8.4';
 
 const out=document.getElementById('results');
 const summary=document.getElementById('summary');
@@ -38,7 +38,7 @@ async function moduleExists(path){try{return(await fetchOk(path)).ok}catch{retur
 async function run(){
   out.innerHTML='';pass=0;fail=0;warn=0;summary.textContent='Executando…';
   try{
-    line('Versão centralizada',APP_VERSION==='1.8.3'?'ok':'fail',`Detectada: ${APP_VERSION}`);
+    line('Versão centralizada',APP_VERSION==='1.8.4'?'ok':'fail',`Detectada: ${APP_VERSION}`);
     line('Schema de dados preservado',SCHEMA_VERSION>=5?'ok':'fail',`Schema: ${SCHEMA_VERSION}`);
     line('Stores clínicas preservadas',STORE_NAMES.includes('patients')&&STORE_NAMES.includes('appointments')&&STORE_NAMES.includes('records')&&STORE_NAMES.includes('payments')?'ok':'fail',STORE_NAMES.join(', '));
     line('Data local',todayISO()===localToday()?'ok':'fail',`${todayISO()} / esperado ${localToday()}`);
@@ -52,44 +52,49 @@ async function run(){
     line('JSON seguro',safeJson('{"ok":true}').ok===true?'ok':'fail');
 
     const files=[
-      '../assets/js/version.js?v=1.8.3',
-      '../assets/js/bootstrap-v151.js?v=1.8.3',
-      '../assets/js/app-core-v150.js?v=1.8.3',
-      '../assets/js/clinical-v136.js?v=1.8.3',
-      '../assets/js/actions-v150.js?v=1.8.3',
-      '../assets/js/resources-premium.js?v=1.8.3',
-      '../assets/js/optimization-v180.js?v=1.8.3',
-      '../assets/js/agenda-mobile-v183.js?v=1.8.3',
-      '../assets/js/mobile-ux-v170.js?v=1.8.3',
-      '../assets/js/sync-supervisor-v162.js?v=1.8.3',
-      '../assets/js/modules/dashboard.js?v=1.8.3',
-      '../assets/js/modules/appointments.js?v=1.8.3',
-      '../assets/js/modules/patients.js?v=1.8.3',
-      '../assets/js/modules/settings.js?v=1.8.3',
-      '../assets/css/clinical-ui-v180.css?v=1.8.3',
-      '../assets/css/agenda-sync-fix-v182.css?v=1.8.3',
-      '../assets/css/agenda-mobile-v183.css?v=1.8.3'
+      '../assets/js/version.js?v=1.8.4',
+      '../assets/js/bootstrap-v151.js?v=1.8.4',
+      '../assets/js/app-core-v150.js?v=1.8.4',
+      '../assets/js/clinical-v136.js?v=1.8.4',
+      '../assets/js/actions-v150.js?v=1.8.4',
+      '../assets/js/resources-premium.js?v=1.8.4',
+      '../assets/js/optimization-v180.js?v=1.8.4',
+      '../assets/js/agenda-mobile-v183.js?v=1.8.4',
+      '../assets/js/mobile-ux-v170.js?v=1.8.4',
+      '../assets/js/sync-supervisor-v162.js?v=1.8.4',
+      '../assets/js/modules/dashboard.js?v=1.8.4',
+      '../assets/js/modules/appointments.js?v=1.8.4',
+      '../assets/js/modules/patients.js?v=1.8.4',
+      '../assets/js/modules/settings.js?v=1.8.4',
+      '../assets/css/clinical-ui-v180.css?v=1.8.4',
+      '../assets/css/patient-sessions-v184.css?v=1.8.4',
+      '../assets/css/agenda-sync-fix-v182.css?v=1.8.4',
+      '../assets/css/agenda-mobile-v183.css?v=1.8.4'
     ];
     for(const file of files)line(`Arquivo ${file.split('/').pop().split('?')[0]}`,await moduleExists(file)?'ok':'fail');
 
-    const index=await fetchOk('../index.html?v=1.8.3');
-    line('Index usa a camada v1.8.3',index.ok&&index.text.includes('agenda-mobile-v183.css?v=1.8.3')&&index.text.includes('agenda-mobile-v183.js?v=1.8.3')?'ok':'fail');
+    const index=await fetchOk('../index.html?v=1.8.4');
+    line('Index usa a camada v1.8.4',index.ok&&index.text.includes('agenda-mobile-v183.css?v=1.8.4')&&index.text.includes('agenda-mobile-v183.js?v=1.8.4')&&index.text.includes('patient-sessions-v184.css?v=1.8.4')?'ok':'fail');
     line('Patches antigos da agenda não são carregados',index.ok&&!index.text.includes('agenda-accessibility-v177')&&!index.text.includes('agenda-clarity-v169')?'ok':'fail');
 
-    const appointments=await fetchOk('../assets/js/modules/appointments.js?v=1.8.3');
+    const patients=await fetchOk('../assets/js/modules/patients.js?v=1.8.4');
+    line('Paciente possui aba Sessões',patients.ok&&patients.text.includes("['timeline','Sessões']")&&patients.text.includes('patient-session-list')?'ok':'fail');
+    line('Sessões exibem frequência clínica',patients.ok&&patients.text.includes("label:'Presente'")&&patients.text.includes("label:'Ausente'")&&patients.text.includes("label:'Cancelada'")?'ok':'fail');
+
+    const appointments=await fetchOk('../assets/js/modules/appointments.js?v=1.8.4');
     line('Agenda semanal cobre 06:00–23:00',appointments.ok&&appointments.text.includes('const START_HOUR=6')&&appointments.text.includes('const END_HOUR=23')?'ok':'fail');
-    const mobileAgenda=await fetchOk('../assets/js/agenda-mobile-v183.js?v=1.8.3');
+    const mobileAgenda=await fetchOk('../assets/js/agenda-mobile-v183.js?v=1.8.4');
     line('Timeline móvel cobre 06:00–23:00',mobileAgenda.ok&&mobileAgenda.text.includes('const START_HOUR=6')&&mobileAgenda.text.includes('const END_HOUR=23')&&mobileAgenda.text.includes('TIMELINE_HOURS')?'ok':'fail');
     line('Timeline móvel usa visão diária com faixa semanal',mobileAgenda.ok&&mobileAgenda.text.includes('rm-cal-week')&&mobileAgenda.text.includes('rm-cal-timeline')&&mobileAgenda.text.includes('rm.agenda.mobileDay')?'ok':'fail');
-    const mobileCss=await fetchOk('../assets/css/agenda-mobile-v183.css?v=1.8.3');
+    const mobileCss=await fetchOk('../assets/css/agenda-mobile-v183.css?v=1.8.4');
     line('Agenda móvel não trunca a timeline',mobileCss.ok&&mobileCss.text.includes('height:1080px')&&mobileCss.text.includes('overflow:visible')?'ok':'fail');
     line('Agenda móvel não cria rolagem horizontal',mobileCss.ok&&mobileCss.text.includes('overflow-x:hidden')&&mobileCss.text.includes('grid-template-columns:repeat(7,minmax(0,1fr))')?'ok':'fail');
 
-    const hotfix=await fetchOk('../assets/css/agenda-sync-fix-v182.css?v=1.8.3');
+    const hotfix=await fetchOk('../assets/css/agenda-sync-fix-v182.css?v=1.8.4');
     line('Cartões semanais desktop preservam os ícones',hotfix.ok&&hotfix.text.includes('height:24px!important')?'ok':'fail');
-    const mobile=await fetchOk('../assets/js/mobile-ux-v170.js?v=1.8.3');
+    const mobile=await fetchOk('../assets/js/mobile-ux-v170.js?v=1.8.4');
     line('Topbar expõe estados Dados e Agenda',mobile.ok&&mobile.text.includes('Dados ✓')&&mobile.text.includes('Agenda ✓')?'ok':'fail');
-    const supervisor=await fetchOk('../assets/js/sync-supervisor-v162.js?v=1.8.3');
+    const supervisor=await fetchOk('../assets/js/sync-supervisor-v162.js?v=1.8.4');
     line('Sincronização possui watchdog automático',supervisor.ok&&supervisor.text.includes('WATCHDOG_MS=10000')&&supervisor.text.includes('STALE_AFTER_MS=22000')&&supervisor.text.includes('error-retry')?'ok':'fail');
 
     line('Service Worker disponível','serviceWorker'in navigator?'ok':'warn','Usado apenas como bridge OAuth; não armazena dados clínicos.');
