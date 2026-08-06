@@ -1,0 +1,60 @@
+/* Hotfix v1.8.2 — cartões da agenda, faixa móvel completa e remoção de ação Google redundante */
+
+/* O cartão semanal precisa caber integralmente dentro de sessões de 50 min. */
+.week-event{
+  grid-template-rows:18px 24px!important;
+  row-gap:2px!important;
+  padding:3px 5px!important;
+}
+.week-event-actions{
+  justify-self:start!important;
+  gap:4px!important;
+  max-width:100%!important;
+  overflow:visible!important;
+}
+.week-mini{
+  width:24px!important;
+  min-width:24px!important;
+  height:24px!important;
+  flex:0 0 24px!important;
+}
+.week-mini .week-action-icon{
+  width:14px!important;
+  height:14px!important;
+}
+
+/* A conferência individual no Google é redundante: a integração é automática. */
+.week-event-actions [data-action="appointment-google-calendar"]{
+  display:none!important;
+}
+
+/* Garante que a grade semanal móvel não seja truncada no meio do dia. */
+@media(max-width:700px){
+  .week-calendar-wrap{
+    overflow:auto!important;
+    overflow-x:auto!important;
+    overflow-y:auto!important;
+    max-height:none!important;
+    height:auto!important;
+    touch-action:pan-x pan-y;
+    -webkit-overflow-scrolling:touch;
+  }
+  body.rm-agenda-day .week-calendar-wrap{
+    display:none!important;
+  }
+  body.rm-agenda-week .week-calendar-wrap{
+    display:block!important;
+    overflow:auto!important;
+    max-height:none!important;
+    height:auto!important;
+  }
+  .week-calendar{
+    height:auto!important;
+    min-height:1134px!important; /* cabeçalho 54 px + 18 horas x 60 px */
+  }
+  .week-time-column,
+  .week-day-column{
+    height:1080px!important;
+    min-height:1080px!important;
+  }
+}
