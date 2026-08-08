@@ -1,0 +1,19 @@
+#rm-gemini-clinical[aria-busy="true"]{opacity:.76;pointer-events:none}
+.gemini-metrics{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.gemini-metrics>span{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);font-size:.82rem}
+.rm-meet-status-desktop{display:inline-flex;flex:0 0 auto}
+.rm-meet-status-mobile{display:none}
+#rm-ai-reviewing{margin-bottom:10px}
+@media(max-width:700px){
+  .rm-meet-status-desktop{display:none!important}
+  .rm-mobile-status .rm-meet-status-mobile{display:inline-flex}
+  .top-actions{gap:4px!important}
+  .rm-mobile-status{gap:4px!important}
+  .rm-status-chip{padding-left:7px!important;padding-right:7px!important;font-size:.64rem!important}
+  .clock-chip{display:none!important}
+  #rm-gemini-clinical .flex.gap-8.wrap.mt-16{display:grid;grid-template-columns:1fr}
+  #rm-gemini-clinical .btn{width:100%}
+}
+@media(max-width:390px){
+  .rm-status-chip{padding-left:6px!important;padding-right:6px!important;font-size:.6rem!important}
+}
