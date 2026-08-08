@@ -1,0 +1,21 @@
+#rm-gemini-clinical[aria-busy="true"]{opacity:.74;pointer-events:none}
+.gemini-metrics{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.gemini-metrics>span{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);font-size:.82rem}
+.gemini-draft-list{display:grid;gap:9px}
+.gemini-draft-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.gemini-draft-row:first-child{border-top:0;padding-top:0}
+.gemini-patient-notice{margin-bottom:14px}
+.rm-technical-details{margin-top:12px;border:1px solid var(--line);border-radius:13px;background:var(--surface2);overflow:hidden}
+.rm-technical-details>summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:800;color:var(--primary2);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rm-technical-details>summary::-webkit-details-marker{display:none}
+.rm-technical-details>summary:after{content:'+';font-size:1.1rem;font-weight:700}
+.rm-technical-details[open]>summary:after{content:'−'}
+.rm-technical-details-body{padding:0 14px 14px;display:grid;gap:10px;min-width:0}
+.rm-technical-details code,.rm-technical-details .notice,.rm-technical-details .small{overflow-wrap:anywhere;word-break:break-word;white-space:normal;max-width:100%}
+@media(max-width:700px){
+  .gemini-draft-row{align-items:flex-start;flex-direction:column}
+  .gemini-draft-row>.flex{width:100%}
+  .gemini-draft-row .btn{flex:1;min-width:0}
+  #rm-gemini-clinical .flex.gap-8.wrap.mt-16{display:grid;grid-template-columns:1fr}
+  #rm-gemini-clinical .btn{width:100%}
+}
