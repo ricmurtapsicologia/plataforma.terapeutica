@@ -1,0 +1,6 @@
+/* Correção isolada de overflow no mobile. Não altera dados, integrações ou sincronização. */
+html,body{max-width:100%;overflow-x:hidden}
+.card,.notice,.field,.rm-technical-details,.rm-technical-details-body{min-width:0;max-width:100%;box-sizing:border-box}
+.card code,.notice code,.rm-technical-details code,.rm-break-anywhere{display:block;max-width:100%;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+.card pre,.notice pre{max-width:100%;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:700px){.content,.card,.notice{min-width:0;max-width:100%}.input,.field input,.field select,.field textarea{max-width:100%;min-width:0}}
