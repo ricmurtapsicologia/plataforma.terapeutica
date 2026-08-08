@@ -1,10 +1,8 @@
-# Plataforma Clínica Richelmy Murta — v2.1.0
+# Plataforma Clínica Richelmy Murta — v2.1.1
 
 Aplicação clínica local-first publicada em GitHub Pages, com cofre AES-GCM, sincronização cifrada entre dispositivos, Google Agenda e integração automática com Google Meet/Gemini.
 
-## v2.1 — Meet/Gemini → Agenda → Prontuário
-
-A partir desta versão, as Anotações do Gemini deixam de funcionar apenas como um inbox de pré-visualização e passam a alimentar o fluxo clínico da plataforma.
+## Fluxo clínico
 
 ```text
 Google Meet
@@ -12,6 +10,8 @@ Google Meet
 Anotações do Gemini no Google Drive
    ↓
 Google Workspace OAuth
+   ↓
+Dados ✓ (cofre sincronizado)
    ↓
 identificação do paciente pelo nome do participante
    ↓
@@ -26,83 +26,83 @@ revisão profissional
 Finalizado
 ```
 
-### Regras de importação
+## Importação do Gemini
 
 - backfill automático a partir de `01/06/2026`;
 - procura o nome do paciente nas próprias Anotações/Transcrição do Gemini;
 - não utiliza `PAC-xxx` para identificar o paciente;
-- data e horário servem como confirmação da associação;
+- data e horário confirmam a associação;
 - nome completo do participante tem prioridade;
-- primeiro nome somente é aceito quando é único no cofre e existe uma sessão próxima no mesmo dia;
+- primeiro nome só é aceito quando é único no cofre e existe uma sessão próxima no mesmo dia;
 - associação ambígua permanece em quarentena;
-- sessão já existente é marcada como `Realizada` e `Presente` quando a correspondência é segura;
-- se não existir sessão local, é criada uma sessão histórica com a data/hora do Meet;
-- sessão cancelada ou desmarcada não é reativada silenciosamente;
-- cada resumo produz um registro `Rascunho IA` vinculado à sessão;
-- registro finalizado nunca é sobrescrito pelo Gemini;
-- rascunho editado após a versão do Gemini não é sobrescrito automaticamente;
-- a revisão/finalização atualiza o mesmo registro, evitando duplicação.
+- sessão existente é marcada `Realizada` e `Presente` quando a correspondência é segura;
+- se não existir sessão local, cria sessão histórica com a data/hora do Meet;
+- sessão cancelada/desmarcada não é reativada silenciosamente;
+- cada resumo produz um registro `Rascunho IA` ligado à sessão;
+- registro `Finalizado` nunca é sobrescrito pelo Gemini;
+- rascunho editado depois da versão do Gemini não é sobrescrito automaticamente;
+- revisão/finalização atualiza o mesmo registro, sem duplicação.
 
-### Idempotência e sincronização
+### Proteção contra conflitos
+
+A v2.1.1 não inicia o backfill enquanto a sincronização notebook ↔ celular não estiver em `Dados ✓`.
+
+Se o cofre estiver `Sincronizando`, `Pendente` ou `Conflito`, a importação é pausada. O Gemini volta a conferir automaticamente depois que o evento `rm:sync-status` informa `synced`.
+
+O backfill é persistido em lote. Durante a gravação, eventos intermediários de sincronização são silenciados e, ao final, uma única alteração é sinalizada ao cofre. O Google Agenda não recebe eventos históricos duplicados durante esse processo.
+
+## Idempotência
 
 Os IDs são derivados do `fileId` do documento Gemini:
 
 - sessão: `gmappt_<fileId>`;
 - prontuário: `gmrec_<fileId>`.
 
-Isso permite que notebook e celular encontrem o mesmo documento sem gerar duas sessões ou dois prontuários.
-
-O backfill é persistido em lote e não dispara a criação de eventos históricos duplicados no Google Agenda. Após a importação, a sincronização cifrada do cofre é acionada uma única vez.
+Notebook e celular reconhecem o mesmo resumo como o mesmo registro.
 
 ## Estrutura do Rascunho IA
 
-O texto do Gemini é convertido para uma evolução clínica sintética, sem adicionar informação ausente:
+O texto do Gemini é organizado sem acrescentar informação ausente:
 
 1. `Foco e evolução da sessão`;
 2. `Intervenções e conteúdos trabalhados`;
 3. `Orientações, tarefas ou encaminhamentos`.
 
-O nome do paciente é neutralizado no texto gerado e o nome do profissional é substituído por `Profissional` quando necessário. A transcrição integral não é armazenada no cofre pela integração.
+O nome do paciente é neutralizado no texto gerado. A transcrição integral não é armazenada no cofre pela integração.
 
-No Prontuário, registros `Rascunho IA` recebem ação `Revisar IA`. Durante a revisão, salvar ou finalizar atualiza o mesmo registro.
+No Prontuário, `Rascunho IA` recebe a ação `Revisar IA`. Salvar ou finalizar atualiza o próprio registro.
 
 ## Google Workspace
 
-A plataforma utiliza uma única autorização Google por dispositivo para:
+Uma única autorização Google por dispositivo atende:
 
-- `calendar.events`: sincronização da agenda;
-- `drive.readonly`: leitura das Anotações do Gemini.
+- `calendar.events` — Google Agenda;
+- `drive.readonly` — leitura das Anotações do Gemini.
 
-O token é de curta duração e fica cifrado localmente com a chave do cofre. Nenhuma chave OAuth é publicada no código-fonte.
+O token é de curta duração e fica cifrado localmente. Se houver `403`, a integração diferencia falta de escopo de `Google Drive API` desabilitada e apresenta acesso para ativação da API no projeto OAuth.
 
-Se o OAuth estiver autorizado mas a leitura do Gemini falhar com `403`, a integração diferencia falta de escopo de `Google Drive API` desabilitada no projeto e apresenta o acesso direto para ativação da API.
+## Indicadores do cabeçalho
 
-## Indicadores no cabeçalho
-
-A topbar passa a mostrar três estados operacionais:
-
-- `Dados ✓` — cofre notebook ↔ celular;
+- `Dados ✓` — sincronização notebook ↔ celular;
 - `Agenda ✓` — Google Agenda;
-- `Meet ✓` — leitura do Meet/Gemini.
+- `Meet ✓` — leitura Meet/Gemini.
 
-Estados transitórios usam `↻`; falhas usam `!`.
+`↻` indica processamento e `!` indica falha/ação necessária. No celular, o relógio pode ser ocultado para preservar os três estados sem quebrar a largura da tela.
 
-No celular, o relógio é ocultado quando necessário para preservar os três indicadores sem quebrar a largura da tela.
+## Limite do GitHub Pages
 
-## Limite da aplicação estática
+A página estática não executa com o navegador totalmente fechado. Os resumos são conferidos:
 
-GitHub Pages não executa JavaScript com a página completamente fechada. Por isso, novos documentos são processados:
-
-- ao abrir/desbloquear o cofre;
+- depois que o cofre termina a sincronização inicial;
 - ao retornar à aba;
 - ao recuperar internet;
-- a cada cinco minutos enquanto a plataforma estiver aberta.
+- a cada cinco minutos enquanto a plataforma permanece aberta.
 
-Se uma sessão ocorrer com a plataforma fechada, o resumo será capturado automaticamente na próxima abertura. Automação 24/7 com o dispositivo desligado exigirá um worker privado externo, sem acesso à chave do cofre.
+Se uma sessão ocorrer com a plataforma fechada, o resumo entra automaticamente na próxima abertura após `Dados ✓`.
 
-## Organização funcional e benchmarking
+## Organização e benchmarking
 
-A arquitetura permanece centrada em cinco macroáreas na ficha do paciente, seguindo princípios de ergonomia observados em sistemas clínicos profissionais como o PsicoManager, sem copiar componentes proprietários:
+A ficha do paciente usa cinco macroáreas, inspiradas em princípios de ergonomia de sistemas clínicos profissionais como o PsicoManager, sem copiar componentes proprietários:
 
 - Visão geral;
 - Clínica;
@@ -110,7 +110,7 @@ A arquitetura permanece centrada em cinco macroáreas na ficha do paciente, segu
 - Documentos;
 - Administrativo.
 
-A IA não ganha uma tela clínica independente: ela entra no fluxo `Sessão → Prontuário`, reduzindo cliques e mantendo a ficha do paciente como contexto principal.
+A IA permanece integrada ao fluxo `Sessão → Prontuário` e não vira um silo separado.
 
 ## Segurança
 
@@ -118,29 +118,28 @@ A IA não ganha uma tela clínica independente: ela entra no fluxo `Sessão → 
 - AES-GCM para registros clínicos;
 - branch `clinic-sync-data` contém apenas envelope cifrado;
 - tokens Google e GitHub ficam cifrados localmente;
-- conteúdo bruto do Gemini não é publicado no GitHub;
+- conteúdo clínico não é publicado no GitHub;
+- importação aguarda `Dados ✓`;
 - registros finalizados não são alterados automaticamente;
-- conflitos reais continuam bloqueando sobrescrita silenciosa;
-- testes não abrem nem modificam o banco clínico real.
+- conflitos reais bloqueiam a importação;
+- testes não acessam o banco clínico real.
 
 ## Arquivos centrais
 
 - `assets/js/database.js` — IndexedDB e persistência cifrada;
-- `assets/js/crypto.js` — criptografia;
 - `assets/js/secure-sync-v160.js` — sincronização do cofre;
 - `assets/js/sync-supervisor-v162.js` — watchdog;
 - `assets/js/google-calendar-v168.js` — Agenda;
 - `assets/js/google-workspace-oauth-v200.js` — autorização Workspace;
-- `assets/js/google-gemini-clinical-v210.js` — backfill e importação automática;
-- `assets/js/ai-record-review-v210.js` — revisão e finalização do Rascunho IA;
+- `assets/js/google-gemini-clinical-v210.js` — backfill/importação;
+- `assets/js/ai-record-review-v210.js` — revisão de Rascunho IA;
 - `assets/js/workspace-status-v210.js` — indicador Meet;
-- `assets/css/google-clinical-v210.css` — apresentação da integração;
+- `assets/css/google-clinical-v210.css` — apresentação;
 - `tests/self-test.html` — autoteste não destrutivo.
 
 ## Publicação
 
-- aplicação: branch `main`, GitHub Pages `/`;
-- cofre sincronizado: branch `clinic-sync-data`, `.clinic-sync/vault.json`;
-- versão de interface: `2.1.0`.
-
-Referências de segurança existentes: `backup-pre-workspace-clinical-v2` e `backup-pre-gemini-autofill-v2.1` (criada antes da promoção da v2.1 para `main`).
+- aplicação: `main` / GitHub Pages;
+- cofre sincronizado: `clinic-sync-data/.clinic-sync/vault.json`;
+- versão de interface: `2.1.1`;
+- referência anterior: `backup-pre-gemini-autofill-v2.1`.
