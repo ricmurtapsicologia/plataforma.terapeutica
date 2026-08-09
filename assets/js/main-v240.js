@@ -1,5 +1,8 @@
 document.body.classList.add('rm-booting');
 window.__rmPreBootErrors=[];
+let bootReady=false;
+document.addEventListener('rm:boot-ready',()=>{bootReady=true},{once:true});
+setTimeout(()=>{if(bootReady)return;const box=document.getElementById('rm-boot-fallback');if(box){box.innerHTML='<strong>O carregamento está demorando mais que o esperado.</strong><div class="small">Verifique a conexão e recarregue a página. Se persistir, abra o diagnóstico da plataforma após o acesso.</div>'}},12000);
 const modules=[
   ['./runtime-monitor-v240.js','Monitor de runtime'],
   ['./legacy-sw-cleanup-v240.js','Limpeza do service worker legado'],
@@ -21,4 +24,4 @@ const modules=[
   ['./workspace-status-v240.js','Indicador Meet']
 ];
 for(const [path,label] of modules){try{await import(`${path}?v=2.4.0`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
-try{await import('./bootstrap-v240.js?v=2.4.0')}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
+try{await import('./bootstrap-v240.js?v=2.4.0')}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar a plataforma.</strong><div class="small">${String(err?.message||err).replace(/[<>]/g,'')}</div>`;document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
