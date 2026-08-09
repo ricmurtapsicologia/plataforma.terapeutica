@@ -15,7 +15,7 @@ const modules=[
   ['./agenda-mobile-v183.js','Agenda mobile'],
   ['./agenda-actions-v240.js','Ações da Agenda'],
   ['./portable-tools-v153.js','Ferramentas portáteis'],
-  ['./sync-conflict-recovery-v220.js','Recuperação de conflitos'],
+  ['./sync-conflict-recovery-v240.js','Recuperação de conflitos'],
   ['./patient-closure-v172.js','Encerramento de paciente'],
   ['./version-v170.js','Versão visual'],
   ['./material-share-v162.js','Compartilhamento de materiais'],
