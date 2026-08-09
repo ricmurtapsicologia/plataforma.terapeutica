@@ -1,166 +1,243 @@
-# Plataforma Clínica Richelmy Murta — v2.3.0
+# Plataforma Clínica Richelmy Murta — v2.4.0
 
-Aplicação clínica local-first em GitHub Pages, com cofre AES-GCM, sincronização cifrada notebook ↔ celular, Google Agenda e conciliação das Anotações do Google Meet/Gemini com Sessões e Prontuário.
+Aplicação clínica local-first em GitHub Pages, com cofre AES-GCM, sincronização cifrada notebook ↔ celular, Google Workspace, Google Agenda e conciliação das Anotações do Google Meet/Gemini com Sessões e Prontuário.
 
-## Fluxo v2.3
+## Objetivo da v2.4
+
+A v2.4 é uma release de estabilização e reengenharia. O foco é eliminar intermitência causada por múltiplos timers, múltiplos controladores do mesmo DOM, dois mecanismos concorrentes de sincronização e duplicidade de OAuth/Agenda.
+
+Princípio de arquitetura:
+
+> Um estado deve ter um único proprietário.
+
+## Arquitetura de boot
+
+`index.html` possui apenas um entrypoint JavaScript:
 
 ```text
-Google Meet → Anotações do Gemini no Drive
-                     ↓
-            identificação nominal
-                     ↓
-        normalização de data/horário
-                     ↓
-        Sessão realizada / presente
-                     ↓
-        Rascunho IA no prontuário
-                     ↓
-           revisão profissional
-                     ↓
-                Finalizado
-                     ↓
-          cofre + sync cifrada
+index.html
+   ↓
+main-v240.js
+   ↓
+serviços e UX em ordem controlada
+   ↓
+bootstrap-v240.js
+   ↓
+cofre → dados → interface
 ```
 
-A conciliação só grava no cofre quando `Dados ✓`. Se houver conflito notebook ↔ celular, o Gemini fica pausado e não cria ou altera sessões/prontuários.
+A página possui fallback visual de inicialização. Se o bootstrap não concluir em tempo razoável, o usuário recebe mensagem explícita em vez de uma tela vazia.
 
-## Período rastreado
+## Sincronização v2.4
 
-- backfill desde `01/05/2026`;
-- somente Google Docs identificados como Anotações do Gemini;
-- arquivos novos ou modificados são verificados periodicamente enquanto a aplicação está aberta;
-- `fileId` do Google é usado como identidade estável da sessão para impedir duplicação.
+`secure-sync-v240.js` substitui o antigo conjunto `secure-sync-v160 + sync-supervisor-v162` como coordenador único.
 
-## Identificação do paciente
+Características:
 
-A associação não depende do código `PAC-xxx`.
+- orientada por eventos;
+- debounce para alteração local;
+- heartbeat de segurança de 90 s, em vez de polling agressivo de 15 s;
+- somente uma sincronização simultânea;
+- `BroadcastChannel` e eleição de aba líder para evitar dois motores de sync no mesmo navegador;
+- nenhuma reconstrução da interface quando o cofre remoto não alterou os dados locais;
+- `rm:data-patched` informa quais stores realmente mudaram;
+- conflito continua bloqueando merge automático;
+- recuperação controlada por registro permanece disponível.
 
-A ordem de evidências é:
+Estados:
 
-1. nome completo/nome preferido encontrado no conteúdo do Gemini;
-2. identificador/apelido explicitamente relacionado ao paciente dentro das próprias anotações, aprendido localmente e mantido cifrado;
-3. primeiro nome, somente quando é único entre os pacientes em acompanhamento.
+- `Dados ✓` — sincronizado;
+- `Dados ↻` — sincronizando;
+- `Dados !` — erro/conflito;
+- `Dados •` — pendente/configuração necessária.
 
-O nome do profissional é excluído da identificação de paciente. Itens ambíguos não são forçados para um prontuário.
+## Renderização
 
-## Data e horário
+A v2.4 remove a relação antiga:
 
-O título das Anotações do Gemini é a fonte primária de data e hora da sessão realizada.
+```text
+sync concluído → render completo da aplicação
+```
 
-Para conciliar com a agenda clínica, os minutos são arredondados para o horário cheio mais próximo:
+Agora um ciclo de sync sem alteração modifica somente o chip de status. Render completo é reservado para mudanças reais de dados ou ações de navegação.
 
-- `20:04 → 20:00`;
-- `19:05 → 19:00`;
-- `20:22 → 20:00`;
-- `18:57 → 19:00`.
+## Agenda
 
-Uma sessão já existente próxima pode ser movida para a data/hora comprovada pelo Gemini quando não possui prontuário conflitante. Caso contrário, é criada uma sessão determinística própria, marcada como `Realizada / Presente`.
+A Agenda passa a ter um único renderizador mobile: `agenda-mobile-v183.js`.
 
-## Prontuário automático
+As ações clínicas/administrativas foram consolidadas em `agenda-actions-v240.js`:
 
-Para cada sessão Gemini associada com segurança, a plataforma garante a existência de um prontuário.
+- gerenciar sessão;
+- remarcar;
+- presença/ausência/cancelamento;
+- lembrete WhatsApp;
+- pagamento;
+- abertura do registro da sessão.
 
-O registro automático é criado como `Rascunho IA`, nunca como `Finalizado`.
-
-Estrutura:
-
-1. `Foco clínico e evolução da sessão`;
-2. `Procedimentos técnico-científicos adotados` — somente quando descritos na fonte;
-3. `Resposta do paciente e resultados observados` — somente quando documentados;
-4. `Plano terapêutico, tarefas e encaminhamentos`.
-
-A transcrição integral não é copiada para o prontuário e permanece no Google Drive.
-
-Registros finalizados não são sobrescritos pelo Gemini. Se já existir um registro manual para a mesma data/sessão, ele é preservado e considerado cobertura clínica da sessão.
-
-## Botão “Gerar prontuário por IA”
-
-Na ficha individual e em `Paciente → Prontuário` existe o botão `Gerar prontuário por IA`.
-
-Ele utiliza o conteúdo já produzido por IA pelo Google Gemini e aplica o prompt clínico `TCC-CFP-v2.3` para estruturar o rascunho. Nesta versão não existe uma segunda chamada a um modelo generativo externo: isso evita publicar chave de API ou enviar prontuário para outro serviço a partir de uma página estática.
-
-### Prompt clínico TCC-CFP-v2.3
-
-> Atue como apoio à documentação clínica de um psicólogo com referencial principal em Terapia Cognitivo-Comportamental. A partir exclusivamente do resumo e das anotações produzidas pelo Google Meet/Gemini, redija uma evolução de prontuário sintética, objetiva, cronológica e tecnicamente defensável. Registre somente elementos necessários ao acompanhamento: foco/demanda da sessão, evolução clínica observável, procedimentos técnico-científicos efetivamente descritos, resposta do paciente, decisões clínicas, tarefas e encaminhamentos. Não invente diagnóstico, hipótese, técnica, risco, sintoma, fala, resultado ou conduta ausente na fonte. Não copie a transcrição integral. Evite juízos morais, detalhes íntimos sem pertinência clínica e linguagem estigmatizante. Preserve a distinção entre relato do paciente e intervenção profissional. O texto final deve ser revisado pelo psicólogo antes da finalização.
-
-A responsabilidade técnica permanece do profissional que revisa e finaliza o registro.
-
-## Ficha individual do paciente
-
-A navegação foi ajustada para contexto clínico único:
-
-- a tela `Pacientes` mostra a lista apenas enquanto nenhum paciente está aberto;
-- ao abrir um paciente, a grade com todos os demais deixa de ficar visível;
-- a ficha individual passa a ser o contexto principal;
-- `Prontuário` e `Gerar prontuário por IA` ficam disponíveis diretamente no cabeçalho da ficha;
-- `Trocar paciente` retorna à lista geral.
-
-Isso reduz exposição desnecessária de nomes e aproxima a UX de sistemas clínicos profissionais.
+As camadas antigas que simultaneamente modificavam a Agenda deixam de ser carregadas pelo entrypoint.
 
 ## Google Workspace
 
-Escopos por dispositivo:
+OAuth continua centralizado em `google-workspace-oauth-v200.js` com os escopos:
 
-- `calendar.events` — criação/edição da Google Agenda;
-- `drive.readonly` — leitura das Anotações do Gemini.
+- `calendar.events`;
+- `drive.readonly`.
 
-O token é curto e cifrado localmente. Nenhum segredo OAuth ou conteúdo clínico é publicado no GitHub.
+`google-calendar-service-v240.js` não possui OAuth próprio. Ele consome exclusivamente o token Workspace cifrado no dispositivo. Isso elimina o estado inconsistente em que Agenda e Meet utilizavam autorizações diferentes.
 
-## Sincronização notebook ↔ celular
+O serviço de Agenda cria/atualiza compromissos futuros e eventos que já pertencem à plataforma. O histórico legado não é recriado automaticamente, evitando duplicação com eventos antigos já existentes no Google Agenda.
 
-A conciliação Gemini só inicia em `Dados ✓`.
+## Google Meet/Gemini
 
-- `Dados ✓`: seguro para conciliar;
-- conflito: Gemini fica pausado;
-- IDs de sessão/prontuário derivados do `fileId` evitam duplicação;
-- timestamps de registros automáticos derivam da própria sessão/arquivo, reduzindo divergências entre dispositivos;
-- um dispositivo que recebe primeiro o registro remoto não o recria localmente.
+`clinical-reconcile-v240.js` substitui a conciliação v2.3.
 
-A recuperação controlada de conflitos da v2.2 continua disponível em Configurações.
+Fluxo:
 
-## Indicadores
+```text
+Drive files.list
+      ↓
+fileId + modifiedTime
+      ↓
+novo/modificado?
+  ┌───┴───┐
+ NÃO      SIM
+  ↓        ↓
+skip     export
+           ↓
+      identificar paciente
+           ↓
+      preparar changeset
+           ↓
+   1 lote IndexedDB
+           ↓
+      1 evento de sync
+```
 
-- `Dados ✓` — cofre sincronizado;
-- `Agenda ✓` — Google Agenda operacional;
-- `Meet ✓` — Gemini conciliado;
-- `Meet ↻` — conciliação ativa;
-- `Meet •` — pausado, inclusive durante conflito de Dados;
-- `Meet !` — falha de autorização/leitura.
+Características:
 
-## Limitação do GitHub Pages
+- backfill desde `01/05/2026`;
+- associação pelo nome encontrado no Gemini, nunca por `PAC-xxx`;
+- alias explicitamente aprendido das próprias anotações e armazenado cifrado;
+- fila de leitura com concorrência máxima de 2 documentos;
+- documentos estáveis não são reexportados;
+- `fileId` continua sendo identidade determinística;
+- sessão é marcada `Realizada / Presente` quando a associação é segura;
+- prontuário é criado como `Rascunho IA`;
+- transcrição integral permanece no Drive;
+- registros finalizados não são sobrescritos.
 
-A aplicação não executa com todos os navegadores fechados. Um resumo criado enquanto a plataforma estiver fechada será conciliado na próxima abertura, depois de `Dados ✓`. Automação 24/7 exigiria um worker privado externo; a chave do cofre não deve ser enviada a esse worker.
+## Timestamps e sincronização
+
+A v2.4 separa o relógio clínico do relógio da fonte.
+
+- `updatedAt`: relógio de alteração da entidade no cofre;
+- `source.sourceModifiedAt` / `gemini.sourceModifiedAt`: momento em que o documento Gemini foi modificado.
+
+A migração `gemini-migration-v240.js` corrige registros antigos para que o `modifiedTime` do Gemini não rebaixe silenciosamente o `updatedAt` de uma entidade clínica.
+
+## Prontuário assistido por IA
+
+Na ficha individual e em `Paciente → Prontuário` existe `Gerar prontuário por IA`.
+
+O prompt clínico `TCC-CFP-v2.4` exige:
+
+1. foco/demanda da sessão;
+2. evolução clínica observável;
+3. procedimentos técnico-científicos efetivamente descritos;
+4. resposta do paciente;
+5. decisões, tarefas e encaminhamentos;
+6. nenhuma invenção de diagnóstico, técnica, risco, sintoma, fala ou resultado ausente;
+7. nenhuma transcrição integral;
+8. revisão profissional obrigatória antes da finalização.
+
+A v2.4 continua usando o conteúdo produzido pelo Gemini como fonte; não publica chave de uma segunda API generativa no GitHub Pages.
+
+## Ficha individual do paciente
+
+`patient-ux-v240.js` mantém a lista geral apenas enquanto nenhum paciente está aberto.
+
+Quando um paciente é selecionado:
+
+- a grade com todos os pacientes deixa de ficar visível;
+- a ficha individual vira o contexto principal;
+- aparecem atalhos `Prontuário` e `Gerar prontuário por IA`;
+- a navegação é agrupada em Visão geral, Clínica, Intervenções, Documentos e Administrativo;
+- `Trocar paciente` volta para a lista.
+
+## Multiaba
+
+A sincronização usa `BroadcastChannel` para eleger uma aba líder. Apenas a aba líder executa sincronização automática. Alterações feitas em outra aba sinalizam a líder, reduzindo corrida de escrita e chamadas duplicadas ao GitHub.
+
+## Service Worker legado
+
+O antigo service worker usado para contornar popup OAuth não é mais registrado. `legacy-sw-cleanup-v240.js` remove registros antigos de `sw.js` sem executar reload automático. O OAuth atual usa redirecionamento de página inteira.
+
+## Observabilidade
+
+`runtime-monitor-v240.js` registra somente métricas técnicas, nunca dados clínicos:
+
+- renders;
+- ciclos de sync;
+- erros de sync;
+- ciclos Calendar;
+- ciclos Gemini;
+- erros não tratados;
+- mudanças de rota.
+
+Disponível em runtime por `window.__rmRuntimeMetrics` para diagnóstico local.
 
 ## Segurança
 
 - PBKDF2-HMAC-SHA256 + AES-GCM;
-- `clinic-sync-data` armazena somente envelope cifrado;
-- catálogo Gemini cifrado localmente;
+- `clinic-sync-data` contém somente envelope cifrado;
 - tokens Google/GitHub cifrados localmente;
+- catálogo Gemini cifrado localmente;
 - nomes e conteúdo clínico não entram no código público;
-- transcrição integral não entra no prontuário;
 - registro finalizado não é sobrescrito;
-- conflito pausa a conciliação.
+- conflito pausa a conciliação;
+- nenhuma chave do cofre é enviada ao Google ou ao GitHub.
 
-## Organização funcional
+## Arquivos centrais v2.4
 
-O benchmarking usa sistemas clínicos profissionais, inclusive PsicoManager, somente como referência de ergonomia. Os núcleos permanecem: Hoje, Agenda, Pacientes, Sessões/Prontuário, Recursos/Documentos, Financeiro e Configurações/Integrações.
-
-## Arquivos centrais
-
-- `assets/js/secure-sync-v160.js` — sincronização cifrada;
-- `assets/js/sync-conflict-recovery-v220.js` — recuperação controlada de conflitos;
-- `assets/js/google-calendar-v168.js` — Google Agenda;
-- `assets/js/google-workspace-oauth-v200.js` — OAuth Agenda + Drive;
-- `assets/js/clinical-reconcile-v230.js` — backfill desde maio, associação nominal, conciliação de sessões e prontuário automático;
-- `assets/js/ai-record-review-v220.js` — revisão/finalização profissional;
-- `assets/js/workspace-status-v220.js` — indicador Meet;
-- `assets/css/google-clinical-v220.css` — UX da integração clínica;
+- `assets/js/main-v240.js` — entrypoint único;
+- `assets/js/bootstrap-v240.js` — boot resiliente;
+- `assets/js/secure-sync-v240.js` — SyncManager event-driven e multiaba;
+- `assets/js/google-workspace-oauth-v200.js` — OAuth único Workspace;
+- `assets/js/google-calendar-service-v240.js` — serviço Google Agenda;
+- `assets/js/clinical-reconcile-v240.js` — pipeline incremental Gemini;
+- `assets/js/gemini-migration-v240.js` — correção segura de timestamps antigos;
+- `assets/js/agenda-mobile-v183.js` — único renderizador mobile da Agenda;
+- `assets/js/agenda-actions-v240.js` — ações da Agenda;
+- `assets/js/patient-ux-v240.js` — contexto individual do paciente;
+- `assets/js/workspace-status-v240.js` — indicador Meet orientado por eventos;
+- `assets/js/runtime-monitor-v240.js` — métricas técnicas;
+- `assets/js/sync-conflict-recovery-v220.js` — recuperação manual de conflitos;
 - `tests/self-test.html` — autoteste não destrutivo.
+
+## Código legado não carregado
+
+A v2.4 deixa de carregar no runtime:
+
+- `sync-supervisor-v162.js`;
+- `google-calendar-v168.js`;
+- `clinical-reconcile-v230.js`;
+- `gemini-migration-v230.js`;
+- `optimization-v180.js`;
+- `agenda-enhancements-v152.js`;
+- `agenda-tools-v162.js`;
+- `workspace-status-v220.js`;
+- `sw-coop-register-v165.js`.
+
+Esses arquivos podem ser removidos definitivamente após homologação da v2.4; a branch `backup-pre-stability-refactor-v2.4` preserva o estado anterior para rollback.
+
+## Limitação do GitHub Pages
+
+A aplicação não executa com todos os navegadores fechados. Resumos Gemini novos serão conciliados na próxima abertura/retomada depois de `Dados ✓`. Automação 24/7 exigiria um worker privado externo sem acesso à chave do cofre.
 
 ## Publicação
 
 - aplicação: `main` / GitHub Pages;
 - cofre remoto: `clinic-sync-data/.clinic-sync/vault.json`;
-- versão: `2.3.0`;
-- `SCHEMA_VERSION`: preservado; sem migração de IndexedDB.
+- versão: `2.4.0`;
+- `SCHEMA_VERSION`: 5, preservado;
+- rollback: `backup-pre-stability-refactor-v2.4`.
