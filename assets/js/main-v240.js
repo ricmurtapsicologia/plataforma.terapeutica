@@ -9,10 +9,10 @@ const modules=[
   ['./browser-fixes-v153.js','Compatibilidade de navegador'],
   ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
   ['./google-calendar-service-v240.js','Google Agenda'],
-  ['./top-status-dedupe-v242.js','Deduplicação dos indicadores do topo'],
+  ['./top-status-owner-v243.js','Proprietário único dos indicadores do topo'],
   ['./clinical-reconcile-v240.js','Google Meet/Gemini'],
   ['./gemini-migration-v240.js','Migração Gemini'],
-  ['./gemini-reclassify-v241.js','Reclassificação histórica Gemini'],
+  ['./gemini-repair-v243.js','Reparo histórico Gemini'],
   ['./ai-record-review-v220.js','Revisão de prontuário IA'],
   ['./agenda-mobile-v183.js','Agenda mobile'],
   ['./agenda-actions-v240.js','Ações da Agenda'],
@@ -26,5 +26,5 @@ const modules=[
   ['./patient-ux-v240.js','Contexto individual do paciente'],
   ['./workspace-status-v240.js','Indicador Meet']
 ];
-for(const [path,label] of modules){try{await import(`${path}?v=2.4.2`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
-try{await import('./bootstrap-v240.js?v=2.4.2');if(Array.isArray(window.__rmBootErrors)&&window.__rmPreBootErrors.length)window.__rmBootErrors.push(...window.__rmPreBootErrors)}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar a plataforma.</strong><div class="small">${String(err?.message||err).replace(/[<>]/g,'')}</div>`;document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
+for(const [path,label] of modules){try{await import(`${path}?v=2.4.3`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
+try{await import('./bootstrap-v240.js?v=2.4.3');if(Array.isArray(window.__rmBootErrors)&&window.__rmPreBootErrors.length)window.__rmBootErrors.push(...window.__rmPreBootErrors)}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar a plataforma.</strong><div class="small">${String(err?.message||err).replace(/[<>]/g,'')}</div>`;document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
