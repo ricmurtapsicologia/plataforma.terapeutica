@@ -1,83 +1,65 @@
-# Plataforma Clínica Richelmy Murta — v2.4.7
+# Plataforma Clínica Richelmy Murta — v2.4.8
 
 Aplicação clínica local-first em GitHub Pages, com cofre AES-GCM, sincronização cifrada notebook ↔ celular, Google Workspace, Google Agenda e conciliação das Anotações do Google Meet/Gemini com Sessões e Prontuário.
 
-## Objetivo da v2.4.7
+## Objetivo da v2.4.8
 
-A v2.4.7 corrige a etapa final da recuperação de conflitos notebook ↔ celular. Antes, um conflito manual restante bloqueava o SyncManager e fazia conflitos Gemini já conciliados reaparecerem, porque a resolução ocorria apenas localmente e ainda dependia de uma sincronização posterior.
+A v2.4.8 corrige falsos conflitos de sincronização que ainda apareciam na revisão manual quando local e remoto representavam a mesma decisão clínica, mas possuíam timestamps diferentes.
 
-Agora `sync-conflict-recovery-v247.js` publica a resolução parcial diretamente no cofre remoto, preservando os conflitos que ainda exigem decisão humana.
-
-## Política de conflitos
-
-### 1. Gemini equivalente
-
-Conflitos `appointments:gmappt_<fileId>` e `records:gmrec_<fileId>` podem ser conciliados automaticamente quando os dois lados representam semanticamente o mesmo registro. Campos voláteis de sincronização não entram nessa comparação.
-
-### 2. Gemini divergente
-
-Se o mesmo `fileId` tiver diferença de associação, data, status ou conteúdo, a plataforma não decide silenciosamente. Na base confirmada como correta aparece o comando:
-
-`Usar este dispositivo no Gemini (N)`
-
-Esse comando publica no cofre remoto somente os registros determinísticos selecionados a partir deste dispositivo. Prontuários `Finalizado` ficam fora dessa operação.
-
-### 3. Conflitos manuais
-
-IDs não determinísticos, como `appointments:apt_...`, permanecem protegidos. `Revisar conflitos manuais` mostra, para cada registro:
-
-- este dispositivo;
-- cofre remoto;
-- paciente;
-- data/horário;
-- status;
-- data da atualização.
-
-Cada conflito é resolvido individualmente com `Manter este dispositivo` ou `Usar remoto`.
-
-## Resolução transacional parcial
-
-A recuperação v2.4.7 trabalha em duas imagens:
+Exemplo real:
 
 ```text
-LOCAL CORRETO                   COFRE REMOTO
-      │                              │
-      └──────── merge seguro ────────┘
-                    │
-          conflitos escolhidos
-                    │
-         ┌──────────┴──────────┐
-         │                     │
-  snapshot publicado    snapshot local
-  conflitos pendentes   conflitos pendentes
-  ficam como remoto      ficam como local
-         │                     │
-         └──── baseline parcial┘
+Este dispositivo: Excluído em 04:32:43
+Cofre remoto:     Excluído em 04:33:59
 ```
 
-Assim, conflitos já resolvidos são efetivamente gravados na branch `clinic-sync-data`, mesmo quando ainda existe outro conflito manual. O SyncManager deixa de reencontrar os mesmos `gmappt_.../gmrec_...` em cada ciclo.
+Os dois lados concordam que a entidade está excluída. Isso não exige escolha humana.
 
-## Gemini e prontuário
+## Equivalência semântica
 
-- backfill desde 01/05/2026;
-- sessão determinística: `gmappt_<fileId>`;
-- prontuário determinístico: `gmrec_<fileId>`;
-- sessão associada com segurança: `Realizada / Presente`;
-- prontuário automático: `Rascunho IA`;
-- prontuário finalizado não é sobrescrito;
-- transcrição integral permanece no Drive;
-- identidade/aliases permanecem cifrados localmente;
-- o Gemini fica pausado enquanto houver conflito de Dados.
+`sync-semantic-conflict-cleanup-v248.js` executa antes da revisão manual e reconhece como equivalentes:
+
+1. a mesma entidade excluída nos dois lados, independentemente do horário do tombstone;
+2. entidades manuais presentes nos dois lados cujo conteúdo é idêntico após remover somente campos técnicos voláteis de sincronização.
+
+A rotina não modifica o conteúdo clínico e não escolhe silenciosamente entre dados diferentes. Ela atualiza apenas a baseline local para registrar que aqueles dois estados representam a mesma decisão.
+
+Campos clínicos, paciente, data, horário, status, texto e demais conteúdos permanecem parte da comparação.
+
+## O que continua exigindo revisão humana
+
+Permanecem em `Revisar conflitos manuais`:
+
+- registro existente em um lado e excluído no outro;
+- paciente diferente;
+- data/horário diferente;
+- status diferente;
+- conteúdo clínico diferente;
+- qualquer outra divergência semântica real.
+
+Cada conflito verdadeiro continua sendo resolvido individualmente com `Manter este dispositivo` ou `Usar remoto`.
+
+## Integração com o Gemini
+
+A política existente é preservada:
+
+- sessão: `gmappt_<fileId>`;
+- prontuário: `gmrec_<fileId>`;
+- Gemini equivalente pode ser conciliado automaticamente;
+- Gemini divergente exige comando explícito na base considerada correta;
+- prontuário `Finalizado` não é sobrescrito;
+- o Gemini fica pausado enquanto houver conflito real de Dados.
 
 ## Identidade Gemini
 
-A associação segue nome completo/nome preferido, relação explícita `identificador do Meet (nome)` e componente único do nome quando ele identifica apenas um paciente ativo. Nenhum nome ou codinome clínico é hardcoded no repositório público.
+A associação usa nome completo/nome preferido, relações explícitas encontradas nas próprias Anotações do Gemini e componente único do nome quando ele identifica exatamente um paciente ativo. Nenhum nome ou codinome clínico é hardcoded no repositório público.
 
 ## Arquitetura principal
 
 - `assets/js/main-v240.js` — entrypoint único;
 - `assets/js/secure-sync-v240.js` — SyncManager event-driven;
-- `assets/js/sync-conflict-recovery-v247.js` — resolução parcial publicada diretamente no cofre remoto;
+- `assets/js/sync-semantic-conflict-cleanup-v248.js` — saneamento de falsos conflitos semanticamente equivalentes;
+- `assets/js/sync-conflict-recovery-v247.js` — recuperação transacional dos conflitos reais;
 - `assets/js/google-workspace-oauth-v200.js` — OAuth Google único;
 - `assets/js/google-calendar-service-v240.js` — Google Agenda;
 - `assets/js/clinical-reconcile-v240.js` — pipeline incremental Gemini;
@@ -92,12 +74,12 @@ A associação segue nome completo/nome preferido, relação explícita `identif
 - branch `clinic-sync-data` contém somente o cofre cifrado;
 - tokens Google/GitHub ficam cifrados localmente;
 - a chave do cofre não é enviada ao Google nem ao GitHub;
-- prontuários finalizados não entram na resolução automática Gemini;
-- conflitos manuais são resolvidos individualmente.
+- o saneamento v2.4.8 não altera dados clínicos;
+- divergências reais continuam bloqueadas para decisão explícita.
 
 ## Publicação
 
-- versão: `2.4.7`;
+- versão: `2.4.8`;
 - `SCHEMA_VERSION`: 5, preservado;
-- rollback: `backup-pre-conflict-publish-v2.4.7-final`;
+- rollback: `backup-pre-semantic-conflicts-v2.4.8`;
 - cofre remoto: branch `clinic-sync-data`.
