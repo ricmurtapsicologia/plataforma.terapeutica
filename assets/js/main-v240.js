@@ -1,0 +1,24 @@
+document.body.classList.add('rm-booting');
+window.__rmPreBootErrors=[];
+const modules=[
+  ['./runtime-monitor-v240.js','Monitor de runtime'],
+  ['./legacy-sw-cleanup-v240.js','Limpeza do service worker legado'],
+  ['./browser-fixes-v153.js','Compatibilidade de navegador'],
+  ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
+  ['./google-calendar-service-v240.js','Google Agenda'],
+  ['./clinical-reconcile-v240.js','Google Meet/Gemini'],
+  ['./gemini-migration-v240.js','Migração Gemini'],
+  ['./ai-record-review-v220.js','Revisão de prontuário IA'],
+  ['./agenda-mobile-v183.js','Agenda mobile'],
+  ['./agenda-actions-v240.js','Ações da Agenda'],
+  ['./portable-tools-v153.js','Ferramentas portáteis'],
+  ['./sync-conflict-recovery-v220.js','Recuperação de conflitos'],
+  ['./patient-closure-v172.js','Encerramento de paciente'],
+  ['./version-v170.js','Versão visual'],
+  ['./material-share-v162.js','Compartilhamento de materiais'],
+  ['./mobile-ux-v170.js','UX mobile'],
+  ['./patient-ux-v240.js','Contexto individual do paciente'],
+  ['./workspace-status-v240.js','Indicador Meet']
+];
+for(const [path,label] of modules){try{await import(`${path}?v=2.4.0`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
+try{await import('./bootstrap-v240.js?v=2.4.0')}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
