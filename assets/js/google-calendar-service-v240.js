@@ -1,0 +1,51 @@
+import {data,runtime,patientById,todayISO} from './state.js';
+import {decryptJson} from './crypto.js';
+import {toast,esc} from './ui.js';
+
+const TOKEN_STORAGE='rm.google.calendar.token.v1';
+const PENDING_STORAGE='rm.google.calendar.pending.v240';
+const MIRROR_STORAGE='rm.google.calendar.mirror.v240';
+const SIGNATURE_STORAGE='rm.google.calendar.signature.v240';
+const CALENDAR_SCOPE='https://www.googleapis.com/auth/calendar.events';
+const TIMEZONE=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Sao_Paulo';
+let token='',expiresAt=0,scope='',busy=false,reconcileTimer=null,lastStatus='unknown';
+const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
+const getJson=(k,f)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??f}catch{return f}};
+const setJson=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const getPending=()=>arr(getJson(PENDING_STORAGE,[]));
+const setPending=v=>setJson(PENDING_STORAGE,[...new Set(arr(v))].slice(-1000));
+const getMirror=()=>new Set(arr(getJson(MIRROR_STORAGE,[])));
+const saveMirror=s=>setJson(MIRROR_STORAGE,[...s].slice(-3000));
+const tokenValid=()=>Boolean(token&&expiresAt>Date.now()+60000&&scope.split(/\s+/).includes(CALENDAR_SCOPE));
+
+function emit(status,detail=''){lastStatus=status;document.dispatchEvent(new CustomEvent('rm:calendar-status',{detail:{status,detail}}));paintStatus();paintSettings()}
+async function loadToken(){token='';expiresAt=0;scope='';if(!runtime.key)return false;let raw=null;try{raw=JSON.parse(localStorage.getItem(TOKEN_STORAGE)||'null')}catch{}if(!raw)return false;try{const v=await decryptJson(runtime.key,raw,'google-calendar-token');if(v?.token&&Number(v.expiresAt)>Date.now()+60000){token=v.token;expiresAt=Number(v.expiresAt);scope=String(v.scope||CALENDAR_SCOPE);return true}}catch{}return false}
+function localDateTime(date,time){return`${date}T${time||'00:00'}:00`}
+function addMinutes(date,time,minutes){const d=new Date(localDateTime(date,time));d.setMinutes(d.getMinutes()+Number(minutes||50));return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:00`}
+async function eventIdFor(value){const bytes=new TextEncoder().encode(String(value||'')),hash=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),alphabet='0123456789abcdefghijklmnopqrstuv';let bits=0,buffer=0,out='rm';for(const b of hash){buffer=(buffer<<8)|b;bits+=8;while(bits>=5){bits-=5;out+=alphabet[(buffer>>bits)&31]}}if(bits>0)out+=alphabet[(buffer<<(5-bits))&31];return out}
+function eventPayload(a){const p=patientById(a.patientId),code=p?.code||'Paciente';return{summary:`Sessão clínica · ${code}`,description:'Sessão registrada na Plataforma Clínica. Nenhum conteúdo clínico é enviado ao Google Agenda.',start:{dateTime:localDateTime(a.date,a.time),timeZone:TIMEZONE},end:{dateTime:addMinutes(a.date,a.time,a.duration),timeZone:TIMEZONE},visibility:'private',transparency:'opaque',reminders:{useDefault:false,overrides:[{method:'popup',minutes:30}]},extendedProperties:{private:{rmAppointmentId:a.id,rmSource:'plataforma-terapeutica'}}}}
+async function gfetch(url,options={}){if(!tokenValid())throw new Error('Google Workspace precisa ser renovado.');const r=await fetch(url,{...options,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',...(options.headers||{})}});if(r.status===401){token='';expiresAt=0;emit('disconnected','Autorização Google expirada.');throw new Error('A autorização do Google Workspace expirou.')}return r}
+function addPending(id){if(!id)return;const list=getPending();if(!list.includes(id)){list.push(id);setPending(list)}}
+function removePending(id){setPending(getPending().filter(x=>x!==id))}
+function mirrorAdd(id){const s=getMirror();s.add(id);saveMirror(s)}
+function mirrorDelete(id){const s=getMirror();s.delete(id);saveMirror(s)}
+async function deleteEvent(id){const eid=await eventIdFor(id),base='https://www.googleapis.com/calendar/v3/calendars/primary/events',r=await gfetch(`${base}/${encodeURIComponent(eid)}?sendUpdates=none`,{method:'DELETE'});if(!r.ok&&r.status!==404)throw new Error(`Google Agenda respondeu ${r.status}.`);mirrorDelete(id);removePending(id)}
+async function upsert(a){if(!a?.id||!a.date||!a.time)return;if(a.status==='Cancelada'||a.attendanceStatus==='Desmarcou'){if(getMirror().has(a.id))await deleteEvent(a.id);return}const eid=await eventIdFor(a.id),base='https://www.googleapis.com/calendar/v3/calendars/primary/events',payload={id:eid,...eventPayload(a)};let r=await gfetch(`${base}?sendUpdates=none`,{method:'POST',body:JSON.stringify(payload)});if(r.status===409)r=await gfetch(`${base}/${encodeURIComponent(eid)}?sendUpdates=none`,{method:'PUT',body:JSON.stringify(eventPayload(a))});if(!r.ok)throw new Error(`Google Agenda respondeu ${r.status}.`);mirrorAdd(a.id);removePending(a.id)}
+function relevant(){const today=todayISO(),mirror=getMirror();return arr(data.appointments).filter(a=>a?.id&&a?.date&&a?.time&&(a.date>=today||mirror.has(a.id))).slice(0,600)}
+function signature(list){return list.map(a=>[a.id,a.updatedAt||'',a.date||'',a.time||'',a.duration||'',a.status||'',a.attendanceStatus||'',a.patientId||''].join('|')).sort().join('\n')}
+async function flushPending(){if(!tokenValid())return;for(const id of getPending()){const a=arr(data.appointments).find(x=>x?.id===id);try{if(a)await upsert(a);else await deleteEvent(id)}catch{break}}}
+async function reconcile({force=false,quiet=true}={}){if(busy||!runtime.dataReady)return;if(!tokenValid()){emit('disconnected','Renove o Google Workspace.');return}const list=relevant(),sig=signature(list);if(!force&&sig===localStorage.getItem(SIGNATURE_STORAGE)){emit('connected','Agenda Google atualizada.');return}busy=true;emit('syncing','Conferindo alterações da Agenda.');try{for(const a of list)await upsert(a);const allIds=new Set(arr(data.appointments).map(a=>a?.id).filter(Boolean));for(const id of getMirror())if(!allIds.has(id))await deleteEvent(id);localStorage.setItem(SIGNATURE_STORAGE,sig);emit('connected',`${list.length} compromisso(s) conferido(s).`);if(!quiet)toast('Google Agenda conferida.','success')}catch(err){emit('error',err.message||'Falha na Google Agenda.');if(!quiet)toast(err.message||'Não foi possível conferir a Agenda.','error')}finally{busy=false}}
+function queue({force=false,quiet=true,delay=500}={}){clearTimeout(reconcileTimer);reconcileTimer=setTimeout(()=>void reconcile({force,quiet}),delay)}
+
+function paintStatus(){if(runtime.locked)return;const top=document.querySelector('.top-actions');if(!top)return;let chip=document.getElementById('rm-calendar-status-v240');if(!chip){chip=document.createElement('button');chip.id='rm-calendar-status-v240';chip.type='button';chip.dataset.route='settings';top.insertBefore(chip,document.getElementById('clock-chip')||top.firstChild)}const label=lastStatus==='connected'?'Agenda ✓':lastStatus==='syncing'?'Agenda ↻':lastStatus==='error'||lastStatus==='disconnected'?'Agenda !':'Agenda •';chip.className=`rm-status-chip ${lastStatus==='connected'?'ok':lastStatus==='error'||lastStatus==='disconnected'?'error':'warn'}`;chip.textContent=label;chip.title='Estado da integração com Google Agenda'}
+function settingsMarkup(){return`<section id="rm-google-calendar" class="card mt-16"><div class="card-title"><div><div class="eyebrow">Google Workspace</div><h3 class="mb-0">Google Agenda</h3></div><span class="badge">${tokenValid()?'Conectado':'Reconectar'}</span></div><p class="muted">Agenda usa a autorização unificada do Google Workspace. Não existe um segundo OAuth nem um segundo token. Sessões futuras e eventos já gerenciados pela plataforma são refletidos no Google; o histórico anterior permanece preservado para evitar duplicar eventos legados.</p><div class="flex gap-8 wrap mt-16"><button class="btn" data-action="workspace-connect">${tokenValid()?'Renovar Google Workspace':'Conectar Google Workspace'}</button><button class="btn secondary" data-action="calendar-reconcile-v240" ${tokenValid()?'':'disabled'}>Conferir Agenda</button></div>${getPending().length?`<div class="notice warning mt-12"><strong>${getPending().length}</strong> alteração(ões) aguardando conexão.</div>`:''}</section>`}
+function paintSettings(){if(runtime.locked||runtime.route!=='settings')return;const main=document.getElementById('main-content');if(!main)return;const old=document.getElementById('rm-google-calendar'),wrap=document.createElement('div');wrap.innerHTML=settingsMarkup();if(old)old.replaceWith(wrap.firstElementChild);else main.appendChild(wrap.firstElementChild)}
+async function activate(){await loadToken();emit(tokenValid()?'connected':'disconnected',tokenValid()?'Google Agenda pronta.':'Renove o Google Workspace.');if(tokenValid()){await flushPending();queue({force:false,quiet:true,delay:700})}}
+
+document.addEventListener('rm:data-ready',()=>void activate());
+document.addEventListener('rm:rendered',()=>{paintStatus();paintSettings()});
+document.addEventListener('rm:google-workspace-authorized',()=>setTimeout(()=>void activate(),120));
+document.addEventListener('rm:data-patched',e=>{if(arr(e.detail?.stores).includes('appointments')&&tokenValid())queue({force:false,quiet:true,delay:650})});
+document.addEventListener('rm:local-data-changed',e=>{if(globalThis.__rmSyncApplying||e.detail?.storeName!=='appointments')return;const id=e.detail?.id;if(id){addPending(id);queue({force:false,quiet:true,delay:550})}else queue({force:true,quiet:true,delay:650})});
+window.addEventListener('online',()=>{if(tokenValid()&&runtime.dataReady){void flushPending();queue({force:false,quiet:true,delay:700})}});
+document.addEventListener('click',e=>{const el=e.target.closest?.('[data-action="calendar-reconcile-v240"]');if(!el)return;e.preventDefault();e.stopImmediatePropagation();void reconcile({force:true,quiet:false})},true);
