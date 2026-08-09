@@ -1,121 +1,99 @@
-# Plataforma Clínica Richelmy Murta — v2.4.4
+# Plataforma Clínica Richelmy Murta — v2.4.5
 
 Aplicação clínica local-first em GitHub Pages, com cofre AES-GCM, sincronização cifrada notebook ↔ celular, Google Workspace, Google Agenda e conciliação das Anotações do Google Meet/Gemini com Sessões e Prontuário.
 
-## Objetivo da v2.4.4
+## Objetivo da v2.4.5
 
-A v2.4.4 corrige o reparo histórico do Gemini em produção. O catálogo anterior podia carregar aliases aprendidos incorretamente e preservar um Rascunho IA antigo mesmo quando o documento de origem não correspondia mais a paciente ativo.
+A v2.4.5 corrige um caso real de identificação no Gemini: o nome exibido entre parênteses pode ser um componente intermediário do nome completo cadastrado, e não necessariamente o primeiro nome ou o nome preferido.
 
-A rotina `gemini-canonical-repair-v244.js` reconstrói os aliases do zero usando apenas evidência explícita existente nas próprias Anotações do Gemini e os pacientes ativos do cofre desbloqueado.
+A nova rotina `gemini-name-token-repair-v245.js` aceita esse componente somente quando ele identifica de forma única um único paciente ativo. Nenhum nome ou codinome clínico é escrito no repositório público.
 
-## Reparo canônico do Gemini
+## Regra de identidade
 
-Fluxo:
+A associação segue esta ordem:
+
+1. nome completo/nome preferido do paciente como participante do Gemini;
+2. relação explícita `identificador do Meet (nome)` encontrada nas próprias Anotações;
+3. se o valor entre parênteses for um único componente do nome, ele só é aceito quando esse componente existir no nome de exatamente um paciente ativo;
+4. o identificador do Meet aprendido é armazenado apenas no catálogo Gemini cifrado localmente.
+
+Exemplo abstrato:
+
+```text
+Participante X (NomeIntermediário)
+        ↓
+NomeIntermediário pertence a exatamente 1 paciente ativo
+        ↓
+Participante X ↔ patientId
+```
+
+## Reparo histórico
+
+Após `Dados ✓`, a rotina v2.4.5 executa uma vez por dispositivo:
 
 ```text
 Anotações Gemini desde 01/05/2026
         ↓
-leitura controlada do Drive
+leitura do Drive
         ↓
-extração dos participantes
-        ↓
-reconstrução dos aliases sem reutilizar associações antigas
-        ↓
-identificação segura do paciente
+identificação segura
         ↓
 criação/correção da sessão Realizada / Presente
         ↓
 criação/correção do prontuário Rascunho IA
         ↓
-remoção de materialização automática sem paciente ativo
+remoção de materializações automáticas inválidas
         ↓
 1 evento de sincronização
 ```
 
 Regras de integridade:
 
-- nenhum nome ou alias clínico é hardcoded no repositório público;
-- aliases antigos do catálogo não alimentam a reconstrução v2.4.4;
-- paciente é associado somente por nome de participante ou alias explicitamente relacionado a paciente ativo no Gemini;
-- sessão ausente recebe ID determinístico `gmappt_<fileId>`;
-- prontuário ausente recebe ID determinístico `gmrec_<fileId>`;
-- prontuário finalizado não é sobrescrito;
-- registro manual sem origem Gemini não é apagado;
-- sessão/prontuário automáticos de documento sem paciente ativo podem ser removidos;
-- transcrição integral permanece no Drive;
-- a correção é idempotente e executa uma vez por dispositivo na v2.4.4.
+- sessão: `gmappt_<fileId>`;
+- prontuário: `gmrec_<fileId>`;
+- registro finalizado não é sobrescrito;
+- materialização automática sem paciente ativo pode ser removida;
+- dados manuais não são removidos pela rotina;
+- a transcrição integral permanece no Drive;
+- aliases ficam cifrados no navegador;
+- conflitos de Dados pausam a conciliação Gemini.
 
 ## Prontuário assistido por IA
 
-Cada sessão segura recebe `Rascunho IA` estruturado a partir do resumo/anotações do Gemini em:
-
-- foco clínico e evolução da sessão;
-- procedimentos técnico-científicos efetivamente descritos;
-- resposta do paciente e resultados observados;
-- plano terapêutico, tarefas e encaminhamentos.
-
-O prompt `TCC-CFP-v2.4` não permite inventar diagnóstico, hipótese, técnica, risco, sintoma, fala, resultado ou conduta ausente na fonte. A finalização exige revisão profissional.
+Cada sessão identificada pode receber `Rascunho IA`, estruturado a partir exclusivamente do resumo/anotações do Gemini em foco/evolução, procedimentos descritos, resposta/resultados observados e plano/tarefas/encaminhamentos. O prompt `TCC-CFP-v2.4` proíbe inventar diagnóstico, hipótese, técnica, risco, sintoma, fala ou resultado ausente na fonte. A finalização exige revisão profissional.
 
 ## Indicadores do topo
 
-`top-status-owner-v243.js` mantém `rm-calendar-status-v240` como proprietário único do indicador de Agenda e remove chips redundantes após renderizações.
-
-Estado esperado:
+`top-status-owner-v243.js` mantém um único indicador oficial de Agenda.
 
 ```text
 Dados ✓   Agenda ✓   Meet ✓
 ```
 
-## Sincronização
+## Arquitetura principal
 
-`secure-sync-v240.js` permanece como único SyncManager:
-
-- orientado por eventos;
-- debounce de 1,6 s;
-- heartbeat de 90 s;
-- aba líder via `BroadcastChannel`;
-- um `performSync` por vez;
-- conflitos clínicos reais bloqueiam merge automático;
-- estados técnicos legados do Meet são saneados por `legacy-sync-cleanup-v242.js`.
-
-## Google Workspace
-
-- OAuth único: `google-workspace-oauth-v200.js`;
-- Google Agenda: `google-calendar-service-v240.js`;
-- pipeline permanente Gemini/Drive: `clinical-reconcile-v240.js`;
-- reparo histórico canônico: `gemini-canonical-repair-v244.js`;
-- escopos: `calendar.events` e `drive.readonly`.
-
-## Ficha do paciente
-
-Ao abrir um paciente, a ficha individual é o contexto principal. Há acesso direto a `Prontuário` e `Gerar prontuário por IA`.
+- `assets/js/main-v240.js` — entrypoint único;
+- `assets/js/secure-sync-v240.js` — SyncManager event-driven e multiaba;
+- `assets/js/google-workspace-oauth-v200.js` — OAuth único;
+- `assets/js/google-calendar-service-v240.js` — Google Agenda;
+- `assets/js/clinical-reconcile-v240.js` — pipeline incremental permanente do Gemini;
+- `assets/js/gemini-name-token-repair-v245.js` — reparo histórico por nome/componente único;
+- `assets/js/top-status-owner-v243.js` — proprietário único do chip Agenda;
+- `assets/js/patient-ux-v240.js` — ficha individual;
+- `tests/self-test.html` — autoteste não destrutivo.
 
 ## Segurança
 
 - PBKDF2-HMAC-SHA256 + AES-GCM;
-- cofre remoto contém somente envelope cifrado;
+- branch `clinic-sync-data` contém somente o cofre cifrado;
 - tokens Google/GitHub ficam cifrados localmente;
-- catálogo Gemini e aliases ficam cifrados no navegador;
-- nomes, aliases e conteúdo clínico não entram no código público;
+- aliases e catálogo Gemini ficam cifrados no navegador;
+- nenhum nome/codinome clínico é hardcoded no código público;
 - chave do cofre não é enviada ao Google nem ao GitHub.
-
-## Arquivos centrais
-
-- `assets/js/main-v240.js` — entrypoint único;
-- `assets/js/bootstrap-v240.js` — boot resiliente;
-- `assets/js/secure-sync-v240.js` — sincronização;
-- `assets/js/google-workspace-oauth-v200.js` — OAuth;
-- `assets/js/google-calendar-service-v240.js` — Agenda Google;
-- `assets/js/top-status-owner-v243.js` — proprietário único do chip Agenda;
-- `assets/js/clinical-reconcile-v240.js` — pipeline incremental Gemini;
-- `assets/js/gemini-canonical-repair-v244.js` — reconstrução canônica e limpeza de materializações indevidas;
-- `assets/js/legacy-sync-cleanup-v242.js` — limpeza de estado técnico antigo;
-- `assets/js/patient-ux-v240.js` — ficha individual;
-- `tests/self-test.html` — autoteste não destrutivo.
 
 ## Publicação
 
-- versão: `2.4.4`;
+- versão: `2.4.5`;
 - `SCHEMA_VERSION`: 5, preservado;
-- rollback imediato: `backup-pre-gemini-clean-v2.4.4`;
+- rollback imediato: `backup-pre-name-token-fix-v2.4.5`;
 - cofre remoto: branch `clinic-sync-data`.
