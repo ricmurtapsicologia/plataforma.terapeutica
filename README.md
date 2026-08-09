@@ -1,12 +1,39 @@
-# Plataforma Clínica Richelmy Murta — v2.4.1
+# Plataforma Clínica Richelmy Murta — v2.4.2
 
 Aplicação clínica local-first em GitHub Pages, com cofre AES-GCM, sincronização cifrada notebook ↔ celular, Google Workspace, Google Agenda e conciliação das Anotações do Google Meet/Gemini com Sessões e Prontuário.
 
-## Objetivo da v2.4.1
+## Objetivo da v2.4.2
 
-A v2.4.1 é um hotfix de integridade clínica sobre a arquitetura estável da v2.4. O foco é corrigir associações históricas do Gemini quando o participante usa nome, apelido, conta comercial ou outro identificador diferente do nome cadastrado na plataforma, sem publicar aliases ou nomes de pacientes no repositório.
+A v2.4.2 é um hotfix de estabilidade móvel sobre a arquitetura v2.4/v2.4.1. O foco é remover estados legados de antigas integrações do Meet que ainda possam existir no store `settings` e bloquear a sincronização de um dispositivo secundário, além de impedir indicadores duplicados de Agenda no topo.
 
-Princípio: **a identidade clínica é inferida apenas por evidência disponível nas próprias Anotações do Gemini e pelos pacientes ativos do cofre desbloqueado**.
+A correção não altera dados clínicos, pacientes, prontuários ou sessões atuais.
+
+## Saneamento de conflito legado
+
+`legacy-sync-cleanup-v242.js` procura somente chaves técnicas antigas do padrão `meet_*sync_state_v18x`.
+
+Quando uma chave desse tipo existe localmente ou na baseline de sincronização:
+
+1. a chave é removida do store técnico `settings`;
+2. é criado tombstone sincronizável para remover a mesma chave do cofre remoto;
+3. a entrada correspondente é retirada da baseline local para não continuar sendo classificada como conflito bilateral;
+4. o cofre é marcado como `dirty`;
+5. o `SyncManager` executa nova sincronização manual;
+6. os demais dados do celular podem voltar a acompanhar o cofre remoto normalmente.
+
+A regra é deliberadamente restrita a estados técnicos legados do Meet. Nenhum registro clínico é descartado por esse saneamento.
+
+## Deduplicação dos indicadores do topo
+
+`top-status-dedupe-v242.js` garante que `.top-actions` tenha apenas um indicador de Google Agenda: `#rm-calendar-status-v240`.
+
+Se uma aba antiga, cache anterior ou script legado tentar inserir outro chip cujo texto comece por `Agenda`, o elemento redundante é removido. O indicador `Meet` permanece independente.
+
+Estado esperado no topo:
+
+```text
+Dados ✓   Agenda ✓   Meet ✓
+```
 
 ## Arquitetura preservada
 
@@ -22,7 +49,7 @@ bootstrap-v240.js
 cofre → dados → interface
 ```
 
-A v2.4.1 mantém o SyncManager event-driven, aba líder por `BroadcastChannel`, Agenda mobile com renderizador único, OAuth Google Workspace único e pipeline incremental do Gemini.
+A v2.4.2 mantém o SyncManager event-driven, aba líder por `BroadcastChannel`, Agenda mobile com renderizador único, OAuth Google Workspace único e pipeline incremental do Gemini.
 
 ## Reclassificação histórica do Gemini
 
@@ -86,26 +113,26 @@ O prompt `TCC-CFP-v2.4` exige registro sintético, baseado exclusivamente no res
 - `agenda-mobile-v183.js` é o único renderizador mobile;
 - `agenda-actions-v240.js` concentra gerenciar, remarcar, presença/ausência/cancelamento, WhatsApp, pagamento e ações do calendário;
 - `google-calendar-service-v240.js` é o único serviço de espelhamento Google;
-- OAuth permanece centralizado em `google-workspace-oauth-v200.js` com `calendar.events` e `drive.readonly`.
+- OAuth permanece centralizado em `google-workspace-oauth-v200.js` com `calendar.events` e `drive.readonly`;
+- `top-status-dedupe-v242.js` elimina indicadores redundantes no topo.
 
 ## Sincronização
 
-`secure-sync-v240.js` é o único coordenador de sincronização.
+`secure-sync-v240.js` continua sendo o único coordenador de sincronização.
 
 - debounce de 1,6 s para alterações locais;
 - heartbeat de segurança de 90 s;
 - somente um `performSync` simultâneo;
 - eleição de aba líder;
 - sync sem mudança não reconstrói a interface;
-- conflitos continuam bloqueando merge automático;
+- conflitos clínicos reais continuam bloqueando merge automático;
+- estados técnicos legados do Meet são saneados por `legacy-sync-cleanup-v242.js`;
 - recuperação manual permanece em `sync-conflict-recovery-v240.js`.
 
 ## Timestamps
 
 - `updatedAt`: relógio da entidade clínica;
 - `source.sourceModifiedAt` / `gemini.sourceModifiedAt`: relógio da fonte Gemini.
-
-Essa separação impede que um documento antigo do Drive reduza a prioridade temporal de uma alteração clínica mais recente.
 
 ## Ficha individual do paciente
 
@@ -119,15 +146,18 @@ Essa separação impede que um documento antigo do Drive reduza a prioridade tem
 - catálogo Gemini e aliases cifrados localmente;
 - nomes, aliases e conteúdo clínico não entram no código público;
 - chave do cofre não é enviada ao Google nem ao GitHub;
-- conflito pausa a conciliação.
+- conflitos reais pausam a conciliação.
 
 ## Arquivos centrais
 
 - `assets/js/main-v240.js` — entrypoint único;
 - `assets/js/bootstrap-v240.js` — boot resiliente;
 - `assets/js/secure-sync-v240.js` — SyncManager event-driven e multiaba;
+- `assets/js/legacy-sync-cleanup-v242.js` — saneamento de estados antigos do Meet;
+- `assets/js/sync-conflict-recovery-v240.js` — recuperação manual de conflitos reais;
 - `assets/js/google-workspace-oauth-v200.js` — OAuth único Workspace;
 - `assets/js/google-calendar-service-v240.js` — Google Agenda;
+- `assets/js/top-status-dedupe-v242.js` — deduplicação dos chips do topo;
 - `assets/js/clinical-reconcile-v240.js` — pipeline incremental Gemini;
 - `assets/js/gemini-migration-v240.js` — migração segura de timestamps;
 - `assets/js/gemini-reclassify-v241.js` — reclassificação histórica de aliases/vínculos automáticos;
@@ -145,7 +175,8 @@ Essa separação impede que um documento antigo do Drive reduza a prioridade tem
 ## Publicação
 
 - aplicação: `main` / GitHub Pages;
-- versão: `2.4.1`;
+- versão: `2.4.2`;
 - `SCHEMA_VERSION`: 5, preservado;
-- rollback imediato: `backup-pre-gemini-alias-fix-v2.4.1`;
-- backup arquitetural anterior: `backup-pre-stability-refactor-v2.4`.
+- rollback imediato: `backup-pre-mobile-sync-fix-v2.4.2`;
+- backup de reclassificação: `backup-pre-gemini-alias-fix-v2.4.1`;
+- backup arquitetural: `backup-pre-stability-refactor-v2.4`.
