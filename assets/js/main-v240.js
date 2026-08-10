@@ -11,6 +11,7 @@ const modules=[
   ['./google-calendar-service-v240.js','Google Agenda'],
   ['./top-status-owner-v243.js','Proprietário único dos indicadores do topo'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
+  ['./public-clinical-storage-guard-v251.js','Gate de storage clínico público'],
   ['./clinical-reconcile-v240.js','Google Meet/Gemini'],
   ['./gemini-migration-v240.js','Migração Gemini'],
   ['./gemini-attendance-repair-v249.js','Reparo de presença do histórico Gemini'],
