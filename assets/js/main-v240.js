@@ -10,6 +10,7 @@ const modules=[
   ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
   ['./google-calendar-service-v240.js','Google Agenda'],
   ['./top-status-owner-v243.js','Proprietário único dos indicadores do topo'],
+  ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
   ['./clinical-reconcile-v240.js','Google Meet/Gemini'],
   ['./gemini-migration-v240.js','Migração Gemini'],
   ['./gemini-name-token-repair-v245.js','Reparo Gemini por nome único'],
