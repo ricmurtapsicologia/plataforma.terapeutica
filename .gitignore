@@ -1,0 +1,34 @@
+# P0 — repositório público deve conter somente código e assets não sensíveis
+
+# Cofres, exports e bancos locais
+.clinic-sync/
+*.rmvault
+*.db
+*.sqlite
+*.sqlite3
+*.p12
+*.pfx
+*.pem
+*.key
+
+# Segredos e configuração local
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+
+# Exports e backups clínicos locais
+clinical-export*
+clinic-export*
+patient-export*
+patients-export*
+*clinical-backup*.json
+*clinic-backup*.json
+*vault-backup*.json
+
+# Arquivos temporários/OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
