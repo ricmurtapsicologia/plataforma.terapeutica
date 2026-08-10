@@ -26,4 +26,6 @@ jobs:
       - name: Compile service
         run: python -m compileall -q app tests
       - name: Run contract tests
-        run: pytest -q
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q
