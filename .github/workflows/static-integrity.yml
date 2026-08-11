@@ -80,7 +80,8 @@ jobs:
           const fs=require('fs');
           const index=fs.readFileSync('index.html','utf8');
           const scripts=[...index.matchAll(/<script\s+type="module"[^>]+src="([^"]+)"/g)].map(m=>m[1]);
-          if(scripts.length!==1||!scripts[0].includes('main-v240.js'))throw new Error(`Expected one module entrypoint main-v240.js, found: ${scripts.join(', ')}`);
+          if(scripts.length!==1||!scripts[0].includes('main-v250.js'))throw new Error(`Expected one module entrypoint main-v250.js, found: ${scripts.join(', ')}`);
+          if(!index.includes('rm-build')||!index.includes('2.5.1-main-v250'))throw new Error('Pages build marker 2.5.1 missing');
           const retired=['sync-supervisor-v162.js','google-calendar-v168.js','clinical-reconcile-v230.js','optimization-v180.js','agenda-enhancements-v152.js','agenda-tools-v162.js','workspace-status-v220.js','sw-coop-register-v165.js'];
           for(const name of retired)if(index.includes(name))throw new Error(`Retired concurrent module referenced by index: ${name}`);
           const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
@@ -88,12 +89,14 @@ jobs:
           const sync=fs.readFileSync('assets/js/secure-sync-v260.js','utf8');
           if(!sync.includes('HEARTBEAT_MS=90000')||!sync.includes('BroadcastChannel'))throw new Error('Private SyncManager invariants missing');
           if(sync.includes('api.github.com'))throw new Error('Private SyncManager must not write/read clinical vault through GitHub');
+          if(sync.includes('GitHub autorizado'))throw new Error('Legacy GitHub authorization label must not exist in private sync UI');
           const storage=fs.readFileSync('assets/js/drive-appdata-storage-v260.js','utf8');
           if(!storage.includes("spaces:'appDataFolder'")||!storage.includes("parents:['appDataFolder']"))throw new Error('Drive appDataFolder adapter invariants missing');
           const token=fs.readFileSync('assets/js/google-workspace-token-v260.js','utf8');
           if(!token.includes('https://www.googleapis.com/auth/drive.appdata'))throw new Error('drive.appdata scope missing');
-          const main=fs.readFileSync('assets/js/main-v240.js','utf8');
+          const main=fs.readFileSync('assets/js/main-v250.js','utf8');
           if(main.includes('sync-conflict-recovery-v247.js')||!main.includes('sync-semantic-conflict-cleanup-v260.js'))throw new Error('Legacy GitHub conflict recovery must not be active');
+          if(!main.includes("__rmEntrypointVersion='2.5.1-main-v250'"))throw new Error('New entrypoint marker missing');
           const calendar=fs.readFileSync('assets/js/google-calendar-service-v240.js','utf8');
           if(calendar.includes('accounts.google.com/o/oauth2'))throw new Error('Calendar service must not own OAuth');
           const gemini=fs.readFileSync('assets/js/clinical-reconcile-v240.js','utf8');
