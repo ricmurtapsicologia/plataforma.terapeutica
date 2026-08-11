@@ -20,4 +20,4 @@ function firstName(p){return String(p?.preferredName||p?.name||'').trim().split(
 function rerender(){window.__rmRender?.()}
 function nl2br(v=''){return esc(String(v||'')).replace(/\n/g,'<br>')}
 
-// Branch abandoned; do not merge.
+// Branch intentionally not merged. Main remains unchanged.
