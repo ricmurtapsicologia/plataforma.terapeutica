@@ -7,7 +7,7 @@ import {conflictKeys,entityState,parseConflictKey,stamp} from './sync-merge-v260
 
 const FORMAT='rm-clinic-sync-v2';
 const SECRET_STORAGE='rm.sync.secret.v1';
-const BASELINE_STORAGE='rm.sync.baseline.v2';
+const BASELINE_STORAGE='rm.sync.drive.baseline.v260';
 const parseJson=v=>{try{return JSON.parse(v)}catch{return null}};
 let running=false;
 
