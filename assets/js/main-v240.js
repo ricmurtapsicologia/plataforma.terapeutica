@@ -20,8 +20,7 @@ const modules=[
   ['./agenda-mobile-v183.js','Agenda mobile'],
   ['./agenda-actions-v240.js','Ações da Agenda'],
   ['./portable-tools-v153.js','Ferramentas portáteis'],
-  ['./sync-semantic-conflict-cleanup-v248.js','Limpeza de falsos conflitos equivalentes'],
-  ['./sync-conflict-recovery-v247.js','Recuperação transacional de conflitos'],
+  ['./sync-semantic-conflict-cleanup-v260.js','Limpeza de falsos conflitos equivalentes'],
   ['./legacy-sync-cleanup-v242.js','Limpeza de conflito legado do Meet'],
   ['./patient-closure-v172.js','Encerramento de paciente'],
   ['./version-v170.js','Versão visual'],
@@ -30,5 +29,5 @@ const modules=[
   ['./patient-ux-v240.js','Contexto individual do paciente'],
   ['./workspace-status-v240.js','Indicador Meet']
 ];
-for(const [path,label] of modules){try{await import(`${path}?v=2.4.11`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
-try{await import('./bootstrap-v240.js?v=2.4.11');if(Array.isArray(window.__rmBootErrors)&&window.__rmPreBootErrors.length)window.__rmBootErrors.push(...window.__rmPreBootErrors)}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar a plataforma.</strong><div class="small">${String(err?.message||err).replace(/[<>]/g,'')}</div>`;document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
+for(const [path,label] of modules){try{await import(`${path}?v=2.5.0`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
+try{await import('./bootstrap-v240.js?v=2.5.0');if(Array.isArray(window.__rmBootErrors)&&window.__rmPreBootErrors.length)window.__rmBootErrors.push(...window.__rmPreBootErrors)}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar a plataforma.</strong><div class="small">${String(err?.message||err).replace(/[<>]/g,'')}</div>`;document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}

@@ -2,7 +2,7 @@ import {STORE_NAMES,runtime,setStore} from './state.js';
 import {APP_VERSION} from './version.js';
 import {openDatabase,unlockVault,getAllDecrypted} from './database.js';
 import {runMigrations} from './migrations.js';
-import {startSyncSession} from './secure-sync-v240.js';
+import {startSyncSession} from './secure-sync-v260.js';
 
 const app=document.getElementById('app');
 let authenticating=false,authFailureCount=0,authBlockedUntil=0;
