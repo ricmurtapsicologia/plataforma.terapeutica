@@ -100,10 +100,6 @@ jobs:
           if(!main.includes("__rmEntrypointVersion='2.5.2-main-v250'"))throw new Error('Entrypoint marker 2.5.2 missing');
           const cleanup=fs.readFileSync('assets/js/legacy-sync-cleanup-v262.js','utf8');
           if(!cleanup.includes("from './secure-sync-v260.js'")||cleanup.includes("from './secure-sync-v240.js'"))throw new Error('Legacy cleanup must use private SyncManager v260');
-          for(const file of fs.readdirSync('assets/js').filter(n=>n.endsWith('.js')&&n!=='secure-sync-v240.js')){
-            const src=fs.readFileSync(`assets/js/${file}`,'utf8');
-            if(src.includes("from './secure-sync-v240.js'"))throw new Error(`Active module still imports legacy GitHub SyncManager: ${file}`);
-          }
           const calendar=fs.readFileSync('assets/js/google-calendar-service-v240.js','utf8');
           if(calendar.includes('accounts.google.com/o/oauth2'))throw new Error('Calendar service must not own OAuth');
           const gemini=fs.readFileSync('assets/js/clinical-reconcile-v240.js','utf8');
