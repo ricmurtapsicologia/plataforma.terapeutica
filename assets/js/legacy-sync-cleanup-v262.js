@@ -4,10 +4,17 @@ import {performSync} from './secure-sync-v260.js';
 
 const BASELINE_STORAGE='rm.sync.drive.baseline.v260';
 const DIRTY_STORAGE='rm.sync.drive.dirty.v260';
+const LEGACY_GITHUB_KEYS=['rm.sync.githubToken.v1','rm.sync.baseline.v2','rm.sync.remoteRevision','rm.sync.dirty'];
+const LEGACY_GITHUB_SESSION_KEYS=['rm.sync.githubToken.handoff'];
 const LEGACY_RX=/^meet_(?:name_)?sync_state_v18\d+$/i;
 let running=false;
 
 const parseJson=value=>{try{return JSON.parse(value)}catch{return null}};
+function purgeLegacyGithubCredential(){
+  for(const key of LEGACY_GITHUB_KEYS)localStorage.removeItem(key);
+  for(const key of LEGACY_GITHUB_SESSION_KEYS)sessionStorage.removeItem(key);
+  document.dispatchEvent(new CustomEvent('rm:legacy-github-credential-purged',{detail:{provider:'github',replacement:'google-drive-appdata'}}));
+}
 function baseline(){return parseJson(localStorage.getItem(BASELINE_STORAGE)||'{}')||{}}
 function legacyIds(){
   const ids=new Set((Array.isArray(data.settings)?data.settings:[]).map(x=>x?.id).filter(id=>LEGACY_RX.test(String(id||''))));
@@ -19,6 +26,7 @@ function legacyIds(){
   return [...ids];
 }
 async function cleanup(){
+  purgeLegacyGithubCredential();
   if(running||runtime.locked||!runtime.key||!runtime.dataReady)return;
   const ids=legacyIds();if(!ids.length)return;
   running=true;
@@ -32,5 +40,6 @@ async function cleanup(){
     setTimeout(()=>void performSync({manual:true}),350);
   }catch(err){console.warn('Não foi possível limpar estado legado de sincronização',err)}finally{running=false}
 }
+purgeLegacyGithubCredential();
 document.addEventListener('rm:data-ready',()=>setTimeout(()=>void cleanup(),450));
 document.addEventListener('rm:sync-status',e=>{if(e.detail?.provider==='google-drive-appdata'&&e.detail?.status==='conflict')setTimeout(()=>void cleanup(),180)});
