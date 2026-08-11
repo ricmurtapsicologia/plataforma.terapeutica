@@ -1,3 +1,5 @@
+// validation trigger for P0 v2.5.2 final
+
 document.body.classList.add('rm-booting');
 window.__rmEntrypointVersion='2.5.2-main-v250';
 window.__rmPreBootErrors=[];
