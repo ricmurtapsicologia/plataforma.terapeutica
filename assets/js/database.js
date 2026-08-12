@@ -55,11 +55,42 @@ async function clearTombstone(storeName,id){
   if(!Array.isArray(current)||!current.some(t=>t?.storeName===storeName&&t?.id===id))return;
   await setMeta('syncTombstones',current.filter(t=>!(t?.storeName===storeName&&t?.id===id)));
 }
+async function clearTombstones(entries){
+  const pairs=entries.filter(x=>x?.storeName&&x?.id);
+  if(!pairs.length)return;
+  const current=await getMeta('syncTombstones');
+  if(!Array.isArray(current)||!current.length)return;
+  const keys=new Set(pairs.map(x=>`${x.storeName}:${x.id}`));
+  const next=current.filter(t=>!keys.has(`${t?.storeName||''}:${t?.id||''}`));
+  if(next.length!==current.length)await setMeta('syncTombstones',next);
+}
 async function recordTombstone(storeName,id){
   if(!id)return;
   const saved=await getMeta('syncTombstones'),current=Array.isArray(saved)?[...saved]:[];
   const deletedAt=new Date().toISOString(),filtered=current.filter(t=>!(t?.storeName===storeName&&t?.id===id));
   filtered.push({storeName,id,deletedAt});await setMeta('syncTombstones',filtered.slice(-10000));
+}
+
+function validateWrite(storeName,value){
+  if(!STORE_NAMES.includes(storeName))throw new Error('Área de dados inválida.');
+  if(!value?.id)throw new Error('Registro sem identificador.');
+}
+async function prepareEncryptedRow(storeName,value,key){
+  validateWrite(storeName,value);
+  const aad=`${storeName}:${value.id}`;
+  const encrypted=await encryptJson(key,value,aad);
+  return{storeName,id:value.id,value,row:{id:value.id,patientId:value.patientId||'',updatedAt:value.updatedAt||new Date().toISOString(),encrypted}};
+}
+async function prepareBatch(storeName,values,key){
+  if(!Array.isArray(values))throw new Error('Lote de gravação inválido.');
+  const ids=new Set();
+  for(const value of values){validateWrite(storeName,value);if(ids.has(value.id))throw new Error(`Registro duplicado no lote: ${storeName}:${value.id}`);ids.add(value.id)}
+  return Promise.all(values.map(value=>prepareEncryptedRow(storeName,value,key)));
+}
+function stable(value){
+  if(Array.isArray(value))return`[${value.map(stable).join(',')}]`;
+  if(value&&typeof value==='object')return`{${Object.keys(value).sort().map(k=>`${JSON.stringify(k)}:${stable(value[k])}`).join(',')}}`;
+  return JSON.stringify(value);
 }
 
 export async function vaultExists(){return Boolean(await getMeta('vault'))}
@@ -78,14 +109,55 @@ export async function unlockVault(password){
 }
 
 export async function putEncrypted(storeName,value,key){
-  if(!STORE_NAMES.includes(storeName))throw new Error('Área de dados inválida.');if(!value?.id)throw new Error('Registro sem identificador.');
-  const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx),aad=`${storeName}:${value.id}`,encrypted=await encryptJson(key,value,aad),updatedAt=value.updatedAt||new Date().toISOString();
-  tx.objectStore(storeName).put({id:value.id,patientId:value.patientId||'',updatedAt,encrypted});await done;await clearTombstone(storeName,value.id);notifyChange(storeName,value.id,'put');return value;
+  const prepared=await prepareEncryptedRow(storeName,value,key);
+  const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx);
+  tx.objectStore(storeName).put(prepared.row);
+  await done;
+  await clearTombstone(storeName,value.id);
+  notifyChange(storeName,value.id,'put');
+  return value;
 }
 export async function bulkPutEncrypted(storeName,values,key){
+  const prepared=await prepareBatch(storeName,values,key);
+  if(!prepared.length)return;
   const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx),store=tx.objectStore(storeName);
-  for(const value of values){const aad=`${storeName}:${value.id}`,encrypted=await encryptJson(key,value,aad);store.put({id:value.id,patientId:value.patientId||'',updatedAt:value.updatedAt||new Date().toISOString(),encrypted})}
-  await done;const ids=new Set(values.map(v=>v?.id).filter(Boolean)),current=await getMeta('syncTombstones');if(Array.isArray(current)&&current.some(t=>t&&ids.has(t.id)&&t.storeName===storeName))await setMeta('syncTombstones',current.filter(t=>!(t?.storeName===storeName&&ids.has(t?.id))));notifyChange(storeName,'','bulk');
+  for(const item of prepared)store.put(item.row);
+  await done;
+  await clearTombstones(prepared);
+  notifyChange(storeName,'','bulk');
+}
+export async function getDecryptedById(storeName,id,key){
+  if(!STORE_NAMES.includes(storeName))throw new Error('Área de dados inválida.');
+  if(!id)return null;
+  const db=await openDatabase(),tx=db.transaction(storeName,'readonly'),done=txDone(tx),row=await requestAsPromise(tx.objectStore(storeName).get(id));
+  await done;
+  if(!row)return null;
+  return decryptJson(key,row.encrypted,`${storeName}:${id}`);
+}
+export async function bulkPutEncryptedAtomic(batches,key,{verify=false}={}){
+  const source=Array.isArray(batches)?batches:[];
+  const normalized=[];
+  const stores=new Set();
+  for(const batch of source){
+    const storeName=batch?.storeName,values=Array.isArray(batch?.values)?batch.values:[];
+    if(!values.length)continue;
+    const items=await prepareBatch(storeName,values,key);
+    normalized.push(...items);stores.add(storeName);
+  }
+  if(!normalized.length)return{counts:{},verified:true};
+  const db=await openDatabase(),names=[...stores],tx=db.transaction(names,'readwrite'),done=txDone(tx);
+  for(const item of normalized)tx.objectStore(item.storeName).put(item.row);
+  await done;
+  await clearTombstones(normalized);
+  const counts={};for(const item of normalized)counts[item.storeName]=(counts[item.storeName]||0)+1;
+  if(verify){
+    for(const item of normalized){
+      const readback=await getDecryptedById(item.storeName,item.id,key);
+      if(!readback||stable(readback)!==stable(item.value))throw new Error(`Falha de verificação após gravação: ${item.storeName}:${item.id}`);
+    }
+  }
+  for(const storeName of stores)notifyChange(storeName,'','bulk');
+  return{counts,verified:true};
 }
 export async function getAllDecrypted(storeName,key){
   const db=await openDatabase();if(!db.objectStoreNames.contains(storeName))return[];
