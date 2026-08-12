@@ -70,7 +70,7 @@ jobs:
           const index=fs.readFileSync('index.html','utf8');
           const refs=[...index.matchAll(/(?:src|href)="(assets\/[^"?#]+|manifest\.webmanifest|sw\.js)/g)].map(m=>m[1]);
           const missing=refs.filter(ref=>!fs.existsSync(ref));
-          if(missing.length){console.error('Missing assets referenced by index.html:\n'+missing.join('\n));process.exit(1)}
+          if(missing.length){console.error('Missing assets referenced by index.html:\n'+missing.join('\n'));process.exit(1)}
           console.log(`Validated ${refs.length} local index assets.`);
           NODE
       - name: Check architecture invariants
