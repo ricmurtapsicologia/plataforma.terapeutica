@@ -81,7 +81,7 @@ jobs:
           const index=fs.readFileSync('index.html','utf8');
           const scripts=[...index.matchAll(/<script\s+type="module"[^>]+src="([^"]+)"/g)].map(m=>m[1]);
           if(scripts.length!==1||!scripts[0].includes('main-v250.js'))throw new Error(`Expected one module entrypoint main-v250.js, found: ${scripts.join(', ')}`);
-          if(!index.includes('rm-build')||!index.includes('2.6.3-main-v250'))throw new Error('Pages build marker 2.6.3 missing');
+          if(!index.includes('rm-build')||!index.includes('2.6.4-main-v250'))throw new Error('Pages build marker 2.6.4 missing');
           const retired=['sync-supervisor-v162.js','google-calendar-v168.js','clinical-reconcile-v230.js','optimization-v180.js','agenda-enhancements-v152.js','agenda-tools-v162.js','workspace-status-v220.js','sw-coop-register-v165.js'];
           for(const name of retired)if(index.includes(name))throw new Error(`Retired concurrent module referenced by index: ${name}`);
           const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
@@ -97,8 +97,14 @@ jobs:
           const main=fs.readFileSync('assets/js/main-v250.js','utf8');
           if(main.includes('sync-conflict-recovery-v247.js')||!main.includes('sync-semantic-conflict-cleanup-v260.js'))throw new Error('Legacy GitHub conflict recovery must not be active');
           if(!main.includes('legacy-sync-cleanup-v262.js')||main.includes('legacy-sync-cleanup-v242.js'))throw new Error('Entrypoint must use Drive-only legacy cleanup v262');
-          if(!main.includes("__rmEntrypointVersion='2.6.3-main-v250'"))throw new Error('Entrypoint marker 2.6.3 missing');
+          if(!main.includes("__rmEntrypointVersion='2.6.4-main-v250'"))throw new Error('Entrypoint marker 2.6.4 missing');
+          if(!main.includes('google-workspace-auto-renew-v264.js'))throw new Error('Silent Workspace renewal v264 missing');
+          if(!main.includes('gemini-autodelivery-v264.js'))throw new Error('Gemini autodelivery v264 missing');
           if(!main.includes('gemini-alias-continuity-v263.js'))throw new Error('Gemini alias continuity guard v263 missing');
+          const renew=fs.readFileSync('assets/js/google-workspace-auto-renew-v264.js','utf8');
+          if(!renew.includes('WORKSPACE_REQUIRED_SCOPES')||!renew.includes("requestAccessToken({prompt:'none'})")||!renew.includes('rm:google-workspace-authorized'))throw new Error('Silent Workspace renewal invariants missing');
+          const delivery=fs.readFileSync('assets/js/gemini-autodelivery-v264.js','utf8');
+          if(!delivery.includes("status==='synced'")||!delivery.includes("RECONCILE_ACTION='gemini-reconcile-v240'")||!delivery.includes('COOLDOWN_MS'))throw new Error('Gemini autodelivery invariants missing');
           const continuity=fs.readFileSync('assets/js/gemini-alias-continuity-v263.js','utf8');
           if(!continuity.includes('historical.length===1')||!continuity.includes('ids.length!==1')||!continuity.includes("status==='review'"))throw new Error('Gemini alias continuity safety invariants missing');
           const cleanup=fs.readFileSync('assets/js/legacy-sync-cleanup-v262.js','utf8');
