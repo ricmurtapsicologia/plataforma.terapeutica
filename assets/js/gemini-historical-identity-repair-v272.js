@@ -50,14 +50,20 @@ async function exportDoc(fileId,token){
   return response.text();
 }
 
-function candidateFileIds(catalog){
-  const ids=new Set(),valid=validPatientIds();
+function candidateMap(catalog){
+  const candidates=new Map(),valid=validPatientIds();
   for(const record of arr(data.records)){
     if(record?.source?.type!=='google-meet-gemini'||!record?.source?.fileId)continue;
-    if(!record.patientId||!valid.has(record.patientId))ids.add(record.source.fileId);
+    if(record.patientId&&valid.has(record.patientId))continue;
+    const current=candidates.get(record.source.fileId)||{};
+    candidates.set(record.source.fileId,{...current,orphan:true,recordId:record.id||''});
   }
-  for(const item of arr(catalog.items))if(item?.status==='review'&&item?.fileId)ids.add(item.fileId);
-  return[...ids];
+  for(const item of arr(catalog.items)){
+    if(item?.status!=='review'||!item?.fileId)continue;
+    const current=candidates.get(item.fileId)||{};
+    candidates.set(item.fileId,{...current,reviewItem:item});
+  }
+  return candidates;
 }
 
 function strongEnough(match,raw,patients){
@@ -73,6 +79,25 @@ function strongEnough(match,raw,patients){
   return sameFirst.length===1&&(labels[0]===first||labels[0].startsWith(`${first} `));
 }
 
+function appointmentSupports(patientId,fileId,item){
+  const direct=arr(data.appointments).find(appointment=>appointment?.source?.fileId===fileId||appointment?.gemini?.fileId===fileId||appointment?.id===`gmappt_${fileId}`);
+  if(direct?.patientId===patientId)return true;
+  const date=item?.meetingDate,time=item?.meetingTime;
+  if(!date||!time)return false;
+  const target=new Date(`${date}T${time}:00-03:00`).getTime();
+  if(!Number.isFinite(target))return false;
+  return arr(data.appointments).some(appointment=>{
+    if(appointment?.patientId!==patientId||appointment?.date!==date||appointment?.status==='Cancelada'||appointment?.attendanceStatus==='Desmarcou')return false;
+    const stamp=new Date(`${appointment.date}T${appointment.time||'00:00'}:00-03:00`).getTime();
+    return Number.isFinite(stamp)&&Math.abs(stamp-target)<=90*60000;
+  });
+}
+
+function clinicallyGrounded(candidate,match,fileId){
+  if(candidate?.orphan)return true;
+  return appointmentSupports(match.patient.id,fileId,candidate?.reviewItem);
+}
+
 async function repair(){
   if(running||runtime.locked||!runtime.key||!runtime.dataReady||!navigator.onLine)return false;
   const last=Number(sessionStorage.getItem(SESSION_KEY)||0);if(Date.now()-last<MIN_INTERVAL_MS)return false;
@@ -80,17 +105,20 @@ async function repair(){
   try{
     const [catalog,token]=await Promise.all([loadCatalog(),loadToken()]);
     if(!token)return false;
-    const fileIds=candidateFileIds(catalog);if(!fileIds.length)return true;
+    const candidates=candidateMap(catalog);if(!candidates.size)return true;
     const patients=patientsForIdentity();if(!patients.length)return false;
     const fetched=[];
-    for(const fileId of fileIds){try{fetched.push({fileId,raw:await exportDoc(fileId,token)})}catch(err){console.warn('Falha ao ler Gemini para reparo de identidade',fileId,err)}}
+    for(const fileId of candidates.keys()){
+      try{fetched.push({fileId,raw:await exportDoc(fileId,token),candidate:candidates.get(fileId)})}
+      catch(err){console.warn('Falha ao ler Gemini para reparo de identidade',fileId,err)}
+    }
     if(!fetched.length)return false;
     const learned=learnAliasesFromDocuments({raws:fetched.map(item=>item.raw),patients,professionalName:preferences.professionalName,existingAliases:catalog.aliases||{}});
     catalog.aliases={...(catalog.aliases||{}),...learned};
     let linked=0;
     for(const item of fetched){
       const match=identifyPatientFromDocument({raw:item.raw,patients,professionalName:preferences.professionalName,learnedAliases:catalog.aliases});
-      if(!strongEnough(match,item.raw,patients))continue;
+      if(!strongEnough(match,item.raw,patients)||!clinicallyGrounded(item.candidate,match,item.fileId))continue;
       if(catalog.manualLinks?.[item.fileId]===match.patient.id)continue;
       catalog.manualLinks={...(catalog.manualLinks||{}),[item.fileId]:match.patient.id};
       const professional=normalizeIdentity(preferences.professionalName),labels=participantLabels(item.raw).filter(label=>label&&label!==professional);
