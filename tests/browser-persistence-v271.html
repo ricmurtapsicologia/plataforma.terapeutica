@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>P0 Browser Persistence</title></head><body><pre id="result">PENDING</pre><script type="module">
+import {createVault,bulkPutEncryptedAtomic,getDecryptedById,deleteDatabase} from '../assets/js/database.js';
+const out=document.getElementById('result');
+try{
+  try{await deleteDatabase()}catch{}
+  const password=`probe-${crypto.randomUUID?.()||Date.now()}`;
+  const {key}=await createVault(password);
+  const appointment={id:'probe-appt',patientId:'probe-patient',date:'2099-01-01',time:'08:00',status:'Realizada',updatedAt:new Date().toISOString()};
+  const record={id:'probe-record',patientId:'probe-patient',appointmentId:'probe-appt',date:'2099-01-01',status:'Rascunho IA',text:'synthetic persistence probe',updatedAt:new Date().toISOString()};
+  await bulkPutEncryptedAtomic([{storeName:'appointments',values:[appointment]},{storeName:'records',values:[record]}],key,{verify:true});
+  const savedAppointment=await getDecryptedById('appointments',appointment.id,key);
+  const savedRecord=await getDecryptedById('records',record.id,key);
+  if(savedAppointment?.id!==appointment.id||savedRecord?.id!==record.id||savedRecord?.text!==record.text)throw new Error('read-back divergiu');
+  out.textContent='P0_BROWSER_PERSISTENCE_PASS';
+}catch(error){out.textContent=`P0_BROWSER_PERSISTENCE_FAIL: ${error?.name||'Error'}: ${error?.message||error}`;document.documentElement.dataset.failed='1'}
+</script></body></html>
