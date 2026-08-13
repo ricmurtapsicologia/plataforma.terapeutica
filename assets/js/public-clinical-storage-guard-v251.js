@@ -1,17 +1,21 @@
-const FLAG='__rmPublicClinicalStorageGuardV251';
+const FLAG='__rmPublicClinicalStorageGuardV252';
 
 if(!globalThis[FLAG]){
   globalThis[FLAG]=true;
   const priorFetch=globalThis.fetch.bind(globalThis);
-  const TARGET='https://api.github.com/repos/ricmurtapsicologia/plataforma.terapeutica/contents/.clinic-sync/vault.json';
+  const REPO_API='https://api.github.com/repos/ricmurtapsicologia/plataforma.terapeutica/contents/';
   const blockedMethods=new Set(['PUT','POST','PATCH','DELETE']);
+
+  function isRepositoryWrite(url,method){
+    return blockedMethods.has(method)&&String(url||'').startsWith(REPO_API);
+  }
 
   globalThis.fetch=async function p0PublicClinicalStorageGuard(input,options={}){
     const url=typeof input==='string'?input:input?.url||String(input||'');
     const method=String(options?.method||(typeof input!=='string'&&input?.method)||'GET').toUpperCase();
-    if(url.startsWith(TARGET)&&blockedMethods.has(method)){
-      document.dispatchEvent(new CustomEvent('rm:clinical-storage-security-blocked',{detail:{reason:'public-github-storage',method}}));
-      throw new Error('P0: gravação clínica em repositório GitHub público bloqueada. Use o cofre local e backup até a ativação do storage privado.');
+    if(isRepositoryWrite(url,method)){
+      document.dispatchEvent(new CustomEvent('rm:clinical-storage-security-blocked',{detail:{reason:'github-clinical-write-forbidden',method}}));
+      throw new Error('P0: gravação de dados clínicos via GitHub bloqueada. O GitHub é somente código; use o cofre clínico privado.');
     }
     return priorFetch(input,options);
   };
