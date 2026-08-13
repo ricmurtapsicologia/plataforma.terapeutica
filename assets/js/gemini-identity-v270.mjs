@@ -32,10 +32,18 @@ function uniquePatientByNameValue(value,patients){
   if(key.includes(' '))return null;
   return uniqueFirstPatient(key,patients);
 }
+function labelDirectlyMatchesAnotherPatient(label,patientId,patients){
+  return patients.some(patient=>patient?.id!==patientId&&patientAliases(patient).some(alias=>alias===label||alias.startsWith(`${label} `)||label.startsWith(`${alias} `)));
+}
 
 export function learnAliasesFromDocuments({raws=[],patients=[],professionalName='',existingAliases={}}={}){
   const professional=normalizeIdentity(professionalName);
-  const learned={...(existingAliases||{})};
+  const validIds=new Set(patients.map(patient=>patient?.id).filter(Boolean));
+  const learned={};
+  for(const [alias,patientId] of Object.entries(existingAliases||{})){
+    const normalized=normalizeIdentity(alias);
+    if(normalized&&validIds.has(patientId)&&!labelDirectlyMatchesAnotherPatient(normalized,patientId,patients))learned[normalized]=patientId;
+  }
   for(const raw of raws){
     const text=String(raw||'');
     const labels=participantLabels(text).filter(label=>label&&label!==professional);
@@ -45,6 +53,7 @@ export function learnAliasesFromDocuments({raws=[],patients=[],professionalName=
       const before=normalizeIdentity(text.slice(Math.max(0,match.index-240),match.index));
       const candidates=labels
         .filter(label=>before.lastIndexOf(label)>=0)
+        .filter(label=>!labelDirectlyMatchesAnotherPatient(label,patient.id,patients))
         .sort((a,b)=>before.lastIndexOf(b)-before.lastIndexOf(a)||b.length-a.length);
       const alias=candidates[0];
       if(alias&&alias.length>=3)learned[alias]=patient.id;
@@ -58,27 +67,31 @@ export function identifyPatientFromDocument({raw='',patients=[],professionalName
   const labels=participantLabels(raw).filter(label=>label&&label!==professional);
   const rank=[];
   for(const patient of patients){
-    let score=0,evidence='';
+    let score=0,confidence=0,evidence='';
     for(const alias of patientAliases(patient)){
       if(alias.split(' ').length>=2&&labels.some(label=>label===alias||label.startsWith(`${alias} `)||alias.startsWith(`${label} `))){
-        score=200;evidence='nome completo do paciente no Gemini';break;
+        score=200;confidence=1;evidence='nome completo do paciente no Gemini';break;
       }
     }
     if(!score){
       for(const label of labels){
-        if(learnedAliases[label]===patient.id){score=195;evidence='identificador do Meet confirmado por relação histórica explícita';break}
+        if(learnedAliases[label]===patient.id&&!labelDirectlyMatchesAnotherPatient(label,patient.id,patients)){
+          score=195;confidence=.99;evidence='identificador do Meet confirmado por relação histórica explícita';break;
+        }
       }
     }
     if(!score){
       const first=firstName(patient);
-      if(first.length>=4&&patients.filter(item=>firstName(item)===first).length===1&&labels.some(label=>label===first||label.startsWith(`${first} `))){
-        score=150;evidence='primeiro nome único no cofre';
+      const unique=first.length>=4&&patients.filter(item=>firstName(item)===first).length===1;
+      if(unique&&labels.some(label=>label===first)){
+        score=150;confidence=.96;evidence='primeiro nome único e exato no cofre';
       }
     }
-    if(score)rank.push({patient,score,evidence});
+    if(score)rank.push({patient,score,confidence,evidence});
   }
   rank.sort((a,b)=>b.score-a.score);
-  if(!rank.length)return{patient:null,reason:'Paciente não identificado com segurança.',labels};
-  if(rank.length>1&&rank[0].score-rank[1].score<20)return{patient:null,reason:'Associação ambígua entre pacientes.',labels};
-  return{...rank[0],labels};
+  if(!rank.length)return{patient:null,confidence:0,reason:'Paciente não identificado com segurança.',labels};
+  if(rank.length>1&&rank[0].score-rank[1].score<25)return{patient:null,confidence:0,reason:'Associação ambígua entre pacientes.',labels};
+  if(rank[0].confidence<.95)return{patient:null,confidence:rank[0].confidence,reason:'Confiança insuficiente para associação automática.',labels};
+  return{...rank[0],automatic:true,labels};
 }
