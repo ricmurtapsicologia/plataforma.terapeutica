@@ -1,0 +1,63 @@
+name: Clinical security regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/js/**'
+      - 'tests/**'
+      - 'security/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/js/**'
+      - 'tests/**'
+      - 'security/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clinical-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Public repository guard
+        run: python3 security/public_repo_guard.py
+
+      - name: Identity module syntax
+        run: node --check assets/js/gemini-identity-v270.mjs
+
+      - name: Clinical identity regression
+        run: node tests/gemini-identity-v270.test.mjs
+
+      - name: Persistence architecture regression
+        run: node tests/persistence-architecture-v270.test.mjs
+
+      - name: No active GitHub clinical storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n -E 'api\.github\.com|\.clinic-sync/vault\.json|clinic-sync-data' assets/js index.html sw.js 2>/dev/null; then
+            echo 'Active runtime still references legacy GitHub clinical storage.' >&2
+            exit 1
+          fi
+          grep -q "spaces:'appDataFolder'" assets/js/drive-appdata-storage-v260.js
+          grep -q "parents:\['appDataFolder'\]" assets/js/drive-appdata-storage-v260.js
+          grep -q 'bulkPutEncryptedAtomic' assets/js/clinical-reconcile-v270.js
+          grep -q '{verify:true}' assets/js/clinical-reconcile-v270.js
