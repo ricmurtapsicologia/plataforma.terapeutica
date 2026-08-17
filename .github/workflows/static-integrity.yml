@@ -2,7 +2,7 @@ name: Static integrity
 
 on:
   push:
-    branches: [main, refactor-v1.8.0]
+    branches: [main]
     paths:
       - 'index.html'
       - 'assets/js/**'
@@ -21,6 +21,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: static-integrity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
