@@ -11,6 +11,7 @@ const modules=[
   ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
   ['./google-workspace-auto-renew-v264.js','Renovação silenciosa do Google Workspace'],
   ['./google-calendar-service-v240.js','Google Agenda'],
+  ['./calendar-integrity-v274.js','Integridade Google Agenda'],
   ['./top-status-owner-v243.js','Proprietário único dos indicadores do topo'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
   ['./public-clinical-storage-guard-v251.js','Gate de storage clínico público'],
