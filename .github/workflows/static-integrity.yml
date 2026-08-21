@@ -110,7 +110,7 @@ jobs:
           const index=fs.readFileSync('index.html','utf8');
           const scripts=[...index.matchAll(/<script\s+type="module"[^>]+src="([^"]+)"/g)].map(m=>m[1]);
           if(scripts.length!==1||!scripts[0].includes('main-v250.js'))throw new Error(`Expected one module entrypoint main-v250.js, found: ${scripts.join(', ')}`);
-          if(!index.includes('rm-build')||!index.includes('2.7.1-main-v250'))throw new Error('Pages build marker 2.7.1 missing');
+          if(!index.includes('rm-build')||!index.includes('2.7.2-main-v250'))throw new Error('Pages build marker 2.7.2 missing');
           const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
           if(!bootstrap.includes("from './secure-sync-v260.js'")||bootstrap.includes("from './secure-sync-v240.js'"))throw new Error('Bootstrap must use private SyncManager v260');
           const sync=fs.readFileSync('assets/js/secure-sync-v260.js','utf8');
@@ -121,7 +121,7 @@ jobs:
           const token=fs.readFileSync('assets/js/google-workspace-token-v260.js','utf8');
           if(!token.includes('https://www.googleapis.com/auth/drive.appdata'))throw new Error('drive.appdata scope missing');
           const main=fs.readFileSync('assets/js/main-v250.js','utf8');
-          if(!main.includes("__rmEntrypointVersion='2.7.1-main-v250'"))throw new Error('Entrypoint marker 2.7.1 missing');
+          if(!main.includes("__rmEntrypointVersion='2.7.2-main-v250'"))throw new Error('Entrypoint marker 2.7.2 missing');
           if(!main.includes('google-workspace-auto-renew-v264.js'))throw new Error('Silent Workspace renewal missing');
           if(!main.includes('clinical-reconcile-v270.js'))throw new Error('Single Gemini pipeline v270 missing');
           const retiredGemini=['clinical-reconcile-v240.js','gemini-autodelivery-v264.js','gemini-alias-continuity-v263.js','gemini-name-token-repair-v245.js','gemini-migration-v240.js','gemini-attendance-repair-v249.js'];
