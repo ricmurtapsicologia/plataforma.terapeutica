@@ -28,11 +28,10 @@ Data de consolidação: 2026-08-22
 | Componente | Classe | Proprietário | Estado |
 |---|---|---|---|
 | platform-runtime-v300.js | CORE/UX/OBSERVABILITY | Plataforma | CANÔNICO |
+| migration-router-v300.js | MIGRATION ROUTER | Plataforma | CANÔNICO; carrega reparos somente sob condição |
 | google-workspace-oauth-v200.js | INTEGRATION | Google Workspace | CANÔNICO |
 | google-workspace-auto-renew-v264.js | INTEGRATION | Google Workspace | CANÔNICO |
-| google-calendar-service-v240.js | INTEGRATION | Calendar | ATIVO — candidato a adapter único |
-| calendar-integrity-v274.js | INTEGRATION/SAFETY | Calendar | ATIVO — consolidar em CalendarAdapter |
-| calendar-reverse-reconcile-v275.js | INTEGRATION | Calendar | ATIVO — consolidar em CalendarAdapter |
+| calendar-adapter-v300.js | INTEGRATION | Calendar | PROPRIETÁRIO ÚNICO DE BOOT |
 | gemini-sharing-guard-v250.js | SECURITY | Gemini | CANÔNICO |
 | public-clinical-storage-guard-v251.js | SECURITY | Storage | CANÔNICO |
 | clinical-reconcile-v270.js | INTEGRATION/CLINICAL | Gemini | PROPRIETÁRIO ÚNICO |
@@ -41,24 +40,33 @@ Data de consolidação: 2026-08-22
 | agenda-mobile-v183.js | UX | Agenda | ATIVO |
 | agenda-actions-v240.js | DOMAIN/INTEGRATION | Agenda | ATIVO |
 | portable-tools-v153.js | UX | Plataforma | ATIVO |
-| sync-semantic-conflict-cleanup-v260.js | SYNC/SAFETY | Sync | ATIVO — resolve somente equivalência semântica |
-| legacy-sync-cleanup-v262.js | MIGRATION/SAFETY | Sync | ATIVO temporariamente; remove estado GitHub legado |
+| sync-semantic-conflict-cleanup-v260.js | SYNC/SAFETY | Sync | ATIVO; atua apenas em conflito real |
 | patient-closure-v172.js | DOMAIN | Paciente | ATIVO |
 | version-v170.js | UX | Release | ATIVO |
 | material-share-v162.js | DOMAIN/UX | Materiais | ATIVO |
 | mobile-ux-v170.js | UX | Mobile | ATIVO |
 | patient-ux-v240.js | UX | Paciente | ATIVO |
 
+## Componentes encapsulados/condicionais
+
+| Componente | Proprietário | Política |
+|---|---|---|
+| google-calendar-service-v240.js | calendar-adapter-v300.js | interno do adapter |
+| calendar-integrity-v274.js | calendar-adapter-v300.js | interno do adapter |
+| calendar-reverse-reconcile-v275.js | calendar-adapter-v300.js | interno do adapter |
+| gemini-materialization-integrity-v273.js | platform-runtime-v300.js | importado somente se o marcador `done` estiver ausente |
+| legacy-sync-cleanup-v262.js | migration-router-v300.js | importado somente quando houver estado legado detectável ou conflito |
+
 ## Componentes retirados do boot permanente na v3.0.0
 
-| Componente | Destino |
-|---|---|
-| runtime-monitor-v240.js | absorvido por platform-runtime-v300.js |
-| legacy-sw-cleanup-v240.js | absorvido como migração persistente one-shot |
-| browser-fixes-v153.js | absorvido por platform-runtime-v300.js |
-| top-status-owner-v243.js | absorvido por platform-runtime-v300.js |
-| workspace-status-v240.js | absorvido por platform-runtime-v300.js |
-| gemini-materialization-integrity-v273.js | carregado somente se marcador de conclusão estiver ausente |
+- runtime-monitor-v240.js — absorvido por `platform-runtime-v300.js`;
+- legacy-sw-cleanup-v240.js — absorvido como migração persistente one-shot;
+- browser-fixes-v153.js — absorvido por `platform-runtime-v300.js`;
+- top-status-owner-v243.js — absorvido por `platform-runtime-v300.js`;
+- workspace-status-v240.js — absorvido por `platform-runtime-v300.js`;
+- gemini-materialization-integrity-v273.js — passou a carregamento condicional;
+- legacy-sync-cleanup-v262.js — passou a carregamento condicional;
+- google-calendar-service-v240.js, calendar-integrity-v274.js e calendar-reverse-reconcile-v275.js — deixaram de ser responsabilidades diretas do entrypoint e passaram ao `CalendarAdapter`.
 
 ## Componentes legados proibidos no boot
 
@@ -81,8 +89,9 @@ Regra inicial de migração:
 
 1. appointment existente recebe `clinicalSessionId = appointment.id`;
 2. record recebe o ID somente se já houver vínculo explícito por `appointmentId` ou pelo mesmo `source.fileId`;
-3. nenhuma associação nova é criada por nome, semelhança textual ou proximidade de horário nesta migração;
-4. o reconciliador Gemini mantém sua revisão humana para ambiguidades.
+3. a gravação da migração usa lote cifrado atômico com verificação (`bulkPutEncryptedAtomic(..., {verify:true})`);
+4. nenhuma associação nova é criada por nome, semelhança textual ou proximidade de horário;
+5. o reconciliador Gemini mantém revisão humana para ambiguidades.
 
 ## UX do psicólogo
 
@@ -97,12 +106,15 @@ O workspace do paciente passa de 13 destinos simultâneos para 6 grupos:
 
 Subáreas continuam acessíveis contextualmente, sem perda funcional. Ações frequentes são reunidas em `+ Ação`, e duplicações de `Agendar sessão`/máscara de privacidade são suprimidas na renderização.
 
+## IA/documentação assistida
+
+Na interface v3, comandos do Gemini são apresentados como preparação/refação de rascunho, não como decisão clínica autônoma. Prontuários finalizados permanecem protegidos contra sobrescrita automática e ambiguidades de identidade seguem para revisão profissional.
+
 ## Pendências controladas pós-v3
 
-Estas não bloqueiam a v3.0.0, mas permanecem como dívida técnica explícita:
+Estas não bloqueiam a v3.0.0 porque exigem regressão visual ou janela de migração observável:
 
-1. fundir `google-calendar-service`, `calendar-integrity` e `calendar-reverse-reconcile` em um `CalendarAdapter`;
-2. retirar `legacy-sync-cleanup-v262.js` após janela de migração comprovada;
-3. aposentar `gemini-historical-identity-repair-v272.js` quando não houver mais identidades órfãs históricas;
-4. consolidar fisicamente as folhas CSS históricas após regressão visual comparativa;
-5. renomear arquivos versionados no nome somente em uma futura reestruturação de build, evitando alteração massiva nesta versão clínica.
+1. retirar definitivamente `legacy-sync-cleanup-v262.js` quando nenhum dispositivo/dado histórico depender dele;
+2. aposentar `gemini-historical-identity-repair-v272.js` após evidência de ausência de identidades órfãs históricas;
+3. consolidar fisicamente as folhas CSS históricas em pacote separado, com regressão visual antes/depois;
+4. renomear arquivos versionados no nome apenas em futura reestruturação de build, evitando alteração massiva simultânea à migração clínica.
