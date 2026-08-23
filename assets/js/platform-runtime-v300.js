@@ -1,5 +1,5 @@
 import {data,runtime} from './state.js';
-import {putEncrypted} from './database.js';
+import {bulkPutEncryptedAtomic} from './database.js';
 import {modal,closeModal} from './ui.js';
 import {APP_VERSION} from './version.js';
 
@@ -13,6 +13,7 @@ let meetStatus='unknown';
 let meetDetail='Estado do Google Meet/Gemini ainda não confirmado.';
 let canonicalTimer=null;
 let decorateQueued=false;
+let observer=null;
 
 const GROUPS=[
   {label:'Principal',tabs:[['summary','Principal']]},
@@ -66,36 +67,39 @@ function appointmentBySourceFile(fileId){if(!fileId)return null;return (Array.is
 
 async function ensureCanonicalSessionIds(){
   if(runtime.locked||!runtime.key||!runtime.dataReady)return;
-  const changedAppointments=[];
-  const changedRecords=[];
   const appointments=Array.isArray(data.appointments)?data.appointments:[];
   const records=Array.isArray(data.records)?data.records:[];
+  const appointmentChanges=[];
+  const recordChanges=[];
 
   for(let i=0;i<appointments.length;i++){
     const current=appointments[i];
     if(!current?.id||current.clinicalSessionId)continue;
-    const next={...current,clinicalSessionId:current.id};
-    appointments[i]=next;
-    changedAppointments.push(next);
+    appointmentChanges.push({index:i,row:{...current,clinicalSessionId:current.id}});
   }
 
+  const proposedSessionId=new Map(appointments.filter(x=>x?.id).map(x=>[x.id,x.clinicalSessionId||x.id]));
   for(let i=0;i<records.length;i++){
     const current=records[i];
     if(!current?.id||current.clinicalSessionId)continue;
     const linked=appointmentById(current.appointmentId)||appointmentBySourceFile(current?.source?.fileId);
-    if(!linked?.clinicalSessionId)continue;
-    const next={...current,clinicalSessionId:linked.clinicalSessionId};
-    records[i]=next;
-    changedRecords.push(next);
+    const sessionId=linked?.clinicalSessionId||proposedSessionId.get(linked?.id)||'';
+    if(!sessionId)continue;
+    recordChanges.push({index:i,row:{...current,clinicalSessionId:sessionId}});
   }
 
+  if(!appointmentChanges.length&&!recordChanges.length)return;
   try{
-    for(const row of changedAppointments)await putEncrypted('appointments',row,runtime.key);
-    for(const row of changedRecords)await putEncrypted('records',row,runtime.key);
-    if(changedAppointments.length||changedRecords.length){
-      localStorage.setItem(CANONICAL_SESSION_MIGRATION,JSON.stringify({status:'done',at:new Date().toISOString(),appointments:changedAppointments.length,records:changedRecords.length}));
-      document.dispatchEvent(new CustomEvent('rm:clinical-session-id',{detail:{appointments:changedAppointments.length,records:changedRecords.length,source:'existing-links-only'}}));
-    }
+    const batches=[];
+    if(appointmentChanges.length)batches.push({storeName:'appointments',values:appointmentChanges.map(x=>x.row)});
+    if(recordChanges.length)batches.push({storeName:'records',values:recordChanges.map(x=>x.row)});
+    await bulkPutEncryptedAtomic(batches,runtime.key,{verify:true});
+    for(const change of appointmentChanges)appointments[change.index]=change.row;
+    for(const change of recordChanges)records[change.index]=change.row;
+    localStorage.setItem(CANONICAL_SESSION_MIGRATION,JSON.stringify({status:'done',at:new Date().toISOString(),appointments:appointmentChanges.length,records:recordChanges.length}));
+    if(appointmentChanges.length)document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{storeName:'appointments',kind:'clinical-session-id-v300',at:new Date().toISOString(),verified:true}}));
+    if(recordChanges.length)document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{storeName:'records',kind:'clinical-session-id-v300',at:new Date().toISOString(),verified:true}}));
+    document.dispatchEvent(new CustomEvent('rm:clinical-session-id',{detail:{appointments:appointmentChanges.length,records:recordChanges.length,source:'existing-links-only'}}));
   }catch(err){console.warn('Não foi possível completar a identidade canônica de sessões.',err)}
 }
 function scheduleCanonicalSessionIds(delay=220){clearTimeout(canonicalTimer);canonicalTimer=setTimeout(()=>void ensureCanonicalSessionIds(),delay)}
@@ -197,14 +201,20 @@ function decorateSettingsHealth(){
 
 function decorateAll(){
   decorateQueued=false;
-  decoratePatientNavigation();
-  relabelAssistedDocumentation();
-  sanitizeTopStatuses();
-  decorateSettingsHealth();
+  const app=document.getElementById('app');
+  observer?.disconnect();
+  try{
+    decoratePatientNavigation();
+    relabelAssistedDocumentation();
+    sanitizeTopStatuses();
+    decorateSettingsHealth();
+  }finally{
+    if(app&&observer)observer.observe(app,{childList:true,subtree:true});
+  }
 }
 function scheduleDecorate(){if(decorateQueued)return;decorateQueued=true;queueMicrotask(decorateAll)}
 
-const observer=new MutationObserver(scheduleDecorate);
+observer=new MutationObserver(scheduleDecorate);
 const app=document.getElementById('app');if(app)observer.observe(app,{childList:true,subtree:true});
 
 document.addEventListener('click',event=>{
