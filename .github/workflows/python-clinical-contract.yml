@@ -1,10 +1,6 @@
-name: Python clinical sidecar contract
+name: Python clinical sidecar contract (archived)
 
 on:
-  pull_request:
-    paths:
-      - 'services/python-clinical/**'
-      - '.github/workflows/python-clinical-contract.yml'
   workflow_dispatch:
 
 permissions:
