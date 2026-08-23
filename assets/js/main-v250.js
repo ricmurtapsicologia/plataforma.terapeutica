@@ -6,6 +6,7 @@ document.addEventListener('rm:boot-ready',()=>{bootReady=true},{once:true});
 setTimeout(()=>{if(bootReady)return;const box=document.getElementById('rm-boot-fallback');if(box){box.innerHTML='<strong>O carregamento está demorando mais que o esperado.</strong><div class="small">Verifique a conexão e recarregue a página. Se persistir, abra o diagnóstico da plataforma após o acesso.</div>'}},12000);
 const modules=[
   ['./platform-runtime-v300.js','Runtime consolidado v3'],
+  ['./migration-router-v300.js','Roteador de migrações condicionais'],
   ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
   ['./google-workspace-auto-renew-v264.js','Renovação silenciosa do Google Workspace'],
   ['./calendar-adapter-v300.js','CalendarAdapter v3'],
@@ -18,7 +19,6 @@ const modules=[
   ['./agenda-actions-v240.js','Ações da Agenda'],
   ['./portable-tools-v153.js','Ferramentas portáteis'],
   ['./sync-semantic-conflict-cleanup-v260.js','Limpeza de falsos conflitos equivalentes'],
-  ['./legacy-sync-cleanup-v262.js','Limpeza de estado legado de sincronização'],
   ['./patient-closure-v172.js','Encerramento de paciente'],
   ['./version-v170.js','Versão visual'],
   ['./material-share-v162.js','Compartilhamento de materiais'],
