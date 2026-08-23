@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const main=read('assets/js/main-v250.js');
 const platform=read('assets/js/platform-runtime-v300.js');
+const calendar=read('assets/js/calendar-adapter-v300.js');
 const index=read('index.html');
 const version=read('assets/js/version.js');
 
@@ -30,6 +31,9 @@ for(const retired of [
   'gemini-attendance-repair-v249.js'
 ])assert.ok(!main.includes(retired),`${retired} must not be an active Gemini runtime`);
 
+assert.ok(main.includes('calendar-adapter-v300.js'),'single Calendar adapter must be active');
+for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v275.js'])assert.ok(!main.includes(internal),`${internal} must be owned by CalendarAdapter, not main`);
+assert.ok(calendar.includes('google-calendar-service-v240.js')&&calendar.includes('calendar-integrity-v274.js')&&calendar.includes('calendar-reverse-reconcile-v275.js'),'CalendarAdapter must preserve service, integrity and reverse reconciliation');
 assert.ok(main.includes('clinical-reconcile-v270.js'),'single Gemini reconciler must remain active');
 assert.ok(platform.includes('clinicalSessionId'),'canonical clinical session identity must exist');
 assert.ok(platform.includes("source:'existing-links-only'"),'canonical backfill must only use existing links');
