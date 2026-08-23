@@ -1,48 +1,30 @@
-# Clinical Sidecar — contrato isolado
+# Clinical Sidecar — arquivado
 
-Esta pasta é um scaffold de contrato para uma futura camada Python privada. Ela não está integrada ao frontend, não é publicada pelo GitHub Pages e não altera o cofre, o `SCHEMA_VERSION`, a sincronização, o Google OAuth, a Agenda, o Gemini ou a resolução de conflitos existentes.
+Status na Plataforma Clínica 3.0: `ARCHIVED / NOT IN RUNTIME`.
 
-Ponto de rollback do repositório: `backup/pre-python-20260809`.
+Esta pasta permanece apenas como scaffold histórico de contrato para uma possível camada Python privada futura. Ela não está integrada ao frontend, não é publicada pelo GitHub Pages, não altera o cofre, o `SCHEMA_VERSION`, a sincronização, o Google OAuth, a Agenda, o Gemini ou a resolução de conflitos existentes.
 
-## Objetivo desta etapa
+O workflow correspondente é manual (`workflow_dispatch`) e não executa automaticamente em pushes ou pull requests.
 
-Validar a fronteira arquitetural antes de qualquer integração real.
+Ponto de rollback histórico do repositório: `backup/pre-python-20260809`.
 
-Endpoints disponíveis:
+## Contrato preservado
+
+Endpoints do scaffold:
 
 - `GET /health` — saúde do serviço;
 - `GET /v1/security/capabilities` — contrato explícito de não persistência/não escrita;
 - `POST /v1/draft/prepare` — recebe texto e devolve apenas um rascunho normalizado, com hash e seções, sem persistência.
 
-O contrato atual rejeita campos extras. Isso impede que identificadores de paciente sejam adicionados informalmente ao payload nesta fase.
-
-## Garantias da fase 0
+## Garantias
 
 - não grava request body;
 - não grava no cofre;
-- não grava na branch `clinic-sync-data`;
+- não grava em branch de dados;
 - não sobrescreve prontuário finalizado;
 - não recebe secrets no payload;
 - não faz chamada de IA;
-- não é chamado pela PWA atual.
+- não é chamado pela PWA atual;
+- não gera custo recorrente nem processamento automático.
 
-## Execução local
-
-```bash
-cd services/python-clinical
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-pytest -q
-```
-
-## Próximas fases, somente após aprovação
-
-1. mover/hospedar o serviço em infraestrutura privada apropriada;
-2. autenticação máquina-a-máquina e origem permitida explícita;
-3. integração Google server-side com secrets fora do repositório;
-4. processamento Gemini/Meet como `draft`;
-5. revisão explícita antes de qualquer persistência clínica;
-6. observabilidade sem conteúdo clínico em logs;
-7. somente depois avaliar jobs e automações.
-
-A PWA atual deve continuar funcional mesmo se este serviço estiver indisponível.
+Qualquer reativação exige decisão arquitetural explícita, infraestrutura privada apropriada, autenticação máquina-a-máquina, observabilidade sem conteúdo clínico e nova revisão de segurança.
