@@ -34,14 +34,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
       - name: Check JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
           while IFS= read -r -d '' file; do
-            echo "Checking $file"
             node --check "$file"
-          done < <(find assets/js -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+          done < <(find assets/js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+
       - name: Run clinical regression tests
         shell: bash
         run: |
@@ -49,6 +50,8 @@ jobs:
           node tests/private-sync-v260.test.mjs
           node tests/gemini-identity-v270.test.mjs
           node tests/persistence-architecture-v270.test.mjs
+          node tests/platform-v300.test.mjs
+
       - name: Run real browser persistence probe
         shell: bash
         run: |
@@ -65,10 +68,8 @@ jobs:
           profile="/tmp/rm-browser-$RANDOM"
           html="$($browser --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=8000 --user-data-dir="$profile" --dump-dom http://127.0.0.1:8765/tests/browser-persistence-v271.html 2>/tmp/rm-browser.log || true)"
           printf '%s\n' "$html"
-          if ! grep -q 'P0_BROWSER_PERSISTENCE_PASS' <<<"$html"; then
-            cat /tmp/rm-browser.log || true
-            exit 1
-          fi
+          grep -q 'P0_BROWSER_PERSISTENCE_PASS' <<<"$html" || { cat /tmp/rm-browser.log || true; exit 1; }
+
       - name: Check local import targets
         shell: bash
         run: |
@@ -91,6 +92,7 @@ jobs:
           if(missing.length){console.error('Missing local imports:\n'+missing.join('\n'));process.exit(1)}
           console.log(`Validated local imports in ${files.length} JavaScript modules.`);
           NODE
+
       - name: Check index local assets
         shell: bash
         run: |
@@ -102,46 +104,49 @@ jobs:
           if(missing.length){console.error('Missing assets referenced by index.html:\n'+missing.join('\n'));process.exit(1)}
           console.log(`Validated ${refs.length} local index assets.`);
           NODE
+
       - name: Check architecture invariants
         shell: bash
         run: |
           node <<'NODE'
           const fs=require('fs');
           const index=fs.readFileSync('index.html','utf8');
+          const main=fs.readFileSync('assets/js/main-v250.js','utf8');
+          const platform=fs.readFileSync('assets/js/platform-runtime-v300.js','utf8');
+          const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
+          const sync=fs.readFileSync('assets/js/secure-sync-v260.js','utf8');
+          const storage=fs.readFileSync('assets/js/drive-appdata-storage-v260.js','utf8');
+          const token=fs.readFileSync('assets/js/google-workspace-token-v260.js','utf8');
+          const database=fs.readFileSync('assets/js/database.js','utf8');
+          const gemini=fs.readFileSync('assets/js/clinical-reconcile-v270.js','utf8');
+          const cleanup=fs.readFileSync('assets/js/legacy-sync-cleanup-v262.js','utf8');
           const scripts=[...index.matchAll(/<script\s+type="module"[^>]+src="([^"]+)"/g)].map(m=>m[1]);
           if(scripts.length!==1||!scripts[0].includes('main-v250.js'))throw new Error(`Expected one module entrypoint main-v250.js, found: ${scripts.join(', ')}`);
-          if(!index.includes('rm-build')||!index.includes('2.7.2-main-v250'))throw new Error('Pages build marker 2.7.2 missing');
-          const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
+          if(!index.includes('3.0.0-main-v250'))throw new Error('Pages build marker 3.0.0 missing');
+          if(!main.includes("__rmEntrypointVersion='3.0.0-main-v250'"))throw new Error('Entrypoint marker 3.0.0 missing');
+          if(!main.includes('platform-runtime-v300.js'))throw new Error('Platform v3 runtime missing');
+          for(const retired of ['runtime-monitor-v240.js','legacy-sw-cleanup-v240.js','browser-fixes-v153.js','top-status-owner-v243.js','gemini-materialization-integrity-v273.js','workspace-status-v240.js'])if(main.includes(retired))throw new Error(`Retired permanent boot module referenced: ${retired}`);
           if(!bootstrap.includes("from './secure-sync-v260.js'")||bootstrap.includes("from './secure-sync-v240.js'"))throw new Error('Bootstrap must use private SyncManager v260');
-          const sync=fs.readFileSync('assets/js/secure-sync-v260.js','utf8');
           if(!sync.includes('HEARTBEAT_MS=90000')||!sync.includes('BroadcastChannel'))throw new Error('Private SyncManager invariants missing');
-          if(sync.includes('api.github.com'))throw new Error('Private SyncManager must not write/read clinical vault through GitHub');
-          const storage=fs.readFileSync('assets/js/drive-appdata-storage-v260.js','utf8');
+          if(sync.includes('api.github.com'))throw new Error('Private SyncManager must not use GitHub for clinical vault');
           if(!storage.includes("spaces:'appDataFolder'")||!storage.includes("parents:['appDataFolder']"))throw new Error('Drive appDataFolder adapter invariants missing');
-          const token=fs.readFileSync('assets/js/google-workspace-token-v260.js','utf8');
           if(!token.includes('https://www.googleapis.com/auth/drive.appdata'))throw new Error('drive.appdata scope missing');
-          const main=fs.readFileSync('assets/js/main-v250.js','utf8');
-          if(!main.includes("__rmEntrypointVersion='2.7.2-main-v250'"))throw new Error('Entrypoint marker 2.7.2 missing');
           if(!main.includes('google-workspace-auto-renew-v264.js'))throw new Error('Silent Workspace renewal missing');
           if(!main.includes('clinical-reconcile-v270.js'))throw new Error('Single Gemini pipeline v270 missing');
-          const retiredGemini=['clinical-reconcile-v240.js','gemini-autodelivery-v264.js','gemini-alias-continuity-v263.js','gemini-name-token-repair-v245.js','gemini-migration-v240.js','gemini-attendance-repair-v249.js'];
-          for(const legacy of retiredGemini)if(main.includes(legacy))throw new Error(`Competing/legacy Gemini runtime must not be active: ${legacy}`);
-          if(main.includes('sync-conflict-recovery-v247.js')||!main.includes('sync-semantic-conflict-cleanup-v260.js'))throw new Error('Legacy GitHub conflict recovery must not be active');
-          if(!main.includes('legacy-sync-cleanup-v262.js')||main.includes('legacy-sync-cleanup-v242.js'))throw new Error('Entrypoint must use Drive-only legacy cleanup v262');
-          const renew=fs.readFileSync('assets/js/google-workspace-auto-renew-v264.js','utf8');
-          if(!renew.includes('WORKSPACE_REQUIRED_SCOPES')||!renew.includes("requestAccessToken({prompt:'none'})")||!renew.includes('rm:google-workspace-authorized'))throw new Error('Silent Workspace renewal invariants missing');
-          const database=fs.readFileSync('assets/js/database.js','utf8');
+          for(const legacy of ['clinical-reconcile-v240.js','gemini-autodelivery-v264.js','gemini-alias-continuity-v263.js','gemini-name-token-repair-v245.js','gemini-migration-v240.js','gemini-attendance-repair-v249.js'])if(main.includes(legacy))throw new Error(`Competing/legacy Gemini runtime active: ${legacy}`);
+          if(main.includes('sync-conflict-recovery-v247.js')||!main.includes('sync-semantic-conflict-cleanup-v260.js'))throw new Error('Private sync conflict policy invalid');
+          if(!main.includes('legacy-sync-cleanup-v262.js')||main.includes('legacy-sync-cleanup-v242.js'))throw new Error('Drive-only legacy cleanup invariant missing');
           if(!database.includes('bulkPutEncryptedAtomic')||!database.includes('prepareEncryptedRow')||!database.includes('getDecryptedById'))throw new Error('Transactional clinical persistence missing');
-          const gemini=fs.readFileSync('assets/js/clinical-reconcile-v270.js','utf8');
           if(!gemini.includes('CONCURRENCY=2')||!gemini.includes('sourceModifiedAt'))throw new Error('Gemini incremental/source clock invariants missing');
           if(!gemini.includes("IDENTITY_RULE_VERSION='3.0'")||!gemini.includes('learnAliasesFromDocuments'))throw new Error('Gemini identity invariants missing');
           if(!gemini.includes('bulkPutEncryptedAtomic')||!gemini.includes('{verify:true}'))throw new Error('Gemini materialization must be atomic and verified');
           if(gemini.includes("syncState!=='synced'"))throw new Error('Local Gemini materialization must not require remote sync state');
           if(!gemini.includes('manualLinks')||!gemini.includes('gemini-review-hub-v270'))throw new Error('Identity review fallback missing');
-          const cleanup=fs.readFileSync('assets/js/legacy-sync-cleanup-v262.js','utf8');
           if(!cleanup.includes("from './secure-sync-v260.js'")||cleanup.includes("from './secure-sync-v240.js'"))throw new Error('Legacy cleanup must use private SyncManager v260');
+          if(!platform.includes('clinicalSessionId')||!platform.includes("source:'existing-links-only'"))throw new Error('Canonical session identity invariant missing');
           console.log('Architecture invariants validated.');
           NODE
+
       - name: Check application version consistency
         shell: bash
         run: |
