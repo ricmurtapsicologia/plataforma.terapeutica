@@ -10,6 +10,7 @@ const modules=[
   ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
   ['./google-workspace-auto-renew-v264.js','Renovação silenciosa do Google Workspace'],
   ['./clinical-intake-runtime-v310.js','Clinical Intake · Anamnese'],
+  ['./clinical-intake-patient-ui-v312.js','Anamnese · área clínica do paciente'],
   ['./calendar-adapter-v300.js','CalendarAdapter v3'],
   ['./clinical-whatsapp-bridge-v300.js','WhatsApp · confirmações clínicas T−6h'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
