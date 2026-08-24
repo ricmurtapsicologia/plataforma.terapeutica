@@ -23,6 +23,8 @@ function baseRow(overrides={}){
   return row;
 }
 
+function csvCell(value){return `"${String(value??'').replaceAll('"','""')}"`}
+
 {
   const csv='A,B,C\n1,"texto, com vírgula","linha 1\nlinha 2"\n2,"aspas ""internas""",fim';
   const rows=parseCsv(csv);
@@ -33,11 +35,9 @@ function baseRow(overrides={}){
 }
 
 {
-  const header=REQUIRED_HEADERS.join(',');
-  const values=REQUIRED_HEADERS.map(h=>{
-    const value=baseRow()[h]||'';
-    return `"${String(value).replaceAll('"','""')}"`;
-  }).join(',');
+  const row=baseRow();
+  const header=REQUIRED_HEADERS.map(csvCell).join(',');
+  const values=REQUIRED_HEADERS.map(h=>csvCell(row[h])).join(',');
   const objects=rowsToObjects(parseCsv(`${header}\n${values}`));
   assert.equal(objects.length,1);
   assert.equal(objects[0][FIELD.name],'Paciente Sintético');
