@@ -1,4 +1,4 @@
-import {data,runtime,selectedPatient,normalizeIdentity as _unused} from './state.js';
+import {data,runtime,selectedPatient} from './state.js';
 import {bulkPutEncryptedAtomic,getMeta,setMeta} from './database.js';
 import {loadWorkspaceAuthorization,DRIVE_READONLY_SCOPE} from './google-workspace-token-v260.js';
 import {toast,modal,closeModal,esc} from './ui.js';
