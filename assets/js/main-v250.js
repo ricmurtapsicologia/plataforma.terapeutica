@@ -1,5 +1,5 @@
 document.body.classList.add('rm-booting');
-window.__rmEntrypointVersion='3.0.1-whatsapp-bridge';
+window.__rmEntrypointVersion='3.0.0-main-v250';
 window.__rmPreBootErrors=[];
 let bootReady=false;
 document.addEventListener('rm:boot-ready',()=>{bootReady=true},{once:true});
@@ -26,5 +26,5 @@ const modules=[
   ['./mobile-ux-v170.js','UX mobile'],
   ['./patient-ux-v240.js','Contexto individual do paciente']
 ];
-for(const [path,label] of modules){try{await import(`${path}?v=3.0.1`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
-try{await import('./bootstrap-v240.js?v=3.0.1');if(Array.isArray(window.__rmBootErrors)&&window.__rmPreBootErrors.length)window.__rmBootErrors.push(...window.__rmPreBootErrors)}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar a plataforma.</strong><div class="small">${String(err?.message||err).replace(/[<>]/g,'')}</div>`;document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
+for(const [path,label] of modules){try{await import(`${path}?v=3.0.0`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
+try{await import('./bootstrap-v240.js?v=3.0.0');if(Array.isArray(window.__rmBootErrors)&&window.__rmPreBootErrors.length)window.__rmBootErrors.push(...window.__rmPreBootErrors)}catch(err){console.error('Falha crítica no bootstrap',err);window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||err}`);const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar a plataforma.</strong><div class="small">${String(err?.message||err).replace(/[<>]/g,'')}</div>`;document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:err?.message||String(err)}}))}
