@@ -1,0 +1,54 @@
+name: Clinical Intake quality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/js/clinical-intake-core-v310.mjs'
+      - 'assets/js/clinical-intake-runtime-v310.js'
+      - 'assets/js/main-v250.js'
+      - 'tests/clinical-intake-v310.test.mjs'
+      - '.github/workflows/clinical-intake-quality.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/js/clinical-intake-core-v310.mjs'
+      - 'assets/js/clinical-intake-runtime-v310.js'
+      - 'assets/js/main-v250.js'
+      - 'tests/clinical-intake-v310.test.mjs'
+      - '.github/workflows/clinical-intake-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clinical-intake-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: |
+          node --check assets/js/clinical-intake-core-v310.mjs
+          node --check assets/js/clinical-intake-runtime-v310.js
+      - name: Clinical Intake regression
+        run: node tests/clinical-intake-v310.test.mjs
+      - name: Privacy contract
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const runtime=fs.readFileSync('assets/js/clinical-intake-runtime-v310.js','utf8');
+          if(!runtime.includes("bulkPutEncryptedAtomic")||!runtime.includes("{verify:true}"))throw new Error('Encrypted verified persistence is required');
+          if(!runtime.includes("DRIVE_READONLY_SCOPE"))throw new Error('Clinical Intake must use read-only source access');
+          if(/console\.(log|debug)\([^\n]*(row|csv|artifact|patient)/i.test(runtime))throw new Error('Potential clinical payload logging detected');
+          const core=fs.readFileSync('assets/js/clinical-intake-core-v310.mjs','utf8');
+          if(!core.includes("autonomousDiagnosis:false")||!core.includes("inferenceGenerated:false"))throw new Error('Human clinical authority invariant missing');
+          console.log('Clinical Intake privacy contract: PASS');
+          NODE
