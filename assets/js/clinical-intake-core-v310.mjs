@@ -1,7 +1,8 @@
-export const CLINICAL_INTAKE_VERSION='3.1.0';
+export const CLINICAL_INTAKE_VERSION='3.1.1';
 export const RESPONSE_SHEET_ID='1W4QKSvzX7pm_cDs6U32EOty5rpI2jbsFJEWvuoPpjyw';
 export const RESPONSE_SHEET_TITLE='Respostas — Antes da nossa primeira sessão';
 export const REVIEW_STATUS='AWAITING_PSYCHOLOGIST_REVIEW';
+export const LIVE_INTAKE_START='2026-08-24';
 
 export const FIELD={
   timestamp:'Timestamp',
@@ -100,6 +101,24 @@ export function bindPatientExact(row,patients=[]){
   return{ok:false,reason:matches.length?'AMBIGUOUS_PATIENT_BINDING':'PATIENT_NOT_FOUND',patient:null,matches:matches.length};
 }
 
+function submissionDateKey(value=''){
+  const raw=String(value||'').trim();
+  const br=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(br){const[,d,m,y,h='0',mi='0',s='0']=br;return`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T${h.padStart(2,'0')}:${mi.padStart(2,'0')}:${s.padStart(2,'0')}`}
+  const iso=raw.match(/^(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2}(?::\d{2})?))?/);
+  if(iso)return`${iso[1]}T${(iso[2]||'00:00:00').padEnd(8,':00')}`;
+  return'';
+}
+
+export function isLiveSubmission(row,{liveStart=LIVE_INTAKE_START}={}){
+  const key=submissionDateKey(row?.[FIELD.timestamp]);
+  return Boolean(key&&key.slice(0,10)>=liveStart);
+}
+
+export function submissionRows(rows,{liveStart=LIVE_INTAKE_START}={}){
+  return (Array.isArray(rows)?rows:[]).filter(row=>isLiveSubmission(row,{liveStart})).sort((a,b)=>Number(a?.__row||0)-Number(b?.__row||0));
+}
+
 function canonicalRowPayload(row){
   const entries=Object.keys(row||{}).filter(k=>k!=='__row').sort().map(k=>[k,String(row[k]??'').trim()]);
   return JSON.stringify(entries);
@@ -143,7 +162,7 @@ function sectionItems(row,fields){return fields.map(field=>({field,patientReport
 export function buildStructuredAnalysis(row){
   const flags=reviewFlags(row);
   return{
-    generatedBy:'deterministic-structured-intake-v310',
+    generatedBy:'deterministic-structured-intake-v311',
     autonomousDiagnosis:false,
     inferenceGenerated:false,
     factProvenance:'PATIENT_REPORTED',
@@ -194,4 +213,11 @@ export function buildClinicalIntakeArtifact({patient,row,fingerprint,now=new Dat
 export function sanitizedLedgerEntry(fingerprint,state='IMPORTED',at=new Date().toISOString()){
   if(!fingerprint)throw new Error('INTAKE_FINGERPRINT_REQUIRED');
   return{fingerprint,state,at};
+}
+
+export function sanitizedQueueEntry(fingerprint,state='RECEIVED',reason='',at=new Date().toISOString()){
+  if(!fingerprint)throw new Error('INTAKE_FINGERPRINT_REQUIRED');
+  const safeState=String(state||'RECEIVED').replace(/[^A-Z0-9_:-]/g,'').slice(0,64)||'RECEIVED';
+  const safeReason=String(reason||'').replace(/[^A-Z0-9_:-]/g,'').slice(0,80);
+  return{fingerprint,state:safeState,reason:safeReason,at};
 }
