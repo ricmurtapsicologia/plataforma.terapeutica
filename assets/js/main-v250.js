@@ -1,5 +1,5 @@
 document.body.classList.add('rm-booting');
-window.__rmEntrypointVersion='3.0.1-main-v281';
+window.__rmEntrypointVersion='3.0.0-main-v250';
 window.__rmPreBootErrors=[];
 let bootReady=false;
 document.addEventListener('rm:boot-ready',()=>{bootReady=true},{once:true});
