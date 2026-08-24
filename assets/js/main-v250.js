@@ -9,6 +9,7 @@ const modules=[
   ['./migration-router-v300.js','Roteador de migrações condicionais'],
   ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
   ['./google-workspace-auto-renew-v264.js','Renovação silenciosa do Google Workspace'],
+  ['./clinical-intake-runtime-v310.js','Clinical Intake · Anamnese'],
   ['./calendar-adapter-v300.js','CalendarAdapter v3'],
   ['./clinical-whatsapp-bridge-v300.js','WhatsApp · confirmações clínicas T−6h'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
