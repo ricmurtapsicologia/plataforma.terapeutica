@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import {
-  FIELD,REVIEW_STATUS,REQUIRED_HEADERS,
-  parseCsv,rowsToObjects,normalizeIdentity,bindPatientExact,rowFingerprint,
-  isExplicitNegative,reviewFlags,buildStructuredAnalysis,buildClinicalIntakeArtifact,sanitizedLedgerEntry
+  CLINICAL_INTAKE_VERSION,FIELD,REVIEW_STATUS,REQUIRED_HEADERS,LIVE_INTAKE_START,
+  parseCsv,rowsToObjects,normalizeIdentity,bindPatientExact,submissionRows,rowFingerprint,
+  isExplicitNegative,reviewFlags,buildStructuredAnalysis,buildClinicalIntakeArtifact,sanitizedLedgerEntry,sanitizedQueueEntry
 } from '../assets/js/clinical-intake-core-v310.mjs';
 
 function baseRow(overrides={}){
   const row=Object.fromEntries(REQUIRED_HEADERS.map(h=>[h,'Resposta']));
   Object.assign(row,{
+    __row:8,
     [FIELD.timestamp]:'24/08/2026 16:40:00',
     [FIELD.name]:'Paciente Sintético',
     [FIELD.reason]:'Quero organizar melhor minhas dificuldades atuais.',
@@ -24,6 +25,9 @@ function baseRow(overrides={}){
 }
 
 function csvCell(value){return `"${String(value??'').replaceAll('"','""')}"`}
+
+assert.equal(CLINICAL_INTAKE_VERSION,'3.1.1');
+assert.equal(LIVE_INTAKE_START,'2026-08-24');
 
 {
   const csv='A,B,C\n1,"texto, com vírgula","linha 1\nlinha 2"\n2,"aspas ""internas""",fim';
@@ -55,6 +59,16 @@ assert.equal(normalizeIdentity('  João  D’Ávila '),'joao d avila');
   assert.equal(ambiguous.reason,'AMBIGUOUS_PATIENT_BINDING');
   const missing=bindPatientExact(row,[{id:'p2',name:'Outra Pessoa'}]);
   assert.equal(missing.reason,'PATIENT_NOT_FOUND');
+}
+
+{
+  const prelive=baseRow({__row:2,[FIELD.timestamp]:'10/08/2026 10:00:00'});
+  const first=baseRow({__row:8,[FIELD.timestamp]:'24/08/2026 11:35:51',[FIELD.name]:'Mesmo Paciente'});
+  const second=baseRow({__row:9,[FIELD.timestamp]:'24/08/2026 17:07:03',[FIELD.name]:'Mesmo Paciente'});
+  const live=submissionRows([second,prelive,first]);
+  assert.equal(live.length,2,'duas submissões do mesmo paciente devem ser preservadas');
+  assert.equal(live[0].__row,8);
+  assert.equal(live[1].__row,9);
 }
 
 assert.equal(isExplicitNegative('Não'),true);
@@ -97,6 +111,10 @@ assert.equal(isExplicitNegative('Sim, há uma situação que preciso conversar')
   const ledger=sanitizedLedgerEntry('a'.repeat(64),'IMPORTED','2026-08-24T19:50:00.000Z');
   assert.deepEqual(Object.keys(ledger).sort(),['at','fingerprint','state']);
   assert.equal(JSON.stringify(ledger).includes('Paciente Sintético'),false);
+  const queue=sanitizedQueueEntry('b'.repeat(64),'PATIENT_BINDING_REQUIRED','PATIENT_NOT_FOUND','2026-08-24T20:00:00.000Z');
+  assert.deepEqual(Object.keys(queue).sort(),['at','fingerprint','reason','state']);
+  assert.equal(queue.reason,'PATIENT_NOT_FOUND');
+  assert.equal(JSON.stringify(queue).includes('Paciente Sintético'),false);
 }
 
-console.log('Clinical Intake v3.1.0: PASS');
+console.log('Clinical Intake v3.1.1: PASS');
