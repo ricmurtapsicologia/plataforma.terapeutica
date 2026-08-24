@@ -10,6 +10,7 @@ const modules=[
   ['./google-workspace-oauth-v200.js','Google Workspace OAuth'],
   ['./google-workspace-auto-renew-v264.js','Renovação silenciosa do Google Workspace'],
   ['./calendar-adapter-v300.js','CalendarAdapter v3'],
+  ['./clinical-whatsapp-bridge-v300.js','WhatsApp · confirmações clínicas T−6h'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
   ['./public-clinical-storage-guard-v251.js','Gate de storage clínico público'],
   ['./clinical-reconcile-v270.js','Google Meet/Gemini · pipeline único'],
