@@ -1,9 +1,9 @@
 import {runtime} from './state.js';
 import {encryptJson} from './crypto.js';
-import {TOKEN_STORAGE,WORKSPACE_REQUIRED_SCOPES,loadWorkspaceAuthorization} from './google-workspace-token-v260.js';
+import {TOKEN_STORAGE,WORKSPACE_REQUIRED_SCOPES,WORKSPACE_FULL_SCOPES,loadWorkspaceAuthorization} from './google-workspace-token-v260.js';
 
 const CLIENT_STORAGE='rm.google.calendar.clientId';
-const SCOPE=WORKSPACE_REQUIRED_SCOPES.join(' ');
+const SCOPE=WORKSPACE_FULL_SCOPES.join(' ');
 const RENEW_BEFORE_MS=10*60*1000;
 const ATTEMPT_COOLDOWN_MS=5*60*1000;
 const CHECK_MS=5*60*1000;
@@ -39,12 +39,12 @@ async function persistToken(response){
   if(!runtime.key)throw new Error('O cofre precisa estar desbloqueado.');
   const grantedScope=String(response.scope||SCOPE);
   const granted=new Set(grantedScope.split(/\s+/).filter(Boolean));
-  const missing=WORKSPACE_REQUIRED_SCOPES.filter(scope=>!granted.has(scope));
-  if(response.scope&&missing.length)throw new Error('O Google não devolveu todas as permissões necessárias do Workspace.');
+  const missingRequired=WORKSPACE_REQUIRED_SCOPES.filter(scope=>!granted.has(scope));
+  if(response.scope&&missingRequired.length)throw new Error('O Google não devolveu todas as permissões necessárias do Workspace.');
   const expiresAt=Date.now()+Math.max(60,Number(response.expires_in||3600))*1000;
   const encrypted=await encryptJson(runtime.key,{token:response.access_token,expiresAt,scope:grantedScope},'google-calendar-token');
   localStorage.setItem(TOKEN_STORAGE,JSON.stringify(encrypted));
-  document.dispatchEvent(new CustomEvent('rm:google-workspace-authorized',{detail:{scopes:WORKSPACE_REQUIRED_SCOPES,renewed:true,expiresAt}}));
+  document.dispatchEvent(new CustomEvent('rm:google-workspace-authorized',{detail:{scopes:[...granted],renewed:true,expiresAt}}));
 }
 
 function interactionRequired(detail){
@@ -59,8 +59,8 @@ async function renewSilently({force=false}={}){
   if(active||runtime.locked||!runtime.key||!runtime.dataReady||!navigator.onLine)return false;
   if(!force&&Date.now()-lastAttemptAt<ATTEMPT_COOLDOWN_MS)return false;
   const clientId=String(localStorage.getItem(CLIENT_STORAGE)||'').trim();
-  if(!/\.apps\.googleusercontent\.com$/.test(clientId)){emit('unconfigured','Google OAuth Client ID não configurado.');return false}
-  const auth=await loadWorkspaceAuthorization(WORKSPACE_REQUIRED_SCOPES);
+  if(!/\.apps\.googleusercontent\.com$/.test(clientId)){emit('unconfigured','Google OAuth Client ID não configurado neste dispositivo.');return false}
+  const auth=await loadWorkspaceAuthorization(WORKSPACE_FULL_SCOPES);
   if(!force&&auth.ok&&auth.expiresAt-Date.now()>RENEW_BEFORE_MS){emit('ok','Autorização Google Workspace vigente.');return true}
   await loadGoogleIdentity();
   active=true;
@@ -86,7 +86,9 @@ async function renewSilently({force=false}={}){
               return finish(false);
             }
             await persistToken(response);
-            emit('renewed','Google Workspace renovado silenciosamente.');
+            const scopes=new Set(String(response.scope||'').split(/\s+/).filter(Boolean));
+            const missingOptional=WORKSPACE_FULL_SCOPES.filter(scope=>!scopes.has(scope));
+            emit('renewed',missingOptional.length?'Workspace renovado; autorização adicional de envio por e-mail pode ser necessária.':'Google Workspace completo renovado silenciosamente.');
             finish(true);
           }catch(err){emit('error',err?.message||String(err));finish(false)}
         })
