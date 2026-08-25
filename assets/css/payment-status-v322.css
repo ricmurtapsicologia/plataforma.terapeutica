@@ -1,0 +1,31 @@
+/* v3.2.2 — status financeiro visível em todas as superfícies de sessão */
+.patient-session-payment,.dashboard-payment-badge,.session-focus-payment{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 9px;border-radius:999px;font-size:.82rem;font-weight:800;white-space:nowrap;border:1px solid transparent}
+.patient-session-payment.paid,.dashboard-payment-badge.paid,.session-focus-payment.paid{background:color-mix(in srgb,var(--green) 14%,var(--surface));border-color:color-mix(in srgb,var(--green) 34%,var(--line));color:var(--green)}
+.patient-session-payment.unpaid,.dashboard-payment-badge.unpaid,.session-focus-payment.unpaid{background:color-mix(in srgb,var(--orange) 13%,var(--surface));border-color:color-mix(in srgb,var(--orange) 36%,var(--line));color:color-mix(in srgb,var(--orange) 78%,var(--text))}
+.patient-session-payment.pending,.dashboard-payment-badge.pending,.session-focus-payment.pending{background:color-mix(in srgb,var(--yellow) 17%,var(--surface));border-color:color-mix(in srgb,var(--yellow) 42%,var(--line));color:#8a6417}
+.patient-session-payment.none,.dashboard-payment-badge.none,.session-focus-payment.none{background:var(--surface2);border-color:var(--line);color:var(--muted)}
+.patient-session-row[data-payment-state="paid"] .patient-session-card{border-left:4px solid var(--green)}
+.patient-session-row[data-payment-state="unpaid"] .patient-session-card{border-left:4px solid var(--orange)}
+.patient-session-row[data-payment-state="pending"] .patient-session-card{border-left:4px solid var(--yellow)}
+.patient-session-row[data-payment-state="none"] .patient-session-card{border-left:4px solid var(--line)}
+.session-focus-payment{margin:0 0 10px}
+.dashboard-payment-badge{font-size:.72rem;min-height:26px;padding:3px 7px}
+.week-event{position:absolute}
+.week-payment-pill{position:absolute;top:2px;right:3px;z-index:3;display:inline-flex;align-items:center;justify-content:center;max-width:52px;min-height:15px;padding:1px 4px;border-radius:999px;font-size:.54rem;font-weight:900;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;border:1px solid transparent}
+.week-payment-pill.paid{background:color-mix(in srgb,var(--green) 17%,var(--surface));border-color:color-mix(in srgb,var(--green) 38%,var(--line));color:var(--green)}
+.week-payment-pill.unpaid{background:color-mix(in srgb,var(--orange) 15%,var(--surface));border-color:color-mix(in srgb,var(--orange) 38%,var(--line));color:color-mix(in srgb,var(--orange) 80%,var(--text))}
+.week-payment-pill.pending{background:color-mix(in srgb,var(--yellow) 19%,var(--surface));border-color:color-mix(in srgb,var(--yellow) 44%,var(--line));color:#8a6417}
+.week-payment-pill.none{background:var(--surface2);border-color:var(--line);color:var(--muted);max-width:20px}
+.week-event.payment-paid{box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--green) 72%,transparent)}
+.week-event.payment-unpaid{box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--orange) 72%,transparent)}
+.week-event.payment-pending{box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--yellow) 78%,transparent)}
+.week-event.payment-none{box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--line) 85%,transparent)}
+.week-event>strong{padding-right:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.appointment-payment-value.paid{color:var(--green)}
+.appointment-payment-value.unpaid{color:var(--orange)}
+.appointment-payment-value.pending{color:#8a6417}
+.appointment-payment-value.none{color:var(--muted)}
+.payment-action-paid{border-color:color-mix(in srgb,var(--green) 44%,var(--line))!important;color:var(--green)!important}
+.payment-action-pending{border-color:color-mix(in srgb,var(--yellow) 48%,var(--line))!important;color:#8a6417!important}
+.payment-action-unpaid{border-color:color-mix(in srgb,var(--orange) 42%,var(--line))!important;color:color-mix(in srgb,var(--orange) 80%,var(--text))!important}
+@media(max-width:700px){.patient-session-payment{font-size:.76rem}.week-payment-pill{font-size:.5rem;max-width:46px}.week-event>strong{padding-right:44px}}
