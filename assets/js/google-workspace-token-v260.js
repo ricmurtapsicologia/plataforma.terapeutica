@@ -6,7 +6,9 @@ export const TOKEN_HANDOFF='rm.google.workspace.token.handoff.v260';
 export const CALENDAR_SCOPE='https://www.googleapis.com/auth/calendar.events';
 export const DRIVE_READONLY_SCOPE='https://www.googleapis.com/auth/drive.readonly';
 export const APPDATA_SCOPE='https://www.googleapis.com/auth/drive.appdata';
+export const GMAIL_SEND_SCOPE='https://www.googleapis.com/auth/gmail.send';
 export const WORKSPACE_REQUIRED_SCOPES=[CALENDAR_SCOPE,DRIVE_READONLY_SCOPE,APPDATA_SCOPE];
+export const WORKSPACE_FULL_SCOPES=[...WORKSPACE_REQUIRED_SCOPES,GMAIL_SEND_SCOPE];
 
 const parseJson=value=>{try{return JSON.parse(value)}catch{return null}};
 const scopeSet=value=>new Set(String(value||'').split(/\s+/).filter(Boolean));
