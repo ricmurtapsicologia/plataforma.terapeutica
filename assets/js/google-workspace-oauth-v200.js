@@ -1,7 +1,7 @@
 import {runtime} from './state.js';
 import {encryptJson} from './crypto.js';
 import {toast} from './ui.js';
-import {WORKSPACE_REQUIRED_SCOPES} from './google-workspace-token-v260.js';
+import {WORKSPACE_FULL_SCOPES} from './google-workspace-token-v260.js';
 
 const CLIENT_STORAGE='rm.google.calendar.clientId';
 const TOKEN_STORAGE='rm.google.calendar.token.v1';
@@ -9,7 +9,7 @@ const STATE_STORAGE='rm.google.workspace.oauth.state.v200';
 const PENDING_STORAGE='rm.google.workspace.oauth.pending.v200';
 const RESULT_STORAGE='rm.google.workspace.oauth.result.v200';
 const REDIRECT_URI='https://ricmurtapsicologia.github.io/plataforma.terapeutica/';
-const REQUIRED_SCOPES=[...WORKSPACE_REQUIRED_SCOPES];
+const REQUIRED_SCOPES=[...WORKSPACE_FULL_SCOPES];
 const SCOPE=REQUIRED_SCOPES.join(' ');
 let importing=false;
 
@@ -26,7 +26,7 @@ function captureRedirect(){
     const token=params.get('access_token')||'',seconds=Math.max(60,Number(params.get('expires_in')||3600)),scope=params.get('scope')||'';
     if(!token)throw new Error('O Google não retornou um token de acesso.');
     const granted=new Set(scope.split(/\s+/).filter(Boolean)),missing=REQUIRED_SCOPES.filter(s=>!granted.has(s));
-    if(scope&&missing.length)throw new Error('As permissões de Agenda, leitura do Drive e cofre privado não foram concedidas integralmente.');
+    if(scope&&missing.length)throw new Error('As permissões de Agenda, Drive privado, Meet/Anamnese e envio de e-mail não foram concedidas integralmente.');
     sessionStorage.setItem(PENDING_STORAGE,JSON.stringify({token,expiresAt:Date.now()+seconds*1000,scope:scope||SCOPE}));
     sessionStorage.setItem(RESULT_STORAGE,'ok');
   }catch(err){sessionStorage.removeItem(PENDING_STORAGE);sessionStorage.setItem(RESULT_STORAGE,`error:${err?.message||err}`)}finally{sessionStorage.removeItem(STATE_STORAGE);cleanHash()}
@@ -66,5 +66,5 @@ document.addEventListener('rm:data-ready',e=>{
   const hasPending=Boolean(sessionStorage.getItem(PENDING_STORAGE));
   if(!hasPending){const result=sessionStorage.getItem(RESULT_STORAGE)||'';if(result.startsWith('error:')){sessionStorage.removeItem(RESULT_STORAGE);queueMicrotask(()=>toast(result.slice(6),'error'))}return}
   e.stopImmediatePropagation();
-  void(async()=>{try{const imported=await persistPending();if(imported)toast('Google Workspace conectado. Agenda, Meet/Drive e cofre privado foram autorizados neste dispositivo.','success')}catch(err){sessionStorage.removeItem(PENDING_STORAGE);toast(err?.message||'Não foi possível salvar a autorização do Google Workspace.','error')}queueMicrotask(()=>document.dispatchEvent(new CustomEvent('rm:data-ready')))})();
+  void(async()=>{try{const imported=await persistPending();if(imported)toast('Google Workspace conectado. Agenda, Meet/Drive, cofre privado e envio de e-mail foram autorizados neste dispositivo.','success')}catch(err){sessionStorage.removeItem(PENDING_STORAGE);toast(err?.message||'Não foi possível salvar a autorização do Google Workspace.','error')}queueMicrotask(()=>document.dispatchEvent(new CustomEvent('rm:data-ready')))})();
 },true);
