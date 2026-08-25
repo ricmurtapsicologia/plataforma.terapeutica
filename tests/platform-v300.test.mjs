@@ -9,15 +9,16 @@ const migrations=read('assets/js/migration-router-v300.js');
 const index=read('index.html');
 const version=read('assets/js/version.js');
 
-assert.match(version,/APP_VERSION='3\.2\.1'/,'APP_VERSION must be 3.2.1');
+assert.match(version,/APP_VERSION='3\.2\.2'/,'APP_VERSION must be 3.2.2');
 assert.ok(index.includes('3.0.0-main-v250'),'index architecture marker must remain v3');
-assert.ok(index.includes('main-v250.js?v=3.2.1'),'index must load the v3.2.1 entrypoint cache');
+assert.ok(index.includes('main-v250.js?v=3.2.2'),'index must load the v3.2.2 entrypoint cache');
 assert.ok(main.includes('platform-runtime-v300.js'),'consolidated platform runtime must be active');
 assert.ok(main.includes('migration-router-v300.js'),'conditional migration router must be active');
 assert.ok(main.includes('clinical-orchestrator-v320.js'),'automatic clinical orchestrator must be active');
 assert.ok(main.includes('record-persistence-v320.js'),'verified record persistence must be active');
 assert.ok(main.includes('treatment-plan-intelligence-v320.js'),'longitudinal treatment plan must be active');
 assert.ok(main.includes('patient-delivery-finance-v320.js'),'PDF delivery and finance workflow must be active');
+assert.ok(main.includes('session-payment-visibility-v322.js'),'session payment visibility must be active');
 
 for(const retired of [
   'runtime-monitor-v240.js',
