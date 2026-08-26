@@ -9,9 +9,10 @@ const migrations=read('assets/js/migration-router-v300.js');
 const index=read('index.html');
 const version=read('assets/js/version.js');
 
-assert.match(version,/APP_VERSION='3\.2\.2'/,'APP_VERSION must be 3.2.2');
-assert.ok(index.includes('3.0.0-main-v250'),'index architecture marker must remain v3');
-assert.ok(index.includes('main-v250.js?v=3.2.2'),'index must load the v3.2.2 entrypoint cache');
+assert.match(version,/APP_VERSION='3\.3\.0'/,'APP_VERSION must be 3.3.0');
+assert.ok(index.includes('3.3.0-main-v250'),'index architecture marker must match v3.3.0');
+assert.ok(index.includes('main-v250.js?v=3.3.0'),'index must load the v3.3.0 entrypoint cache');
+assert.ok(main.includes("__rmEntrypointVersion='3.3.0-main-v250'"),'entrypoint marker must match v3.3.0');
 assert.ok(main.includes('platform-runtime-v300.js'),'consolidated platform runtime must be active');
 assert.ok(main.includes('migration-router-v300.js'),'conditional migration router must be active');
 assert.ok(main.includes('clinical-orchestrator-v320.js'),'automatic clinical orchestrator must be active');
@@ -19,6 +20,8 @@ assert.ok(main.includes('record-persistence-v320.js'),'verified record persisten
 assert.ok(main.includes('treatment-plan-intelligence-v320.js'),'longitudinal treatment plan must be active');
 assert.ok(main.includes('patient-delivery-finance-v320.js'),'PDF delivery and finance workflow must be active');
 assert.ok(main.includes('session-payment-visibility-v322.js'),'session payment visibility must be active');
+assert.ok(main.includes('agenda-controller-v330.js'),'single-owner Agenda Controller v3.3 must be active');
+assert.ok(!main.includes('agenda-actions-v240.js'),'legacy agenda action owner must not boot');
 
 for(const retired of [
   'runtime-monitor-v240.js',
