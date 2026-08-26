@@ -37,6 +37,11 @@
 }
 
 @media(max-width:700px){
-  .rm-cal-event[data-action="appointment-open"]{border:0;text-align:left}
+  .rm-cal-event[data-action="appointment-open"]{border:0;text-align:left;padding-right:74px}
   .rm-cal-event[data-action="appointment-open"]:focus-visible{outline:3px solid var(--yellow,#e4b546);outline-offset:2px}
+  .rm-cal-mobile-payment{position:absolute;right:7px;top:7px;display:inline-flex;align-items:center;justify-content:center;max-width:64px;min-height:20px;padding:2px 6px;border-radius:999px;font-size:.58rem;font-weight:900;line-height:1.05;background:rgba(255,255,255,.92);color:#20343d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+  .rm-cal-mobile-payment.paid{color:var(--green,#247c68)}
+  .rm-cal-mobile-payment.unpaid{color:#9a4e19}
+  .rm-cal-mobile-payment.pending{color:#72520d}
+  .rm-cal-mobile-payment.none{color:var(--muted,#657c85)}
 }
