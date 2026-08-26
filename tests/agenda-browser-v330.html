@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Agenda v3.3 browser probe</title></head>
+<body>
+<div id="main-content"></div><div id="modal-root"></div><div id="toast-region"></div>
+<button id="session" type="button" data-action="appointment-open" data-id="a1">Abrir sessão</button>
+<pre id="result">RUNNING</pre>
+<script type="module">
+const result=document.getElementById('result');
+const fail=message=>{result.textContent=`AGENDA_V330_FAIL: ${message}`;throw new Error(message)};
+const assert=(condition,message)=>{if(!condition)fail(message)};
+const wait=async(check,timeout=3500)=>{const start=Date.now();while(Date.now()-start<timeout){if(await check())return true;await new Promise(r=>setTimeout(r,25))}return false};
+
+try{
+  const state=await import('../assets/js/state.js?v=3.3.0');
+  const db=await import('../assets/js/database.js?v=3.3.0');
+  try{await db.deleteDatabase()}catch{}
+  const vault=await db.createVault('agenda-v330-probe');
+  state.runtime.key=vault.key;state.runtime.locked=false;state.runtime.dataReady=true;state.runtime.route='agenda';
+  const patient={id:'p1',name:'Paciente Teste',preferredName:'Teste',phone:'31999999999',value:260,status:'Ativo',updatedAt:new Date().toISOString()};
+  const appointment={id:'a1',patientId:'p1',date:'2026-08-26',time:'20:00',duration:50,status:'Confirmada',attendanceStatus:'',modality:'On-line',clinicalSessionId:'a1',updatedAt:new Date().toISOString()};
+  state.data.patients=[patient];state.data.appointments=[appointment];state.data.payments=[];
+  await db.putEncrypted('patients',patient,vault.key);await db.putEncrypted('appointments',appointment,vault.key);
+
+  let prepared='',newPaymentClicks=0;
+  globalThis.__rmSessionPayments={prepareAppointment:id=>{prepared=id}};
+  document.addEventListener('click',event=>{if(event.target.closest?.('[data-action="new-payment"]'))newPaymentClicks++});
+  await import('../assets/js/agenda-controller-v330.js?v=3.3.0');
+
+  assert(globalThis.__rmAgendaController?.owner==='agenda-controller-v330','single controller owner missing');
+  assert(globalThis.__rmAgendaController?.listenerCount===1,'controller listener count is not one');
+
+  document.getElementById('session').click();
+  assert(document.querySelectorAll('#modal-root .modal').length===1,'session click did not open exactly one modal');
+  assert(document.querySelector('#modal-title')?.textContent.includes('Sessão — Teste'),'wrong session modal title');
+  assert(document.querySelector('[data-action="agenda-attendance-v330"][data-status="Presente"]'),'presence action missing');
+
+  document.querySelector('[data-action="agenda-attendance-v330"][data-status="Presente"]').click();
+  assert(await wait(async()=>((await db.getDecryptedById('appointments','a1',vault.key))?.attendanceStatus==='Presente')),'Presente did not persist');
+  let stored=await db.getDecryptedById('appointments','a1',vault.key);assert(stored.status==='Realizada','Presente did not transition status to Realizada');
+
+  document.querySelector('[data-action="agenda-attendance-v330"][data-status="Faltou"]').click();
+  assert(await wait(async()=>((await db.getDecryptedById('appointments','a1',vault.key))?.attendanceStatus==='Faltou')),'Faltou did not persist');
+
+  document.querySelector('[data-action="agenda-attendance-v330"][data-status="Desmarcou"]').click();
+  assert(await wait(async()=>((await db.getDecryptedById('appointments','a1',vault.key))?.attendanceStatus==='Desmarcou')),'Desmarcou did not persist');
+  stored=await db.getDecryptedById('appointments','a1',vault.key);assert(stored.status==='Cancelada','Desmarcou did not transition to Cancelada');
+
+  document.querySelector('[data-action="agenda-reschedule-v330"]').click();
+  document.getElementById('agenda-v330-reschedule-date').value='2026-08-27';
+  document.getElementById('agenda-v330-reschedule-time').value='19:30';
+  document.querySelector('[data-action="agenda-reschedule-save-v330"]').click();
+  assert(await wait(async()=>{const a=await db.getDecryptedById('appointments','a1',vault.key);return a?.date==='2026-08-27'&&a?.time==='19:30'}),'reschedule did not persist');
+
+  document.querySelector('[data-action="agenda-payment-v330"]').click();
+  assert(prepared==='a1','payment was not prepared with canonical appointment id');
+  assert(newPaymentClicks===1,'new payment action was not invoked exactly once');
+
+  state.runtime.route='settings';
+  for(let i=0;i<100;i++)document.dispatchEvent(new CustomEvent('rm:rendered',{detail:{route:'settings'}}));
+  await Promise.resolve();await Promise.resolve();
+  assert(document.querySelectorAll('#rm-agenda-health-v330').length===1,'100 renders duplicated agenda health surface');
+
+  state.runtime.route='agenda';document.getElementById('session').click();
+  assert(document.querySelectorAll('#modal-root .modal').length===1,'repeated rendering caused duplicate modal handling');
+  assert(document.getElementById('session').tagName==='BUTTON','appointment-open must remain keyboard-native button semantics');
+
+  document.querySelector('[data-action="agenda-delete-request-v330"]').click();
+  assert(document.querySelector('[data-action="agenda-delete-confirm-v330"]'),'delete action does not require explicit confirmation');
+  const beforeDelete=await db.getDecryptedById('appointments','a1',vault.key);assert(beforeDelete?.id==='a1','delete request removed appointment before confirmation');
+
+  result.textContent='AGENDA_V330_BROWSER_PASS';
+}catch(error){if(!String(result.textContent).includes('FAIL'))result.textContent=`AGENDA_V330_FAIL: ${error?.message||error}`;throw error}
+</script>
+</body></html>
