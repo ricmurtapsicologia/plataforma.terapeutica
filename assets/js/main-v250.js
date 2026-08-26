@@ -35,7 +35,7 @@ const modules=[
   ['./patient-workspace-v320.js','Workspace do paciente mobile first'],
   ['./clinical-orchestrator-v320.js','Orquestração automática do ecossistema clínico']
 ];
-for(const [path,label] of modules){try{await import(`${path}?v=3.2.2`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
+for(const [path,label] of modules){try{await import(`${path}?v=3.2.2&rev=autosync-20260826a`)}catch(err){console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`)}}
 
 let auditNormalizeTimer=null;
 async function normalizeAuditedDrafts(){
