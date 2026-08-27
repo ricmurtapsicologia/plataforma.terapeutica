@@ -1,9 +1,9 @@
-import {data,runtime,patientById,nowISO} from './state.js';
+import {data,runtime,patientById,nowISO,todayISO} from './state.js';
 import {putEncrypted,getDecryptedById,deleteRecord} from './database.js';
 import {openWhatsApp} from './communications.js';
 import {modal,closeModal,toast,esc,fmtDate,money} from './ui.js';
 import {paymentStateForAppointment} from './payment-status-v322.mjs';
-import {AGENDA_VERSION,transitionAttendance,attendanceLabel,appointmentsConflict} from './agenda-domain-v330.mjs';
+import {AGENDA_VERSION,transitionAttendance,appointmentsConflict} from './agenda-domain-v330.mjs';
 
 const OWNER='agenda-controller-v330';
 const ACTIONS=new Set([
@@ -36,6 +36,9 @@ function paymentFor(a){return paymentStateForAppointment(a,{payments:data.paymen
 function attendanceButton(id,value,current,label,kind='secondary'){
   const selected=current===value;
   return `<button class="btn ${kind} agenda-attendance-choice ${selected?'is-selected':''}" type="button" data-action="agenda-attendance-v330" data-id="${esc(id)}" data-status="${esc(value)}" aria-pressed="${selected?'true':'false'}">${esc(label)}</button>`;
+}
+function paymentMethodOptions(selected='Pix'){
+  return ['Pix','Transferência','Dinheiro','Cartão','Outro'].map(value=>`<option ${selected===value?'selected':''}>${value}</option>`).join('');
 }
 
 function showManage(id){
@@ -117,16 +120,38 @@ async function saveReschedule(){
   showManage(stored.id);
 }
 
-function triggerCore(action,id=''){
-  const button=document.createElement('button');button.type='button';button.hidden=true;button.dataset.action=action;if(id)button.dataset.id=id;document.body.appendChild(button);button.click();button.remove();
-}
-
 function openPayment(id){
   const a=appointmentById(id);if(!a)throw new Error('Sessão não localizada.');
-  const state=paymentFor(a);closeModal();
-  if(state.payment){triggerCore('edit-payment',state.payment.id);return}
+  const p=patientById(a.patientId);if(!p)throw new Error('Paciente não localizado.');
+  const state=paymentFor(a),payment=state.payment||null;
+  const payId=payment?.id||'';
+  const payDate=payment?.date||todayISO();
+  const payValue=payment?.value??p?.value??0;
+  const payStatus=payment?.status||'Pago';
+  const payMethod=payment?.method||'Pix';
+
   globalThis.__rmSessionPayments?.prepareAppointment?.(a.id);
-  triggerCore('new-payment');
+
+  modal(payment?'Editar pagamento':'Registrar pagamento',
+    `<input id="pay-id" type="hidden" value="${esc(payId)}">
+     <input id="pay-patient" type="hidden" value="${esc(a.patientId)}">
+     <div class="agenda-session-summary">
+       <div><span>Paciente</span><strong>${esc(patientName(p))}</strong></div>
+       <div><span>Sessão</span><strong>${esc(fmtDate(a.date))} · ${esc(a.time||'—')}</strong></div>
+       <div><span>Situação atual</span><strong class="agenda-payment-value ${esc(state.code)}">${esc(state.label||'Não informado')}</strong></div>
+       <div><span>Referência</span><strong>${esc(money(p?.value||0))}</strong></div>
+     </div>
+     <div class="notice success mt-12" data-rm-payment-link-note="1">Este lançamento será vinculado diretamente a esta sessão.</div>
+     <div class="input-row mt-12">
+       <div class="field"><label>Data do pagamento</label><input id="pay-date" class="input" type="date" value="${esc(payDate)}"></div>
+       <div class="field"><label>Valor</label><input id="pay-value" class="input" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(payValue)}"></div>
+     </div>
+     <div class="input-row mt-12">
+       <div class="field"><label>Status</label><select id="pay-status" class="select"><option ${payStatus==='Pago'?'selected':''}>Pago</option><option ${payStatus==='Pendente'?'selected':''}>Pendente</option></select></div>
+       <div class="field"><label>Forma</label><select id="pay-method" class="select">${paymentMethodOptions(payMethod)}</select></div>
+     </div>
+     <div class="field mt-12"><label>Observação administrativa</label><textarea id="pay-note" class="textarea">${esc(payment?.note||'')}</textarea></div>`,
+    `<button class="btn secondary" type="button" data-action="appointment-open" data-id="${esc(a.id)}">Voltar</button><button class="btn" type="button" data-action="save-payment">${payment?'Salvar alteração':'Registrar pagamento'}</button>`,true);
 }
 
 function openSession(id){
