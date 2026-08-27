@@ -14,6 +14,7 @@ const modules=[
   ['./clinical-intake-patient-ui-v312.js','Anamnese · área clínica do paciente'],
   ['./clinical-assessment-v360.js','Complementação estruturada da avaliação clínica'],
   ['./patient-status-v350.js','Status clínico Ativo/Inativo'],
+  ['./patient-billing-profile-v360.js','Perfil financeiro avulso/pacote/mensal'],
   ['./calendar-adapter-v300.js','CalendarAdapter v3'],
   ['./clinical-whatsapp-bridge-v300.js','WhatsApp · confirmações clínicas T−6h'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
