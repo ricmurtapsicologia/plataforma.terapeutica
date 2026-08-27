@@ -2,9 +2,10 @@ import {data,runtime,nowISO} from './state.js';
 import {bulkPutEncryptedAtomic,deleteRecord} from './database.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
 
-const VERSION='3.4.2';
+const VERSION='3.4.3';
 const LINK_STORES=['appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications'];
 const CLINICAL_STORES=['appointments','records','notes','formulations','goals','tasks'];
+const SUBSTANTIVE_STORES=['appointments','records','payments','communications','consents'];
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
 let running=false;
 let queued=false;
@@ -12,22 +13,28 @@ let queued=false;
 function dateMs(value=''){const d=new Date(`${String(value||'').slice(0,10)}T12:00:00-03:00`);return Number.isNaN(d.getTime())?0:d.getTime()}
 function linkedCount(patientId){return LINK_STORES.reduce((sum,store)=>sum+arr(data[store]).filter(row=>row?.patientId===patientId).length,0)}
 function clinicalCount(patientId){return CLINICAL_STORES.reduce((sum,store)=>sum+arr(data[store]).filter(row=>row?.patientId===patientId).length,0)}
+function substantiveCount(patientId){return SUBSTANTIVE_STORES.reduce((sum,store)=>sum+arr(data[store]).filter(row=>row?.patientId===patientId).length,0)}
 function digits(value=''){return String(value||'').replace(/\D/g,'')}
 function lower(value=''){return String(value||'').trim().toLowerCase()}
 function identitySnapshot(patient){return{cpf:digits(patient?.cpf),email:lower(patient?.email),phone:digits(patient?.phone)}}
+function hasIdentity(patient){const x=identitySnapshot(patient);return Boolean(x.cpf||x.email||x.phone.length>=10)}
 function strongIdentityMatch(a,b){const x=identitySnapshot(a),y=identitySnapshot(b);return Boolean((x.cpf&&y.cpf&&x.cpf===y.cpf)||(x.email&&y.email&&x.email===y.email)||(x.phone.length>=10&&y.phone.length>=10&&x.phone===y.phone))}
 function conflictingIdentity(a,b){const x=identitySnapshot(a),y=identitySnapshot(b);return Boolean((x.cpf&&y.cpf&&x.cpf!==y.cpf)||(x.email&&y.email&&x.email!==y.email)||(x.phone.length>=10&&y.phone.length>=10&&x.phone!==y.phone))}
 function completeness(patient){return['code','cpf','email','phone','preferredName','occupation','summary'].reduce((n,key)=>n+(String(patient?.[key]||'').trim()?1:0),0)+clinicalCount(patient?.id)*4+linkedCount(patient?.id)}
 function mergeFields(primary,secondary){const next={...primary};for(const [key,value] of Object.entries(secondary||{})){if(['id','createdAt','updatedAt'].includes(key))continue;if((next[key]===undefined||next[key]===null||next[key]===''||(Array.isArray(next[key])&&!next[key].length))&&value!==undefined&&value!==null&&value!=='')next[key]=value}next.updatedAt=nowISO();next.mergedDuplicateAt=nowISO();return next}
+function firstToken(value=''){return normalizeIdentity(value).split(' ')[0]||''}
+function singleToken(value=''){const normalized=normalizeIdentity(value);return Boolean(normalized&&!normalized.includes(' '))}
 
 function duplicatePairs(){
   const patients=arr(data.patients).filter(p=>p?.id&&p.status!=='Profissional');
+  const firstCounts=new Map();for(const patient of patients){const first=firstToken(patient.name||patient.preferredName||'');if(first)firstCounts.set(first,(firstCounts.get(first)||0)+1)}
   const pairs=[];
   for(let i=0;i<patients.length;i++)for(let j=i+1;j<patients.length;j++){
     const a=patients[i],b=patients[j],aName=normalizeIdentity(a.name||a.preferredName||''),bName=normalizeIdentity(b.name||b.preferredName||''),sameName=aName&&aName===bName;
     if(conflictingIdentity(a,b))continue;
-    const strong=strongIdentityMatch(a,b),aLinks=linkedCount(a.id),bLinks=linkedCount(b.id),emptyShell=(aLinks===0||bLinks===0);
-    if(strong||(sameName&&emptyShell))pairs.push([a,b]);
+    const strong=strongIdentityMatch(a,b),first=firstToken(aName),sameFirst=first&&first===firstToken(bName),uniquePair=sameFirst&&(firstCounts.get(first)||0)===2;
+    const shortAlias=uniquePair&&((singleToken(aName)&&bName.startsWith(`${aName} `))||(singleToken(bName)&&aName.startsWith(`${bName} `)))&&(!hasIdentity(a)||!hasIdentity(b));
+    if(strong||sameName||shortAlias)pairs.push([a,b]);
   }
   return pairs;
 }
@@ -60,19 +67,18 @@ function looksSyntheticName(value=''){
   const repeatedPair=/(..).*\1/.test(token),triple=/(.)\1{2,}/.test(token);
   return ratio<=0.48||repeatedPair||triple;
 }
-function isOrphanPlaceholder(patient){
+function isSyntheticTestPatient(patient){
   if(!patient?.id||patient.status==='Profissional')return false;
   if(String(patient.code||'').trim()||digits(patient.cpf)||String(patient.email||'').trim()||digits(patient.phone))return false;
-  if(linkedCount(patient.id)>0)return false;
   if(!['Aguardando retorno',''].includes(String(patient.status||'')))return false;
+  if(substantiveCount(patient.id)>0)return false;
   return looksSyntheticName(patient.name||patient.preferredName||'');
 }
-async function removeOrphanPlaceholders(){
-  const bad=arr(data.patients).filter(isOrphanPlaceholder);if(!bad.length)return 0;
+async function removeSyntheticTestPatients(){
+  const bad=arr(data.patients).filter(isSyntheticTestPatient);if(!bad.length)return 0;const ids=new Set(bad.map(p=>p.id));
+  for(const store of LINK_STORES){const doomed=arr(data[store]).filter(row=>ids.has(row?.patientId));for(const row of doomed)await deleteRecord(store,row.id);data[store]=arr(data[store]).filter(row=>!ids.has(row?.patientId))}
   for(const patient of bad)await deleteRecord('patients',patient.id);
-  const ids=new Set(bad.map(p=>p.id));data.patients=arr(data.patients).filter(p=>!ids.has(p.id));
-  if(ids.has(runtime.selectedPatientId))runtime.selectedPatientId='';
-  return bad.length;
+  data.patients=arr(data.patients).filter(p=>!ids.has(p.id));if(ids.has(runtime.selectedPatientId))runtime.selectedPatientId='';return bad.length;
 }
 
 function appointmentPerformed(a){return Boolean(a&&a.status!=='Cancelada'&&a.attendanceStatus!=='Desmarcou'&&(a.status==='Realizada'||['Presente','Compareceu'].includes(a.attendanceStatus)))}
@@ -134,7 +140,7 @@ async function runIntegrity({render=true}={}){
   if(running||runtime.locked||!runtime.key||!runtime.dataReady)return null;running=true;
   try{
     const merged=await mergeDuplicatePatients();
-    const removed=await removeOrphanPlaceholders();
+    const removed=await removeSyntheticTestPatients();
     const paymentLinks=await allocatePackagePayments();
     const superseded=await purgeSupersededPlaceholders();
     const placeholders=await ensureMissingRecordPlaceholders();
