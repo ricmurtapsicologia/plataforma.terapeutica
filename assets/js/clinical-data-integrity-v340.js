@@ -2,7 +2,7 @@ import {data,runtime,nowISO} from './state.js';
 import {bulkPutEncryptedAtomic,deleteRecord} from './database.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
 
-const VERSION='3.4.1';
+const VERSION='3.4.2';
 const LINK_STORES=['appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications'];
 const CLINICAL_STORES=['appointments','records','notes','formulations','goals','tasks'];
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
@@ -146,9 +146,9 @@ async function runIntegrity({render=true}={}){
 }
 function schedule(delay=500){if(running){queued=true;return}setTimeout(()=>void runIntegrity().catch(error=>console.warn('Integridade clínica v3.4:',error)),delay)}
 
-document.addEventListener('rm:data-ready',()=>schedule(900));
+document.addEventListener('rm:data-ready',()=>{schedule(900);schedule(2400)});
 document.addEventListener('rm:data-patched',()=>schedule(700));
 document.addEventListener('rm:calendar-reverse-reconciled',()=>schedule(400));
-document.addEventListener('rm:local-data-changed',event=>{const kind=String(event.detail?.kind||'');if(['gemini-materialize-v270','gemini-regenerate-v270','calendar-reconcile'].includes(kind))schedule(550)});
+document.addEventListener('rm:local-data-changed',event=>{const kind=String(event.detail?.kind||'');if(['gemini-materialize-v270','gemini-regenerate-v270','calendar-reconcile','clinical-autofix-form-patients'].includes(kind))schedule(550)});
 
 globalThis.__rmClinicalDataIntegrity={version:VERSION,run:runIntegrity,status:()=>globalThis.__rmClinicalDataIntegrityStatus||null};
