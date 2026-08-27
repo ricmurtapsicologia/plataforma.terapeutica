@@ -176,6 +176,6 @@ jobs:
           const index=fs.readFileSync('index.html','utf8');
           const test=fs.readFileSync('tests/self-test.html','utf8');
           if(!index.includes(`v=${version}`))throw new Error(`index.html does not reference v=${version}`);
-          if(!test.includes(`v${version}`))throw new Error(`self-test does not identify v${version}`);
+          if(!test.includes('APP_VERSION')||!test.includes('Autoteste não destrutivo'))throw new Error('self-test does not use dynamic APP_VERSION');
           console.log(`Application version validated: ${version}`);
           NODE
