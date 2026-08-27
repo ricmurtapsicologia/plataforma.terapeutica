@@ -64,9 +64,10 @@ export function paymentMatchesAppointment(payment,appointment,appointments=[]){
 export function paymentStateForAppointment(appointment,{payments=[],appointments=[]}={}){
   const matched=arr(payments).filter(payment=>paymentMatchesAppointment(payment,appointment,appointments));
   const paid=matched.find(payment=>payment?.status==='Pago');
-  if(paid)return{code:'paid',label:'Pago',symbol:'✓',payment:paid,matched};
+  if(paid)return{code:'paid',label:'Pago',symbol:'✓',payment:paid,matched,source:'payment'};
+  if(appointment?.paymentReconciled===true)return{code:'paid',label:'Pago',symbol:'✓',payment:null,matched,source:appointment?.paymentReconciliationSource||'reconciled'};
   const pending=matched.find(payment=>payment?.status==='Pendente');
-  if(pending)return{code:'pending',label:'Pendente',symbol:'•',payment:pending,matched};
-  if(appointmentIsCancelled(appointment))return{code:'none',label:'Sem cobrança',symbol:'—',payment:null,matched};
-  return{code:'unpaid',label:'Não pago',symbol:'$',payment:null,matched};
+  if(pending)return{code:'pending',label:'Pendente',symbol:'•',payment:pending,matched,source:'payment'};
+  if(appointmentIsCancelled(appointment))return{code:'none',label:'Sem cobrança',symbol:'—',payment:null,matched,source:'cancelled'};
+  return{code:'unpaid',label:'Não pago',symbol:'$',payment:null,matched,source:'none'};
 }
