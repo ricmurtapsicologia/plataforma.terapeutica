@@ -2,7 +2,7 @@ import {data,runtime,nowISO} from './state.js';
 import {bulkPutEncryptedAtomic,deleteRecord} from './database.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
 
-const VERSION='3.4.0';
+const VERSION='3.4.1';
 const LINK_STORES=['appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications'];
 const CLINICAL_STORES=['appointments','records','notes','formulations','goals','tasks'];
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
@@ -24,7 +24,7 @@ function duplicatePairs(){
   const patients=arr(data.patients).filter(p=>p?.id&&p.status!=='Profissional');
   const pairs=[];
   for(let i=0;i<patients.length;i++)for(let j=i+1;j<patients.length;j++){
-    const a=patients[i],b=patients[j],sameName=normalizeIdentity(a.name||a.preferredName||'')&&normalizeIdentity(a.name||a.preferredName||'')===normalizeIdentity(b.name||b.preferredName||'');
+    const a=patients[i],b=patients[j],aName=normalizeIdentity(a.name||a.preferredName||''),bName=normalizeIdentity(b.name||b.preferredName||''),sameName=aName&&aName===bName;
     if(conflictingIdentity(a,b))continue;
     const strong=strongIdentityMatch(a,b),aLinks=linkedCount(a.id),bLinks=linkedCount(b.id),emptyShell=(aLinks===0||bLinks===0);
     if(strong||(sameName&&emptyShell))pairs.push([a,b]);
@@ -76,12 +76,19 @@ async function removeOrphanPlaceholders(){
 }
 
 function appointmentPerformed(a){return Boolean(a&&a.status!=='Cancelada'&&a.attendanceStatus!=='Desmarcou'&&(a.status==='Realizada'||['Presente','Compareceu'].includes(a.attendanceStatus)))}
-function recordForAppointment(a){return arr(data.records).find(r=>r?.appointmentId===a.id||(a.clinicalSessionId&&r?.clinicalSessionId===a.clinicalSessionId)||(r?.patientId===a.patientId&&r?.date===a.date&&(!r?.time||!a?.time||r.time===a.time)))||null}
+function isPlaceholderRecord(record){return record?.source?.type==='missing-record-placeholder'||String(record?.id||'').startsWith('missing_record_')}
+function recordForAppointment(a){return arr(data.records).find(r=>!isPlaceholderRecord(r)&&(r?.appointmentId===a.id||(a.clinicalSessionId&&r?.clinicalSessionId===a.clinicalSessionId)||(r?.patientId===a.patientId&&r?.date===a.date&&(!r?.time||!a?.time||r.time===a.time))))||arr(data.records).find(r=>isPlaceholderRecord(r)&&r?.appointmentId===a.id)||null}
+async function purgeSupersededPlaceholders(){
+  const obsolete=arr(data.records).filter(isPlaceholderRecord).filter(placeholder=>arr(data.records).some(record=>record?.id!==placeholder.id&&!isPlaceholderRecord(record)&&(record?.appointmentId===placeholder.appointmentId||(record?.patientId===placeholder.patientId&&record?.date===placeholder.date&&(!record?.time||!placeholder?.time||record.time===placeholder.time)))));
+  if(!obsolete.length)return 0;
+  for(const row of obsolete)await deleteRecord('records',row.id);
+  const ids=new Set(obsolete.map(r=>r.id));data.records=arr(data.records).filter(r=>!ids.has(r.id));return obsolete.length;
+}
 async function ensureMissingRecordPlaceholders(){
   const rows=[];
   for(const a of arr(data.appointments).filter(appointmentPerformed)){
     if(recordForAppointment(a))continue;
-    rows.push({id:`missing_record_${a.id}`,patientId:a.patientId,appointmentId:a.id,clinicalSessionId:a.clinicalSessionId||a.id,title:'Evolução de sessão — pendente',date:a.date,time:a.time||'',status:'Rascunho',text:'Não há prontuário.',followup:'',requiresReview:true,editable:true,source:{type:'missing-record-placeholder',appointmentId:a.id},createdAt:nowISO(),updatedAt:nowISO()});
+    rows.push({id:`missing_record_${a.id}`,patientId:a.patientId,appointmentId:a.id,clinicalSessionId:a.clinicalSessionId||a.id,title:'Evolução de sessão — pendente',date:a.date,time:a.time||'',status:'Rascunho',text:'Não há prontuário.',followup:'',requiresReview:true,editable:true,source:{type:'missing-record-placeholder',fileId:`missing:${a.id}`,appointmentId:a.id},createdAt:nowISO(),updatedAt:nowISO()});
   }
   if(!rows.length)return 0;
   await bulkPutEncryptedAtomic([{storeName:'records',values:rows}],runtime.key,{verify:true});
@@ -109,7 +116,7 @@ async function allocatePackagePayments(){
     const sessions=eligibleSessions(patient.id),payments=arr(data.payments).filter(p=>p?.patientId===patient.id&&p?.status==='Pago').sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.createdAt||'').localeCompare(String(b.createdAt||''))),claimed=new Set();
     for(const payment of payments)for(const id of explicitAppointmentIds(payment))if(sessions.some(a=>a.id===id))claimed.add(id);
     for(const payment of payments){
-      if(payment?.appointmentId||arr(payment?.appointmentIds).length)continue;
+      if(payment?.appointmentId||arr(payment?.appointmentIds).length||payment?.clinicalSessionId)continue;
       const units=paymentUnits(payment,patient);let selected=[];
       if(units===1){selected=nearestCandidates(sessions,payment.date,1,claimed);if(selected[0]&&Math.abs((dateMs(selected[0].date)-dateMs(payment.date))/86400000)>12)selected=[]}
       else selected=nearestCandidates(sessions,payment.date,units,claimed);
@@ -129,9 +136,10 @@ async function runIntegrity({render=true}={}){
     const merged=await mergeDuplicatePatients();
     const removed=await removeOrphanPlaceholders();
     const paymentLinks=await allocatePackagePayments();
+    const superseded=await purgeSupersededPlaceholders();
     const placeholders=await ensureMissingRecordPlaceholders();
-    const changed=merged+removed+paymentLinks+placeholders;
-    globalThis.__rmClinicalDataIntegrityStatus={version:VERSION,merged,removed,paymentLinks,placeholders,at:nowISO()};
+    const changed=merged+removed+paymentLinks+superseded+placeholders;
+    globalThis.__rmClinicalDataIntegrityStatus={version:VERSION,merged,removed,paymentLinks,superseded,placeholders,at:nowISO()};
     if(changed){document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{kind:'clinical-data-integrity-v340',count:changed,at:nowISO()}}));if(render)window.__rmRender?.()}
     return globalThis.__rmClinicalDataIntegrityStatus;
   }finally{running=false;if(queued){queued=false;setTimeout(()=>void runIntegrity(),250)}}
@@ -141,6 +149,6 @@ function schedule(delay=500){if(running){queued=true;return}setTimeout(()=>void 
 document.addEventListener('rm:data-ready',()=>schedule(900));
 document.addEventListener('rm:data-patched',()=>schedule(700));
 document.addEventListener('rm:calendar-reverse-reconciled',()=>schedule(400));
-document.addEventListener('rm:gemini-status',event=>{if(event.detail?.status==='ready'||event.detail?.status==='synced')schedule(650)});
+document.addEventListener('rm:local-data-changed',event=>{const kind=String(event.detail?.kind||'');if(['gemini-materialize-v270','gemini-regenerate-v270','calendar-reconcile'].includes(kind))schedule(550)});
 
 globalThis.__rmClinicalDataIntegrity={version:VERSION,run:runIntegrity,status:()=>globalThis.__rmClinicalDataIntegrityStatus||null};
