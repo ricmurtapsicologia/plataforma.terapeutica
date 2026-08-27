@@ -1,8 +1,8 @@
 import {runtime,selectedPatient} from './state.js';
 import {esc} from './ui.js';
 
-const VERSION='3.2.0';
-const NAV=[['summary','Visão geral'],['timeline','Sessões'],['atendimento','Atendimento'],['records','Prontuário'],['intake','Anamnese'],['plans','Plano terapêutico'],['materials','Materiais'],['documents','Documentos'],['finance','Financeiro']];
+const VERSION='3.4.0';
+const NAV=[['summary','Visão geral'],['timeline','Sessões'],['atendimento','Atendimento'],['records','Prontuário'],['intake','Anamnese'],['formulation','Formulação TCC'],['plans','Plano terapêutico'],['materials','Materiais'],['documents','Documentos'],['finance','Financeiro']];
 let timer=null;
 function simplifyHeader(){if(runtime.route!=='patients'||!selectedPatient())return;const host=document.querySelector('.patient-context .flex.gap-8.wrap,.patient-context .flex');if(!host)return;for(const b of [...host.querySelectorAll('button')]){const a=b.dataset.action||'',keep=a==='schedule-selected-patient'||a==='choose-patient'||Boolean(b.dataset.v3ActionMenu);if(!keep)b.hidden=true}const schedule=host.querySelector('[data-action="schedule-selected-patient"]');if(schedule)schedule.textContent='Agendar sessão';const choose=host.querySelector('[data-action="choose-patient"]');if(choose)choose.textContent='Trocar paciente'}
 function unifyNavigation(){if(runtime.route!=='patients'||!selectedPatient())return;const workspace=document.getElementById('patient-workspace');if(!workspace)return;let nav=workspace.querySelector('.rm-unified-patient-nav-v320');if(!nav){nav=document.createElement('nav');nav.className='rm-unified-patient-nav-v320';nav.setAttribute('aria-label','Áreas do paciente');const target=workspace.querySelector(':scope > .tabs')||workspace.firstElementChild;target?.insertAdjacentElement('beforebegin',nav)}if(!nav)return;const current=runtime.patientTab||'summary';nav.innerHTML=NAV.map(([id,label])=>`<button type="button" class="tab ${id===current?'active':''}" data-action="patient-tab" data-tab="${id}">${esc(label)}</button>`).join('')}
