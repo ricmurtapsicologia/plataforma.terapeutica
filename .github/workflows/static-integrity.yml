@@ -130,10 +130,13 @@ jobs:
           const gemini=fs.readFileSync('assets/js/clinical-reconcile-v270.js','utf8');
           const cleanup=fs.readFileSync('assets/js/legacy-sync-cleanup-v262.js','utf8');
           const agenda=fs.readFileSync('assets/js/agenda-controller-v330.js','utf8');
+          const appVersion=fs.readFileSync('assets/js/version.js','utf8').match(/APP_VERSION='([^']+)'/)?.[1];
+          if(!appVersion)throw new Error('APP_VERSION missing');
           const scripts=[...index.matchAll(/<script\s+type="module"[^>]+src="([^"]+)"/g)].map(m=>m[1]);
-          if(scripts.length!==1||!scripts[0].includes('main-v250.js'))throw new Error(`Expected one module entrypoint main-v250.js, found: ${scripts.join(', ')}`);
-          if(!index.includes('3.3.0-main-v250'))throw new Error('Pages build marker 3.3.0 missing');
-          if(!main.includes("__rmEntrypointVersion='3.3.0-main-v250'"))throw new Error('Entrypoint marker 3.3.0 missing');
+          const mainScripts=scripts.filter(src=>src.includes('main-v250.js'));
+          if(mainScripts.length!==1)throw new Error(`Expected one canonical main-v250.js entrypoint, found: ${mainScripts.join(', ')}`);
+          if(!index.includes(`${appVersion}-main-v250`))throw new Error(`Pages build marker ${appVersion} missing`);
+          if(!main.includes(`__rmEntrypointVersion='${appVersion}-main-v250'`))throw new Error(`Entrypoint marker ${appVersion} missing`);
           if(!main.includes('platform-runtime-v300.js'))throw new Error('Platform v3 runtime missing');
           if(!main.includes('calendar-adapter-v300.js'))throw new Error('CalendarAdapter v3 missing');
           if(!main.includes('migration-router-v300.js'))throw new Error('MigrationRouter v3 missing');
