@@ -3,7 +3,7 @@ import {bulkPutEncryptedAtomic,deleteRecord} from './database.js';
 import {loadWorkspaceAuthorization,DRIVE_READONLY_SCOPE} from './google-workspace-token-v260.js';
 import {normalizeIdentity,parseCsv} from './clinical-intake-core-v310.mjs';
 
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const MANIFEST_NAME='RM_PATIENT_DATA_REPAIR_V2';
 const APPLIED_KEY='rm.patient.data.repair.v2.applied';
 const LINK_STORES=['appointments','records','notes','formulations','goals','tasks','materials','documents','payments','consents','communications'];
@@ -15,6 +15,8 @@ function norm(v=''){return normalizeIdentity(String(v||''))}
 function digits(v=''){return String(v||'').replace(/\D/g,'')}
 function linkedCount(patientId){return LINK_STORES.reduce((sum,store)=>sum+arr(data[store]).filter(row=>row?.patientId===patientId).length,0)}
 function upsertLocal(store,row){const list=data[store]||(data[store]=[]),i=list.findIndex(x=>x?.id===row.id);if(i>=0)list[i]=row;else list.push(row)}
+function minuteOf(value=''){const m=String(value||'').match(/^(\d{1,2}):(\d{2})/);return m?Number(m[1])*60+Number(m[2]):null}
+function meetingIso(date,time='00:00'){return`${date}T${time}:00-03:00`}
 
 function patientCandidates(spec){
   const patients=arr(data.patients).filter(p=>p?.id&&p.status!=='Profissional'),type=String(spec?.type||''),value=String(spec?.value||'').trim();
@@ -26,6 +28,14 @@ function patientCandidates(spec){
   return[];
 }
 function resolvePatient(spec){const matches=patientCandidates(spec);return matches.length===1?matches[0]:null}
+function appointmentFor(patientId,date,time=''){
+  const candidates=arr(data.appointments).filter(a=>a?.patientId===patientId&&a?.date===date&&a?.status!=='Cancelada'&&a?.attendanceStatus!=='Desmarcou');
+  if(!candidates.length)return null;
+  const exact=candidates.find(a=>String(a.time||'').slice(0,5)===String(time||'').slice(0,5));if(exact)return exact;
+  if(candidates.length===1)return candidates[0];
+  const target=minuteOf(time);if(target===null)return[...candidates].sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')))[0]||null;
+  return[...candidates].map(a=>({a,d:Math.abs((minuteOf(a.time)??target)-target)})).sort((x,y)=>x.d-y.d)[0]?.a||null;
+}
 
 async function mergePatients(op){
   const primary=resolvePatient(op?.primaryMatch),secondary=resolvePatient(op?.secondaryMatch);
@@ -96,6 +106,23 @@ async function purgeSyntheticCandidates(){
   if(ids.has(runtime.selectedPatientId))runtime.selectedPatientId=null;
   return rows.length;
 }
+async function purgeExactPatients(op){
+  const wanted=new Set(arr(op?.names).map(norm).filter(Boolean));if(!wanted.size)return 0;
+  const patients=arr(data.patients).filter(p=>p?.id&&p.status!=='Profissional'&&(wanted.has(norm(p.name))||wanted.has(norm(p.preferredName))));
+  let removed=0;
+  for(const patient of patients){
+    for(const store of LINK_STORES){
+      const linked=arr(data[store]).filter(row=>row?.patientId===patient.id);
+      for(const row of linked)if(row?.id)await deleteRecord(store,row.id);
+      if(linked.length)data[store]=arr(data[store]).filter(row=>row?.patientId!==patient.id);
+    }
+    await deleteRecord('patients',patient.id);
+    data.patients=arr(data.patients).filter(p=>p?.id!==patient.id);
+    if(runtime.selectedPatientId===patient.id)runtime.selectedPatientId=null;
+    removed++;
+  }
+  return removed;
+}
 
 async function googleText(auth,url,accept='text/plain'){
   const response=await fetch(url,{headers:{Authorization:`Bearer ${auth.token}`,Accept:accept},cache:'no-store',referrerPolicy:'no-referrer'});
@@ -113,7 +140,7 @@ async function loadManifest(auth){
 }
 function legacyIso(value=''){
   const raw=String(value||'').trim();
-  let m=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  const m=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if(m)return`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}T${String(m[4]||'0').padStart(2,'0')}:${String(m[5]||'0').padStart(2,'0')}:${String(m[6]||'0').padStart(2,'0')}-03:00`;
   return raw;
 }
@@ -132,6 +159,38 @@ async function importLegacyIntake(op,auth){
   await bulkPutEncryptedAtomic([{storeName:'notes',values:[note]}],runtime.key,{verify:true});upsertLocal('notes',note);return 1;
 }
 
+async function upsertGeminiSessionRecord(op){
+  const patient=resolvePatient(op?.patientMatch),date=String(op?.date||'').slice(0,10),time=String(op?.time||'08:00').slice(0,5),fileId=String(op?.sourceFileId||'').trim(),text=String(op?.text||'').trim();
+  if(!patient||!date||!fileId||!text)return 0;
+  const sourceModifiedAt=String(op?.sourceModifiedAt||nowISO()),sourceStartedAt=String(op?.sourceStartedAt||meetingIso(date,time)),sourceUrl=String(op?.sourceUrl||'');
+  let appointment=appointmentFor(patient.id,date,time),appointmentChanged=false;
+  if(!appointment){
+    appointment={id:`gmappt_${fileId}`,patientId:patient.id,date,time,duration:Number(op?.duration||50)||50,status:'Realizada',attendanceStatus:'Presente',modality:'On-line',recurrence:'Avulso',note:'Sessão confirmada por agenda e Anotações do Google Meet/Gemini.',createdAt:sourceStartedAt,updatedAt:nowISO(),source:{type:'google-meet-gemini',fileId,url:sourceUrl,sourceModifiedAt},gemini:{fileId,url:sourceUrl,meetingDate:date,meetingTime:time,rawTime:time,sourceModifiedAt}};
+    appointmentChanged=true;
+  }else{
+    const next={...appointment,status:'Realizada',attendanceStatus:'Presente',updatedAt:nowISO(),gemini:{...(appointment.gemini||{}),fileId,url:sourceUrl,meetingDate:date,meetingTime:time,rawTime:time,sourceModifiedAt}};
+    if(JSON.stringify(next)!==JSON.stringify(appointment)){appointment=next;appointmentChanged=true}
+  }
+  const sourceRecord=arr(data.records).find(r=>r?.patientId===patient.id&&(r?.source?.fileId===fileId||r?.id===`gmrec_${fileId}`));
+  const sameDay=arr(data.records).filter(r=>r?.patientId===patient.id&&r?.date===date);
+  const substantiveSameDay=sameDay.find(r=>String(r?.text||'').trim()&&String(r.text).trim()!=='Não há prontuário.');
+  let record=sourceRecord||substantiveSameDay||sameDay[0]||null,recordChanged=false;
+  const writes=[];
+  if(appointmentChanged)writes.push({storeName:'appointments',values:[appointment]});
+  if(!record){
+    record={id:`gmrec_${fileId}`,patientId:patient.id,appointmentId:appointment.id,title:String(op?.title||'Evolução de sessão'),date,status:String(op?.status||'Rascunho IA'),text,followup:String(op?.followup||''),requiresReview:true,createdAt:sourceStartedAt,updatedAt:nowISO(),addenda:[],source:{type:'google-meet-gemini',kind:'gemini-meet-notes',fileId,url:sourceUrl,sourceStartedAt,sourceModifiedAt}};
+    recordChanged=true;
+  }else if(record.status!=='Finalizado'&&(record===sourceRecord||!String(record.text||'').trim()||String(record.text).trim()==='Não há prontuário.')){
+    record={...record,patientId:patient.id,appointmentId:appointment.id,title:String(op?.title||record.title||'Evolução de sessão'),date,status:String(op?.status||'Rascunho IA'),text,followup:String(op?.followup||record.followup||''),requiresReview:true,updatedAt:nowISO(),source:{...(record.source||{}),type:'google-meet-gemini',kind:'gemini-meet-notes',fileId,url:sourceUrl,sourceStartedAt,sourceModifiedAt}};
+    recordChanged=true;
+  }
+  if(recordChanged)writes.push({storeName:'records',values:[record]});
+  if(!writes.length)return 0;
+  await bulkPutEncryptedAtomic(writes,runtime.key,{verify:true});
+  if(appointmentChanged)upsertLocal('appointments',appointment);if(recordChanged)upsertLocal('records',record);
+  return Number(appointmentChanged)+Number(recordChanged);
+}
+
 async function applyManifest(manifest,auth){
   let changed=0;
   for(const op of arr(manifest?.operations)){
@@ -139,7 +198,9 @@ async function applyManifest(manifest,auth){
     else if(op?.type==='updatePatientFields')changed+=await updatePatientFields(op);
     else if(op?.type==='setStatus')changed+=await setPatientStatus(op);
     else if(op?.type==='purgeSyntheticCandidates')changed+=await purgeSyntheticCandidates();
+    else if(op?.type==='purgeExactPatients')changed+=await purgeExactPatients(op);
     else if(op?.type==='importLegacyIntake')changed+=await importLegacyIntake(op,auth);
+    else if(op?.type==='upsertGeminiSessionRecord')changed+=await upsertGeminiSessionRecord(op);
   }
   return changed;
 }
