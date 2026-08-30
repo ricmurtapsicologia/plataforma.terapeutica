@@ -1,0 +1,50 @@
+name: Ecosystem sanitation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'index.html'
+      - 'assets/js/version.js'
+      - 'assets/js/main-v250.js'
+      - 'assets/js/patient-workspace-v320.js'
+      - 'assets/js/google-workspace-token-v260.js'
+      - 'assets/js/clinical-whatsapp-bridge-v300.js'
+      - 'tests/ecosystem-saneamento-v360.test.mjs'
+      - '.github/workflows/ecosystem-saneamento.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'index.html'
+      - 'assets/js/version.js'
+      - 'assets/js/main-v250.js'
+      - 'assets/js/patient-workspace-v320.js'
+      - 'assets/js/google-workspace-token-v260.js'
+      - 'assets/js/clinical-whatsapp-bridge-v300.js'
+      - 'tests/ecosystem-saneamento-v360.test.mjs'
+      - '.github/workflows/ecosystem-saneamento.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecosystem-saneamento-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: |
+          node --check assets/js/patient-workspace-v320.js
+          node --check tests/ecosystem-saneamento-v360.test.mjs
+      - name: Ecosystem sanitation contract
+        run: node tests/ecosystem-saneamento-v360.test.mjs
