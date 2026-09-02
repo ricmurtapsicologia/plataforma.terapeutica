@@ -26,6 +26,7 @@ assert.ok(main.includes('treatment-plan-intelligence-v320.js'),'longitudinal tre
 assert.ok(main.includes('patient-delivery-finance-v320.js'),'PDF delivery and finance workflow must be active');
 assert.ok(main.includes('session-payment-visibility-v322.js'),'session payment visibility must be active');
 assert.ok(main.includes('agenda-controller-v330.js'),'single-owner Agenda Controller v3.3 must be active');
+assert.ok(main.includes('clinical-session-runtime-v370.js'),'one-click clinical session lifecycle must be active');
 assert.ok(!main.includes('agenda-actions-v240.js'),'legacy agenda action owner must not boot');
 
 for(const retired of [
@@ -36,8 +37,8 @@ assert.ok(migrations.includes("import('./legacy-sync-cleanup-v262.js')"),'legacy
 for(const retired of ['clinical-reconcile-v240.js','gemini-autodelivery-v264.js','gemini-alias-continuity-v263.js','gemini-name-token-repair-v245.js','gemini-migration-v240.js','gemini-attendance-repair-v249.js'])assert.ok(!main.includes(retired),`${retired} must not be an active Gemini runtime`);
 
 assert.ok(main.includes('calendar-adapter-v300.js'),'single Calendar adapter must be active');
-for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v275.js'])assert.ok(!main.includes(internal),`${internal} must be owned by CalendarAdapter, not main`);
-assert.ok(calendar.includes('google-calendar-service-v240.js')&&calendar.includes('calendar-integrity-v274.js')&&calendar.includes('calendar-reverse-reconcile-v275.js'),'CalendarAdapter must preserve service, integrity and reverse reconciliation');
+for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])assert.ok(!main.includes(internal),`${internal} must be owned by CalendarAdapter, not main`);
+assert.ok(calendar.includes('google-calendar-service-v240.js')&&calendar.includes('calendar-integrity-v274.js')&&calendar.includes('calendar-reverse-reconcile-v276.js'),'CalendarAdapter must preserve service, integrity and reverse reconciliation');
 assert.ok(main.includes('clinical-reconcile-v270.js'),'single Gemini reconciler must remain active');
 assert.ok(platform.includes('clinicalSessionId'),'canonical clinical session identity must exist');
 assert.ok(platform.includes("source:'existing-links-only'"),'canonical backfill must only use existing links');
