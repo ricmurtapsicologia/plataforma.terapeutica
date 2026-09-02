@@ -52,6 +52,7 @@ jobs:
           node tests/persistence-architecture-v270.test.mjs
           node tests/platform-v300.test.mjs
           node tests/agenda-v330.test.mjs
+          node tests/clinical-session-v370.test.mjs
 
       - name: Run real browser persistence and agenda probes
         shell: bash
@@ -121,6 +122,8 @@ jobs:
           const main=fs.readFileSync('assets/js/main-v250.js','utf8');
           const platform=fs.readFileSync('assets/js/platform-runtime-v300.js','utf8');
           const calendar=fs.readFileSync('assets/js/calendar-adapter-v300.js','utf8');
+          const calendarService=fs.readFileSync('assets/js/google-calendar-service-v240.js','utf8');
+          const sessionRuntime=fs.readFileSync('assets/js/clinical-session-runtime-v370.js','utf8');
           const migrations=fs.readFileSync('assets/js/migration-router-v300.js','utf8');
           const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
           const sync=fs.readFileSync('assets/js/secure-sync-v260.js','utf8');
@@ -141,9 +144,12 @@ jobs:
           if(!main.includes('calendar-adapter-v300.js'))throw new Error('CalendarAdapter v3 missing');
           if(!main.includes('migration-router-v300.js'))throw new Error('MigrationRouter v3 missing');
           if(!main.includes('agenda-controller-v330.js')||main.includes('agenda-actions-v240.js'))throw new Error('Agenda must have one canonical controller v330');
+          if(!main.includes('clinical-session-runtime-v370.js'))throw new Error('Clinical one-click session runtime v370 missing');
           if(!agenda.includes("const OWNER='agenda-controller-v330'")||agenda.includes('stopImmediatePropagation'))throw new Error('Agenda controller ownership invariant missing');
-          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v275.js'])if(main.includes(internal))throw new Error(`Calendar internal must be owned by adapter: ${internal}`);
-          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v275.js'])if(!calendar.includes(internal))throw new Error(`CalendarAdapter missing internal: ${internal}`);
+          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])if(main.includes(internal))throw new Error(`Calendar internal must be owned by adapter: ${internal}`);
+          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])if(!calendar.includes(internal))throw new Error(`CalendarAdapter missing internal: ${internal}`);
+          if(!calendarService.includes('ensureMeetForAppointment')||!calendarService.includes('conferenceDataVersion=1')||!calendarService.includes("conferenceSolutionKey:{type:'hangoutsMeet'}"))throw new Error('Calendar Meet idempotency contract missing');
+          if(!sessionRuntime.includes('getDecryptedById')||!sessionRuntime.includes('sessionStartedAt')||!sessionRuntime.includes('sessionEndedAt')||!sessionRuntime.includes('actualDurationMinutes'))throw new Error('Clinical session lifecycle/readback contract missing');
           for(const retired of ['runtime-monitor-v240.js','legacy-sw-cleanup-v240.js','browser-fixes-v153.js','top-status-owner-v243.js','gemini-materialization-integrity-v273.js','workspace-status-v240.js','legacy-sync-cleanup-v262.js'])if(main.includes(retired))throw new Error(`Retired permanent boot module referenced: ${retired}`);
           if(!migrations.includes("import('./legacy-sync-cleanup-v262.js')"))throw new Error('MigrationRouter must preserve conditional legacy sync cleanup');
           if(!bootstrap.includes("from './secure-sync-v260.js'")||bootstrap.includes("from './secure-sync-v240.js'"))throw new Error('Bootstrap must use private SyncManager v260');
