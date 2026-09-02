@@ -17,6 +17,7 @@ const modules=[
   ['./patient-status-v350.js','Status clínico Ativo/Inativo'],
   ['./patient-billing-profile-v360.js','Perfil financeiro avulso/pacote/mensal'],
   ['./calendar-adapter-v300.js','CalendarAdapter v3'],
+  ['./calendar-reverse-reconcile-v276.js','Calendar → plataforma · conciliação de reagendamentos'],
   ['./clinical-whatsapp-bridge-v300.js','WhatsApp · confirmações clínicas T−6h'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
   ['./public-clinical-storage-guard-v251.js','Gate de storage clínico público'],
