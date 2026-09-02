@@ -1,4 +1,4 @@
-const VERSION='3.0.0';
+const VERSION='3.0.1';
 
 // O adapter é o único proprietário de boot da integração Calendar na Plataforma 3.
 // Os módulos internos permanecem isolados por responsabilidade até a próxima
@@ -6,7 +6,7 @@ const VERSION='3.0.0';
 const components=[
   ['./google-calendar-service-v240.js','serviço'],
   ['./calendar-integrity-v274.js','integridade'],
-  ['./calendar-reverse-reconcile-v275.js','conciliação reversa']
+  ['./calendar-reverse-reconcile-v276.js','conciliação reversa']
 ];
 
 const loaded=[];
