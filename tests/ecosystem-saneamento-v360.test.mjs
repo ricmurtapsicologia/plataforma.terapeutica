@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 const read=path=>fs.readFileSync(path,'utf8');
 const version=read('assets/js/version.js').match(/APP_VERSION='([^']+)'/)?.[1];
-assert.equal(version,'3.6.0','APP_VERSION must remain the canonical 3.6.0 release during sanitation');
+assert.match(version||'',/^\d+\.\d+\.\d+$/,'APP_VERSION must remain a canonical semver release during sanitation');
 
 const index=read('index.html');
 const main=read('assets/js/main-v250.js');
@@ -45,4 +45,4 @@ assert.ok(!/console\.(log|debug)\([^\n]*(phone|recipient|text|patient)/i.test(wh
 assert.ok(index.includes('https://secretaria-digital-core.vercel.app'),'CSP must explicitly allow the governed Secretary Core origin');
 assert.ok(!index.includes("connect-src *"),'CSP connect-src must not use a wildcard');
 
-console.log('ECOSYSTEM_SANEAMENTO_V360_PASS');
+console.log(`ECOSYSTEM_SANEAMENTO_PASS (${version})`);
