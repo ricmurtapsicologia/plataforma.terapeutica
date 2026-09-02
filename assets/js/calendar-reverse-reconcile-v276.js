@@ -103,6 +103,15 @@ function applyCalendarSlot(appointment,eventId,parts){
   return changed;
 }
 
+function stableLinkedAppointment(event){
+  const appointmentId=String(event?.extendedProperties?.private?.rmAppointmentId||'').trim();
+  if(appointmentId){
+    const byAppointmentId=arr(data.appointments).find(a=>String(a?.id||'')===appointmentId);
+    if(byAppointmentId)return byAppointmentId;
+  }
+  return arr(data.appointments).find(a=>String(a?.calendarEventId||'')===String(event?.id||''))||null;
+}
+
 async function reconcileCalendarDates({force=false}={}){
   if(running||runtime.locked||!runtime.dataReady||!runtime.key||!navigator.onLine)return{created:0,linked:0,rescheduled:0};
   const last=Number(localStorage.getItem(SCAN_STORAGE)||0);
@@ -117,14 +126,14 @@ async function reconcileCalendarDates({force=false}={}){
       const patient=uniquePatient(eventPatientToken(event)),parts=localParts(event);
       if(!patient||!parts||!event?.id)continue;
 
-      // Canonical reschedule path: once an appointment is linked to a Calendar
-      // event, the event id survives date/time edits. Reconcile by that stable id
-      // before any date-based fallback so ChatGPT/Calendar moves update the same
-      // clinical appointment instead of creating a duplicate on the new date.
-      const byEventId=arr(data.appointments).find(a=>String(a?.calendarEventId||'')===String(event.id));
-      if(byEventId){
-        if(applyCalendarSlot(byEventId,event.id,parts)){
-          changes.push(byEventId);
+      // Canonical chat-reschedule path. Calendar events created by the clinical
+      // platform carry rmAppointmentId; event ids also survive date/time edits.
+      // Resolve by either stable identifier before any date-based fallback so a
+      // move performed from ChatGPT updates the same encrypted appointment.
+      const stable=stableLinkedAppointment(event);
+      if(stable){
+        if(applyCalendarSlot(stable,event.id,parts)){
+          changes.push(stable);
           rescheduled+=1;
         }
         continue;
