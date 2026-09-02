@@ -1,10 +1,10 @@
-# Plataforma Clínica Richelmy Murta — v3.6.0
+# Plataforma Clínica Richelmy Murta — v3.7.0
 
 Aplicação clínica local-first publicada como código estático em GitHub Pages. O repositório público contém somente código e assets da aplicação; dados clínicos novos não são persistidos no GitHub.
 
 ## Fonte canônica de versão
 
-A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build vigente é `3.6.0-main-v250`.
+A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build vigente é `3.7.0-main-v250`.
 
 ## Arquitetura vigente
 
@@ -64,7 +64,7 @@ Arquivos relacionados:
 - `tests/self-test.html` — autoteste não destrutivo;
 - `CLINICAL_CUTOVER_CHECKLIST.md` — gate operacional para migração do dispositivo principal e segundo dispositivo.
 
-## Google Calendar
+## Google Calendar e início de sessão
 
 O Calendar é camada operacional, não prontuário. O título permitido para sessões é:
 
@@ -73,6 +73,10 @@ T – Nome
 ```
 
 Não devem ser enviados para a descrição do evento diagnóstico, conteúdo de sessão, prontuário, respostas de instrumentos, transcrição Gemini ou outros dados clínicos.
+
+O runtime `assets/js/clinical-session-runtime-v370.js` implementa o ciclo operacional de sessão. Para uma sessão do dia, o comando `Iniciar sessão` localiza o evento por identidade estável, reutiliza um Google Meet existente ou solicita uma única conferência no próprio evento, grava `sessionStartedAt` no cofre cifrado com readback e abre o Meet. O cronômetro é derivado do timestamp persistido, e não de estado volátil do navegador.
+
+Ao encerrar, a plataforma registra `sessionEndedAt`, duração real, presença e estado realizado, com opção de desfazer um início acidental sem apagar o Meet já criado. Alterações no Google Calendar preservam a identidade da sessão para evitar duplicações.
 
 ## Meet / Gemini
 
@@ -110,12 +114,14 @@ A navegação do workspace do paciente prioriza seis áreas recorrentes — Vis�
 
 ## Entrypoints atuais
 
-- `index.html` — build `3.6.0-main-v250`;
+- `index.html` — build `3.7.0-main-v250`;
 - `assets/js/main-v250.js` — entrypoint principal;
 - `assets/js/bootstrap-v240.js` — boot/login e carregamento do SyncManager atual;
 - `assets/js/secure-sync-v260.js` — sincronização privada;
 - `assets/js/drive-appdata-storage-v260.js` — storage remoto privado;
 - `assets/js/google-workspace-token-v260.js` — autorização Workspace/appData;
+- `assets/js/calendar-adapter-v300.js` — proprietário único dos serviços internos do Calendar;
+- `assets/js/clinical-session-runtime-v370.js` — iniciar/abrir/encerrar sessão e cronômetro persistente;
 - `assets/js/public-clinical-storage-guard-v251.js` — fail-closed para storage clínico público legado;
 - `assets/js/gemini-sharing-guard-v250.js` — guardrail de compartilhamento Gemini;
 - `assets/js/clinical-reconcile-v270.js` — conciliação incremental Gemini;
@@ -132,6 +138,7 @@ Continuam dependentes de validação no dispositivo do usuário:
 2. comprovar notebook ↔ celular nos dois sentidos;
 3. executar teste de restore isolado com um backup real;
 4. validar visualmente os fluxos críticos em viewport móvel real;
-5. comprovar o fluxo real Calendar → Gemini/Meet → rascunho → revisão → prontuário → auditoria.
+5. comprovar o fluxo real `Iniciar sessão → Google Meet → cronômetro → Encerrar sessão → prontuário` com uma sessão controlada;
+6. comprovar o fluxo real Calendar → Gemini/Meet → rascunho → revisão → prontuário → auditoria.
 
 Esses gates não devem ser marcados como concluídos apenas com CI remoto.
