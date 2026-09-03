@@ -29,13 +29,14 @@ const adapter=fs.readFileSync('assets/js/calendar-adapter-v300.js','utf8');
 
 for(const needle of ['conferenceDataVersion=1',"conferenceSolutionKey:{type:'hangoutsMeet'}",'ensureMeetForAppointment','meetUrlFromEvent'])assert.ok(calendar.includes(needle),`Calendar missing ${needle}`);
 assert.ok(calendar.includes("method:'PATCH'"),'Calendar updates must use PATCH so existing Meet data is preserved');
-for(const needle of ['sessionStartedAt','sessionEndedAt','actualDurationMinutes','getDecryptedById','clinical-session-start-v370','clinical-session-end-v370',"window.open('about:blank'",'clinical-session-start-flex-v372','createAdHocAppointment','manual-flex-start','rollbackAdHoc','startFlexibleSession'])assert.ok(runtime.includes(needle),`Session runtime missing ${needle}`);
+for(const needle of ['sessionStartedAt','sessionEndedAt','actualDurationMinutes','getDecryptedById','clinical-session-start-v370','clinical-session-end-v370',"window.open('about:blank'",'clinical-session-start-flex-v372','createAdHocAppointment','manual-flex-start','rollbackAdHoc','startFlexibleSession','meetWindows','meetWindowMonitors','trackMeetWindow','autoEndFromMeetClose','meet-window-closed','clinical-session-auto-end-v373'])assert.ok(runtime.includes(needle),`Session runtime missing ${needle}`);
+assert.ok(!runtime.includes("window.open(url,'_blank','noopener,noreferrer')"),'Meet reopening must retain a trackable WindowProxy so closing the tab can stop the timer');
 for(const needle of ['clinical-session-start-flex-v372','Sem sessão aberta hoje','Iniciar nova sessão'])assert.ok(header.includes(needle),`Flexible session header missing ${needle}`);
 assert.ok(!header.includes('data-v3-action-menu'),'Patient header must not expose generic action-menu marker that can intercept session clicks');
 assert.ok(!header.includes('disabled title="Sem sessão agendada para hoje"'),'No-schedule state must not disable session start');
 assert.ok(index.includes('clinical-session-header-v371.js?v=3.7.3&rev=session-flex-runtime-20260903'),'Index must cache-bust flexible session header');
-assert.ok(index.includes('main-v250.js?v=3.7.0&rev=session-flex-runtime-20260903'),'Index must cache-bust canonical runtime loader');
-assert.ok(main.includes('session-flex-runtime-20260903'),'Canonical runtime imports must use fresh cache key');
+assert.ok(index.includes('main-v250.js?v=3.7.0&rev=meet-close-autostop-20260903'),'Index must cache-bust canonical runtime loader');
+assert.ok(main.includes('meet-close-autostop-20260903'),'Canonical runtime imports must use fresh cache key');
 assert.ok(main.includes('clinical-session-runtime-v370.js'),'Canonical main must boot clinical session runtime');
 assert.ok(!main.includes('calendar-reverse-reconcile-v276.js'),'Reverse reconciliation must not be double-booted by main');
 assert.ok(adapter.includes('calendar-reverse-reconcile-v276.js'),'Calendar adapter must own v276 reconciliation');
