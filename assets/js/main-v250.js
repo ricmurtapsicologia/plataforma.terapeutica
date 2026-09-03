@@ -13,6 +13,7 @@ const modules=[
   ['./clinical-private-reconciliation-v350.js','Conciliação clínica privada via Google Drive'],
   ['./clinical-intake-runtime-v310.js','Clinical Intake · Anamnese'],
   ['./clinical-intake-patient-ui-v312.js','Anamnese · área clínica do paciente'],
+  ['./clinical-icaps-runtime-v400.js','ICAPS · avaliação estruturada e conciliação clínica'],
   ['./clinical-assessment-v360.js','Complementação estruturada da avaliação clínica'],
   ['./patient-status-v350.js','Status clínico Ativo/Inativo'],
   ['./patient-billing-profile-v360.js','Perfil financeiro avulso/pacote/mensal'],
