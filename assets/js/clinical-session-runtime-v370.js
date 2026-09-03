@@ -3,10 +3,12 @@ import {putEncrypted,getDecryptedById,deleteRecord} from './database.js';
 import {toast,modal,closeModal,esc,fmtDate} from './ui.js';
 import {sessionPhase,selectPatientSession,elapsedSeconds,formatElapsed,finalDurationMinutes} from './clinical-session-domain-v370.mjs';
 
-const VERSION='3.7.2';
+const VERSION='3.7.3';
 const FLEX_ACTION='clinical-session-start-flex-v372';
 const ACTIONS=new Set(['clinical-session-start-v370',FLEX_ACTION,'clinical-session-open-meet-v370','clinical-session-end-v370','clinical-session-end-confirm-v370','clinical-session-undo-v370']);
 const busy=new Set();
+const meetWindows=new Map();
+const meetWindowMonitors=new Map();
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
 const appointmentById=id=>arr(data.appointments).find(a=>a?.id===id)||null;
 
@@ -48,12 +50,32 @@ function preopenMeet(){
 }
 
 function sendPopup(popup,url){
-  if(popup&&!popup.closed){try{popup.location.replace(url);return true}catch{}}
-  const opened=window.open(url,'_blank','noopener,noreferrer');
-  return Boolean(opened);
+  let target=popup;
+  if(!target||target.closed)target=preopenMeet();
+  if(!target)return null;
+  try{target.location.replace(url);return target}catch{closePopup(target);return null}
 }
 
 function closePopup(popup){try{if(popup&&!popup.closed)popup.close()}catch{}}
+
+function forgetMeetWindow(id){
+  const timer=meetWindowMonitors.get(id);if(timer)clearInterval(timer);
+  meetWindowMonitors.delete(id);meetWindows.delete(id);
+}
+
+function trackMeetWindow(id,popup){
+  if(!id||!popup)return popup;
+  forgetMeetWindow(id);meetWindows.set(id,popup);
+  let observedOpen=true;
+  const timer=setInterval(()=>{
+    const tracked=meetWindows.get(id);if(!tracked){clearInterval(timer);meetWindowMonitors.delete(id);return}
+    let closed=false;try{closed=Boolean(tracked.closed)}catch{return}
+    if(!closed){observedOpen=true;return}
+    forgetMeetWindow(id);
+    if(observedOpen)void autoEndFromMeetClose(id);
+  },1000);
+  meetWindowMonitors.set(id,timer);return popup;
+}
 
 async function ensureMeet(appointment){
   const result=await calendarApi().ensureMeetForAppointment(appointment);
@@ -72,9 +94,10 @@ async function startSession(id,sourceElement){
   busy.add(id);sourceElement?.classList.add('rm-session-starting-v370');sourceElement&&(sourceElement.disabled=true);
   const popup=preopenMeet();
   try{
-    const meet=await ensureMeet(current),startedAt=nowISO();
+    const meet=await ensureMeet(current),startedAt=nowISO(),opened=sendPopup(popup,meet.url);
+    if(!opened)throw new Error('O navegador bloqueou a nova aba. Permita pop-ups para abrir o Google Meet.');
     const stored=await persistAppointment({...current,calendarEventId:meet.eventId||current.calendarEventId||'',meetUrl:meet.url,sessionStartedAt:current.sessionStartedAt||startedAt,sessionEndedAt:'',clinicalSessionState:'Em atendimento',sessionPreviousStatus:current.sessionPreviousStatus??current.status??'',sessionPreviousAttendanceStatus:current.sessionPreviousAttendanceStatus??current.attendanceStatus??'',sessionStartSource:'platform-one-click'},'clinical-session-start-v370');
-    sendPopup(popup,meet.url);
+    trackMeetWindow(stored.id,opened);
     toast('Sessão iniciada. Google Meet aberto e cronômetro registrado.','success');
     decorate();
     return stored;
@@ -114,13 +137,18 @@ async function startFlexibleSession(sourceElement){
 
 async function openMeet(id){
   const current=appointmentById(id);if(!current)throw new Error('Sessão não localizada.');
-  let url=String(current.meetUrl||'').trim();
-  if(!url){
-    const meet=await ensureMeet(current);url=meet.url;
-    await persistAppointment({...current,calendarEventId:meet.eventId||current.calendarEventId||'',meetUrl:url},'clinical-session-meet-link-v370');
-  }
-  const opened=window.open(url,'_blank','noopener,noreferrer');
-  if(!opened)throw new Error('O navegador bloqueou a nova aba. Permita pop-ups para abrir o Google Meet.');
+  const popup=preopenMeet();
+  try{
+    let url=String(current.meetUrl||'').trim();
+    if(!url){
+      const meet=await ensureMeet(current);url=meet.url;
+      await persistAppointment({...current,calendarEventId:meet.eventId||current.calendarEventId||'',meetUrl:url},'clinical-session-meet-link-v370');
+    }
+    const opened=sendPopup(popup,url);
+    if(!opened)throw new Error('O navegador bloqueou a nova aba. Permita pop-ups para abrir o Google Meet.');
+    if(sessionPhase(appointmentById(id))==='in_progress')trackMeetWindow(id,opened);
+    return opened;
+  }catch(error){closePopup(popup);throw error}
 }
 
 function endModal(id){
@@ -130,6 +158,18 @@ function endModal(id){
   modal('Encerrar sessão',`<div class="notice success"><strong>Sessão em andamento.</strong> O encerramento marcará presença e registrará a duração real.</div><div class="rm-session-end-summary-v370 mt-16"><div><span>Data</span><strong>${esc(fmtDate(current.date))}</strong></div><div><span>Início</span><strong>${esc(new Date(current.sessionStartedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}))}</strong></div><div><span>Decorrido</span><strong data-rm-session-timer="${esc(current.id)}">${esc(elapsed)}</strong></div></div><p class="small muted mt-16">Se o início foi acionado por engano, use “Desfazer início”. O Meet criado é preservado para evitar duplicações.</p>`,`<button class="btn secondary" type="button" data-action="close-modal">Continuar sessão</button><button class="btn secondary" type="button" data-action="clinical-session-undo-v370" data-id="${esc(current.id)}">Desfazer início</button><button class="btn" type="button" data-action="clinical-session-end-confirm-v370" data-id="${esc(current.id)}">Encerrar e abrir prontuário</button>`,true);
 }
 
+async function autoEndFromMeetClose(id){
+  const current=appointmentById(id);if(!current||sessionPhase(current)!=='in_progress'||busy.has(id))return;
+  busy.add(id);
+  try{
+    const endedAt=nowISO(),minutes=finalDurationMinutes(current.sessionStartedAt,endedAt);
+    await persistAppointment({...current,sessionEndedAt:endedAt,clinicalSessionState:'Encerrada',actualDurationMinutes:minutes,status:'Realizada',attendanceStatus:'Presente',sessionEndSource:'meet-window-closed'},'clinical-session-auto-end-v373');
+    toast(`Sessão encerrada automaticamente ao fechar o Meet. Duração registrada: ${minutes} min.`,'success');
+    decorate();
+  }catch(error){toast(error?.message||'O Meet foi fechado, mas não foi possível encerrar a sessão automaticamente. Use “Encerrar sessão”.','error')}
+  finally{busy.delete(id)}
+}
+
 async function confirmEnd(id){
   const current=appointmentById(id);if(!current)throw new Error('Sessão não localizada.');
   if(sessionPhase(current)!=='in_progress')throw new Error('A sessão não está mais em andamento.');
@@ -137,7 +177,7 @@ async function confirmEnd(id){
   try{
     const endedAt=nowISO(),minutes=finalDurationMinutes(current.sessionStartedAt,endedAt);
     const stored=await persistAppointment({...current,sessionEndedAt:endedAt,clinicalSessionState:'Encerrada',actualDurationMinutes:minutes,status:'Realizada',attendanceStatus:'Presente',sessionEndSource:'platform-one-click'},'clinical-session-end-v370');
-    closeModal();
+    forgetMeetWindow(id);closeModal();
     runtime.selectedPatientId=stored.patientId;runtime.patientTab='records';
     if(typeof globalThis.__rmNavigate==='function')globalThis.__rmNavigate('patients');else{runtime.route='patients';window.__rmRender?.()}
     toast(`Sessão encerrada. Duração registrada: ${minutes} min.`,'success');
@@ -147,9 +187,9 @@ async function confirmEnd(id){
 async function undoStart(id){
   const current=appointmentById(id);if(!current)throw new Error('Sessão não localizada.');
   if(sessionPhase(current)!=='in_progress')throw new Error('A sessão não está em andamento.');
-  const restored={...current,status:current.sessionPreviousStatus||'Confirmada',attendanceStatus:current.sessionPreviousAttendanceStatus||'',sessionStartedAt:'',sessionEndedAt:'',clinicalSessionState:'',actualDurationMinutes:null,sessionStartSource:'',sessionEndSource:'',sessionPreviousStatus:'',sessionPreviousAttendanceStatus:''};
+  const restored={...current,status:current.sessionPreviousStatus||'Confirmirmada',attendanceStatus:current.sessionPreviousAttendanceStatus||'',sessionStartedAt:'',sessionEndedAt:'',clinicalSessionState:'',actualDurationMinutes:null,sessionStartSource:'',sessionEndSource:'',sessionPreviousStatus:'',sessionPreviousAttendanceStatus:''};
   await persistAppointment(restored,'clinical-session-undo-v370');
-  closeModal();toast('Início desfeito. O link do Meet foi preservado.','success');decorate();
+  forgetMeetWindow(id);closeModal();toast('Início desfeito. O link do Meet foi preservado.','success');decorate();
 }
 
 function removeLiveUi(container){container?.querySelectorAll?.('[data-rm-session-live-v370],[data-rm-session-end-button-v370]').forEach(el=>el.remove())}
