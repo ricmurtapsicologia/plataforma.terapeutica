@@ -4,11 +4,11 @@ import {toast} from './ui.js';
 import {
   TODAY_TEST_CLEANUP_DATE,
   LIVE_TEST_MAX_MINUTES,
-  TODAY_CLEANUP_MAX_MINUTES,
   linkedRecords,
   hasSubstantiveRecord,
   isSubstantiveRecord,
   isShortTestCandidate,
+  isTodayCleanupCandidate,
   resetScheduledTestSession,
   shouldDeleteAdHocTest
 } from './clinical-documentation-policy-v374.mjs';
@@ -78,7 +78,7 @@ async function cleanupTodayTests(){
   busy=true;let count=0;
   try{
     const candidates=[...(data.appointments||[])].filter(appointment=>
-      isShortTestCandidate(appointment,{date:TODAY_TEST_CLEANUP_DATE,maxMinutes:TODAY_CLEANUP_MAX_MINUTES,includeRunning:true})&&
+      isTodayCleanupCandidate(appointment,{date:TODAY_TEST_CLEANUP_DATE})&&
       !hasSubstantiveRecord(data.records,appointment)
     );
     for(const appointment of candidates)if(await discardTestSession(appointment,{kind:'clinical-test-cleanup-20260902-v374'}))count+=1;
