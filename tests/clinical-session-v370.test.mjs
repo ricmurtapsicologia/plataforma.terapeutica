@@ -22,12 +22,16 @@ assert.equal(meetUrlFromEvent({conferenceData:{entryPoints:[{entryPointType:'pho
 
 const calendar=fs.readFileSync('assets/js/google-calendar-service-v240.js','utf8');
 const runtime=fs.readFileSync('assets/js/clinical-session-runtime-v370.js','utf8');
+const header=fs.readFileSync('assets/js/clinical-session-header-v371.js','utf8');
 const main=fs.readFileSync('assets/js/main-v250.js','utf8');
+const index=fs.readFileSync('index.html','utf8');
 const adapter=fs.readFileSync('assets/js/calendar-adapter-v300.js','utf8');
 
 for(const needle of ['conferenceDataVersion=1',"conferenceSolutionKey:{type:'hangoutsMeet'}",'ensureMeetForAppointment','meetUrlFromEvent'])assert.ok(calendar.includes(needle),`Calendar missing ${needle}`);
 assert.ok(calendar.includes("method:'PATCH'"),'Calendar updates must use PATCH so existing Meet data is preserved');
 for(const needle of ['sessionStartedAt','sessionEndedAt','actualDurationMinutes','getDecryptedById','clinical-session-start-v370','clinical-session-end-v370',"window.open('about:blank'"])assert.ok(runtime.includes(needle),`Session runtime missing ${needle}`);
+for(const needle of ['rm-session-header-v371','Iniciar sessão','Sem sessão agendada para hoje','clinical-session-open-meet-v370','clinical-session-end-v370'])assert.ok(header.includes(needle),`Patient header session UX missing ${needle}`);
+assert.ok(index.includes('clinical-session-header-v371.js'),'Index must load the visible patient-header session control');
 assert.ok(main.includes('clinical-session-runtime-v370.js'),'Canonical main must boot clinical session runtime');
 assert.ok(!main.includes('calendar-reverse-reconcile-v276.js'),'Reverse reconciliation must not be double-booted by main');
 assert.ok(adapter.includes('calendar-reverse-reconcile-v276.js'),'Calendar adapter must own v276 reconciliation');
