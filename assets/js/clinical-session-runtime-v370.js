@@ -1,10 +1,11 @@
-import {data,runtime,selectedPatient,todayISO,nowISO} from './state.js';
-import {putEncrypted,getDecryptedById} from './database.js';
+import {data,runtime,selectedPatient,todayISO,nowISO,uid,preferences} from './state.js';
+import {putEncrypted,getDecryptedById,deleteRecord} from './database.js';
 import {toast,modal,closeModal,esc,fmtDate} from './ui.js';
 import {sessionPhase,selectPatientSession,elapsedSeconds,formatElapsed,finalDurationMinutes} from './clinical-session-domain-v370.mjs';
 
-const VERSION='3.7.0';
-const ACTIONS=new Set(['clinical-session-start-v370','clinical-session-open-meet-v370','clinical-session-end-v370','clinical-session-end-confirm-v370','clinical-session-undo-v370']);
+const VERSION='3.7.2';
+const FLEX_ACTION='clinical-session-start-flex-v372';
+const ACTIONS=new Set(['clinical-session-start-v370',FLEX_ACTION,'clinical-session-open-meet-v370','clinical-session-end-v370','clinical-session-end-confirm-v370','clinical-session-undo-v370']);
 const busy=new Set();
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
 const appointmentById=id=>arr(data.appointments).find(a=>a?.id===id)||null;
@@ -80,6 +81,37 @@ async function startSession(id,sourceElement){
   }catch(error){closePopup(popup);throw error}finally{busy.delete(id);sourceElement?.classList.remove('rm-session-starting-v370');if(sourceElement)sourceElement.disabled=false}
 }
 
+function patientAppointments(patientId){return arr(data.appointments).filter(a=>a?.patientId===patientId&&a?.status!=='Cancelada'&&a?.attendanceStatus!=='Desmarcou')}
+function currentTime(){const d=new Date();return`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
+
+async function createAdHocAppointment(patient){
+  if(!runtime.key)throw new Error('Sessão encerrada. Entre novamente na plataforma.');
+  const stamp=nowISO(),appointment={id:uid('appt'),patientId:patient.id,date:todayISO(),time:currentTime(),duration:Number(preferences.defaultSessionMinutes)||50,status:'Confirmada',attendanceStatus:'',modality:patient.modality||'On-line',recurrence:'Avulso',note:'Sessão avulsa iniciada manualmente pela plataforma.',sessionOrigin:'manual-flex-start',createdAt:stamp,updatedAt:stamp};
+  await putEncrypted('appointments',appointment,runtime.key);
+  const stored=await getDecryptedById('appointments',appointment.id,runtime.key);
+  if(!stored||stored.id!==appointment.id||stored.updatedAt!==appointment.updatedAt)throw new Error('A sessão avulsa não passou na verificação de gravação.');
+  const list=data.appointments||(data.appointments=[]);list.push(stored);emitChanged(stored.id,'clinical-session-flex-create-v372');window.__rmRender?.();return stored;
+}
+
+async function rollbackAdHoc(id){
+  try{await deleteRecord('appointments',id)}catch{}
+  const list=data.appointments||(data.appointments=[]),index=list.findIndex(a=>a?.id===id);if(index>=0)list.splice(index,1);
+}
+
+async function startFlexibleSession(sourceElement){
+  const patient=selectedPatient();if(!patient)throw new Error('Selecione um paciente antes de iniciar a sessão.');
+  const list=patientAppointments(patient.id),running=list.find(a=>sessionPhase(a)==='in_progress');
+  if(running)return openMeet(running.id);
+  const openToday=list.filter(a=>a?.date===todayISO()&&sessionPhase(a)==='scheduled');
+  let appointment=openToday.length?selectPatientSession(openToday,patient.id,todayISO()):null,created=false;
+  try{
+    if(!appointment){appointment=await createAdHocAppointment(patient);created=true}
+    const result=await startSession(appointment.id,sourceElement);
+    if(created)toast('Sessão avulsa criada para agora e iniciada.','success');
+    return result;
+  }catch(error){if(created&&appointment?.id)await rollbackAdHoc(appointment.id);throw error}
+}
+
 async function openMeet(id){
   const current=appointmentById(id);if(!current)throw new Error('Sessão não localizada.');
   let url=String(current.meetUrl||'').trim();
@@ -120,24 +152,17 @@ async function undoStart(id){
   closeModal();toast('Início desfeito. O link do Meet foi preservado.','success');decorate();
 }
 
-function removeLiveUi(container){
-  container?.querySelectorAll?.('[data-rm-session-live-v370],[data-rm-session-end-button-v370]').forEach(el=>el.remove());
-}
+function removeLiveUi(container){container?.querySelectorAll?.('[data-rm-session-live-v370],[data-rm-session-end-button-v370]').forEach(el=>el.remove())}
 
 function applySessionButton(button,appointment){
   if(!button||!appointment)return;
-  const phase=sessionPhase(appointment),parent=button.parentElement;
-  removeLiveUi(parent);
+  const phase=sessionPhase(appointment),parent=button.parentElement;removeLiveUi(parent);
   if(phase==='in_progress'){
     const live=document.createElement('span');live.className='rm-session-live-v370';live.dataset.rmSessionLiveV370='1';live.innerHTML=`<span class="dot">●</span> Em atendimento · <span data-rm-session-timer="${esc(appointment.id)}">${esc(formatElapsed(elapsedSeconds(appointment)))}</span>`;
-    parent?.insertBefore(live,button);
-    button.dataset.action='clinical-session-open-meet-v370';button.dataset.id=appointment.id;button.textContent='Abrir Meet';button.classList.remove('secondary');button.classList.add('btn');
-    const end=document.createElement('button');end.type='button';end.className='btn secondary';end.dataset.action='clinical-session-end-v370';end.dataset.id=appointment.id;end.dataset.rmSessionEndButtonV370='1';end.textContent='Encerrar sessão';button.insertAdjacentElement('afterend',end);
-    return;
+    parent?.insertBefore(live,button);button.dataset.action='clinical-session-open-meet-v370';button.dataset.id=appointment.id;button.textContent='Abrir Meet';button.classList.remove('secondary');button.classList.add('btn');
+    const end=document.createElement('button');end.type='button';end.className='btn secondary';end.dataset.action='clinical-session-end-v370';end.dataset.id=appointment.id;end.dataset.rmSessionEndButtonV370='1';end.textContent='Encerrar sessão';button.insertAdjacentElement('afterend',end);return;
   }
-  if(phase==='scheduled'&&appointment.date===todayISO()){
-    button.dataset.action='clinical-session-start-v370';button.dataset.id=appointment.id;button.textContent='Iniciar sessão';button.classList.remove('secondary');button.classList.add('btn');
-  }
+  if(phase==='scheduled'&&appointment.date===todayISO()){button.dataset.action='clinical-session-start-v370';button.dataset.id=appointment.id;button.textContent='Iniciar sessão';button.classList.remove('secondary');button.classList.add('btn')}
 }
 
 function decoratePatientSummary(){
@@ -147,30 +172,24 @@ function decoratePatientSummary(){
   const button=document.querySelector('#patient-tab-content [data-action="patient-tab"][data-tab="atendimento"],#patient-tab-content [data-action="clinical-session-start-v370"],#patient-tab-content [data-action="clinical-session-open-meet-v370"]');
   if(!button)return;
   const parent=button.parentElement;removeLiveUi(parent);
-  if(!appointment||appointment.date!==todayISO()&&sessionPhase(appointment)!=='in_progress'){
-    button.dataset.action='patient-tab';button.dataset.tab='atendimento';button.removeAttribute('data-id');button.textContent='Abrir atendimento';button.classList.add('secondary');return;
-  }
+  if(!appointment||appointment.date!==todayISO()&&sessionPhase(appointment)!=='in_progress'){button.dataset.action='patient-tab';button.dataset.tab='atendimento';button.removeAttribute('data-id');button.textContent='Abrir atendimento';button.classList.add('secondary');return}
   applySessionButton(button,appointment);
 }
 
 function decorateAgendaModal(){
   const root=document.getElementById('modal-root');if(!root)return;
-  const button=root.querySelector('[data-action="agenda-session-v330"],[data-action="clinical-session-start-v370"],[data-action="clinical-session-open-meet-v370"]');
-  if(!button)return;
-  const id=button.dataset.id||'',appointment=appointmentById(id);if(!appointment)return;
-  if(appointment.date===todayISO()||sessionPhase(appointment)==='in_progress')applySessionButton(button,appointment);
+  const button=root.querySelector('[data-action="agenda-session-v330"],[data-action="clinical-session-start-v370"],[data-action="clinical-session-open-meet-v370"]');if(!button)return;
+  const id=button.dataset.id||'',appointment=appointmentById(id);if(!appointment)return;if(appointment.date===todayISO()||sessionPhase(appointment)==='in_progress')applySessionButton(button,appointment);
 }
 
-function updateTimers(){
-  document.querySelectorAll('[data-rm-session-timer]').forEach(node=>{const appointment=appointmentById(node.dataset.rmSessionTimer||'');if(appointment)node.textContent=formatElapsed(elapsedSeconds(appointment))});
-}
-
+function updateTimers(){document.querySelectorAll('[data-rm-session-timer]').forEach(node=>{const appointment=appointmentById(node.dataset.rmSessionTimer||'');if(appointment)node.textContent=formatElapsed(elapsedSeconds(appointment))})}
 function decorate(){addStyles();decoratePatientSummary();decorateAgendaModal();updateTimers()}
 function queueDecorate(delay=20){setTimeout(decorate,delay)}
 
 async function dispatch(action,element){
   const id=element?.dataset?.id||'';
   if(action==='clinical-session-start-v370')return startSession(id,element);
+  if(action===FLEX_ACTION)return startFlexibleSession(element);
   if(action==='clinical-session-open-meet-v370')return openMeet(id);
   if(action==='clinical-session-end-v370')return endModal(id);
   if(action==='clinical-session-end-confirm-v370')return confirmEnd(id);
@@ -183,7 +202,6 @@ document.addEventListener('rm:data-ready',()=>queueDecorate(80));
 document.addEventListener('rm:data-patched',()=>queueDecorate(50));
 document.addEventListener('rm:local-data-changed',event=>{if(event.detail?.storeName==='appointments')queueDecorate(40)});
 const modalRoot=document.getElementById('modal-root');if(modalRoot)new MutationObserver(()=>queueDecorate(0)).observe(modalRoot,{childList:true,subtree:true});
-setInterval(updateTimers,1000);
-addStyles();
+setInterval(updateTimers,1000);addStyles();
 
-globalThis.__rmClinicalSession={version:VERSION,start:startSession,openMeet,end:endModal,phase:sessionPhase,decorate};
+globalThis.__rmClinicalSession={version:VERSION,start:startSession,startFlexible:startFlexibleSession,openMeet,end:endModal,phase:sessionPhase,decorate};
