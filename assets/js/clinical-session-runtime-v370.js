@@ -63,16 +63,20 @@ function forgetMeetWindow(id){
   meetWindowMonitors.delete(id);meetWindows.delete(id);
 }
 
+function trackedMeetWindow(id){
+  const popup=meetWindows.get(id);if(!popup)return null;
+  try{if(!popup.closed)return popup}catch{}
+  forgetMeetWindow(id);return null;
+}
+
 function trackMeetWindow(id,popup){
   if(!id||!popup)return popup;
   forgetMeetWindow(id);meetWindows.set(id,popup);
-  let observedOpen=true;
   const timer=setInterval(()=>{
     const tracked=meetWindows.get(id);if(!tracked){clearInterval(timer);meetWindowMonitors.delete(id);return}
     let closed=false;try{closed=Boolean(tracked.closed)}catch{return}
-    if(!closed){observedOpen=true;return}
-    forgetMeetWindow(id);
-    if(observedOpen)void autoEndFromMeetClose(id);
+    if(!closed)return;
+    forgetMeetWindow(id);void autoEndFromMeetClose(id);
   },1000);
   meetWindowMonitors.set(id,timer);return popup;
 }
@@ -137,6 +141,7 @@ async function startFlexibleSession(sourceElement){
 
 async function openMeet(id){
   const current=appointmentById(id);if(!current)throw new Error('Sessão não localizada.');
+  const existing=trackedMeetWindow(id);if(existing){try{existing.focus()}catch{}return existing}
   const popup=preopenMeet();
   try{
     let url=String(current.meetUrl||'').trim();
@@ -187,7 +192,7 @@ async function confirmEnd(id){
 async function undoStart(id){
   const current=appointmentById(id);if(!current)throw new Error('Sessão não localizada.');
   if(sessionPhase(current)!=='in_progress')throw new Error('A sessão não está em andamento.');
-  const restored={...current,status:current.sessionPreviousStatus||'Confirmirmada',attendanceStatus:current.sessionPreviousAttendanceStatus||'',sessionStartedAt:'',sessionEndedAt:'',clinicalSessionState:'',actualDurationMinutes:null,sessionStartSource:'',sessionEndSource:'',sessionPreviousStatus:'',sessionPreviousAttendanceStatus:''};
+  const restored={...current,status:current.sessionPreviousStatus||'Confirmada',attendanceStatus:current.sessionPreviousAttendanceStatus||'',sessionStartedAt:'',sessionEndedAt:'',clinicalSessionState:'',actualDurationMinutes:null,sessionStartSource:'',sessionEndSource:'',sessionPreviousStatus:'',sessionPreviousAttendanceStatus:''};
   await persistAppointment(restored,'clinical-session-undo-v370');
   forgetMeetWindow(id);closeModal();toast('Início desfeito. O link do Meet foi preservado.','success');decorate();
 }
