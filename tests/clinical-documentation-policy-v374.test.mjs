@@ -7,6 +7,7 @@ import {
   isSubstantiveRecord,
   hasSubstantiveRecord,
   isShortTestCandidate,
+  isTodayCleanupCandidate,
   resetScheduledTestSession,
   shouldDeleteAdHocTest
 } from '../assets/js/clinical-documentation-policy-v374.mjs';
@@ -22,6 +23,10 @@ const scheduled={
   sessionPreviousStatus:'Confirmada',sessionPreviousAttendanceStatus:''
 };
 const adHoc={...scheduled,id:'a2',sessionOrigin:'manual-flex-start'};
+const runningLong={
+  ...scheduled,id:'a3',status:'Confirmada',attendanceStatus:'',actualDurationMinutes:null,
+  sessionStartedAt:'2026-09-02T22:00:00.000Z',sessionEndedAt:'',clinicalSessionState:'Em atendimento'
+};
 const realRecord={id:'r1',patientId:'p1',appointmentId:'a1',text:'Paciente relatou eventos relevantes da semana, pensamentos automáticos, emoções associadas e foram discutidas estratégias de enfrentamento e tarefa terapêutica para o período seguinte.',status:'Rascunho'};
 const placeholder={id:'missing_record_a1',patientId:'p1',appointmentId:'a1',text:'Não há prontuário.',source:{type:'missing-record-placeholder'}};
 
@@ -31,6 +36,7 @@ assert.equal(isSubstantiveRecord(realRecord),true);
 assert.equal(hasSubstantiveRecord([placeholder],scheduled),false);
 assert.equal(hasSubstantiveRecord([placeholder,realRecord],scheduled),true);
 assert.equal(isShortTestCandidate(scheduled,{date:'2026-09-02',maxMinutes:3,includeRunning:false}),true);
+assert.equal(isTodayCleanupCandidate(runningLong,{date:'2026-09-02',nowMs:new Date('2026-09-03T00:45:00.000Z').getTime()}),true);
 assert.equal(shouldDeleteAdHocTest(adHoc),true);
 
 const reset=resetScheduledTestSession(scheduled,'2026-09-03T00:00:00.000Z');
