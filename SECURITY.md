@@ -12,6 +12,10 @@ Não devem ser commitados: cofres clínicos, exports ou backups reais, bancos lo
 
 Não publique em Issues ou Pull Requests conteúdo clínico, credenciais ou outros dados sensíveis. Ao investigar uma falha, use dados sintéticos e descreva apenas o comportamento técnico necessário para reprodução.
 
+## Resposta a incidentes
+
+O procedimento operacional está documentado em `docs/CLINICAL-INCIDENT-RESPONSE.md`. Incidentes envolvendo exposição de dados clínicos, credenciais, perda/corrupção do cofre ou escrita clínica em superfície pública devem ser tratados como críticos e contidos antes da retomada da operação.
+
 ## P0
 
 O workflow `P0 Public Repo Guard` bloqueia categorias de arquivos e padrões de segredo incompatíveis com um repositório público. Esse controle é preventivo e não substitui a revisão de permissões no Google Drive, OAuth e demais serviços externos.
