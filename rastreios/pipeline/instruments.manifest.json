@@ -1,7 +1,25 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "storagePolicy": "No clinical response data may be persisted in GitHub.",
-  "migrationStateOrder": ["ATIVO", "ESPELHADO", "VALIDADO", "REDIRECIONADO", "ARQUIVADO", "EXCLUIVEL"],
+  "presentationPolicy": "When a Google Form is embedded in an ecosystem page, preserve the host page as the public interface and treat the Form as the collection engine.",
+  "migrationStateOrder": [
+    "ATIVO",
+    "ESPELHADO",
+    "VALIDADO",
+    "REDIRECIONADO",
+    "ARQUIVADO",
+    "EXCLUIVEL"
+  ],
+  "supportInterfaces": [
+    {
+      "id": "controle-atendimento",
+      "publicName": "Formulário de Controle para Atendimento Clínico",
+      "formUrl": "https://docs.google.com/forms/d/e/1FAIpQLSfvrCtU4hn72xCYHPizP60GMIiRAm45KM-1k3z5_8VIOj6dMQ/viewform",
+      "presentationMode": "EMBEDDED_IN_HOST_PAGE",
+      "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/",
+      "catalogScope": "SUPPORT_NOT_SCREENING"
+    }
+  ],
   "instruments": [
     {
       "id": "geral",
@@ -14,7 +32,9 @@
       "reportState": "PENDING",
       "criticality": "HIGH",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "tdah",
@@ -27,7 +47,9 @@
       "reportState": "PENDING",
       "criticality": "HIGH",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "bipolar",
@@ -40,7 +62,9 @@
       "reportState": "PENDING",
       "criticality": "HIGH",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "borderline",
@@ -53,7 +77,9 @@
       "reportState": "PENDING",
       "criticality": "HIGH",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "narcisismo",
@@ -66,7 +92,9 @@
       "reportState": "PENDING",
       "criticality": "HIGH",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "impulsividade",
@@ -79,7 +107,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "esquemas",
@@ -92,7 +122,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "modos",
@@ -105,7 +137,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "necessidades",
@@ -118,7 +152,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "codependencia",
@@ -131,7 +167,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "icaps",
@@ -144,7 +182,9 @@
       "reportState": "PENDING",
       "criticality": "HIGH",
       "repoState": "ATIVO",
-      "version": "2.1"
+      "version": "2.1",
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "risco",
@@ -158,7 +198,9 @@
       "criticality": "CRITICAL",
       "repoState": "ATIVO",
       "version": "1.0",
-      "requiresDedicatedSafetyFlow": true
+      "requiresDedicatedSafetyFlow": true,
+      "presentationMode": "DEDICATED_PAGE_LEGACY",
+      "hostPage": null
     },
     {
       "id": "humor",
@@ -171,7 +213,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "EMBEDDED_IN_HOST_PAGE",
+      "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/"
     },
     {
       "id": "ansiedade",
@@ -184,7 +228,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "EMBEDDED_IN_HOST_PAGE",
+      "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/"
     },
     {
       "id": "autoestima",
@@ -197,7 +243,9 @@
       "reportState": "PENDING",
       "criticality": "MEDIUM",
       "repoState": "ATIVO",
-      "version": "1.0"
+      "version": "1.0",
+      "presentationMode": "EMBEDDED_IN_HOST_PAGE",
+      "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/"
     }
   ]
 }
