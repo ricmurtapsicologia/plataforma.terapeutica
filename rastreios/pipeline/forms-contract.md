@@ -51,8 +51,9 @@ O motor cria, quando ausentes, as seguintes colunas ao final da aba de respostas
 5. Instrumentos sem função de correção validada ficam com `SCORER_PENDING` e não recebem interpretação automatizada como se estivessem validados.
 6. Todo instrumento com Form ausente ou scorer `pending` deve permanecer inativo até a validação clínica e técnica do espelho, da correção e do relatório.
 7. EIR-RS usa fluxo separado de segurança e não pode depender apenas de escore global.
-8. O motor usa lock e `submission_id` para evitar e-mails duplicados.
-9. Cabeçalhos duplicados em abas de respostas interrompem o processamento até saneamento do Form.
+8. O motor usa lock, `submission_id` e estado de entrega para reduzir duplicidade. Antes do envio, grava e força persistência de `SENDING`; após sucesso grava `SENT`.
+9. Se uma execução futura encontrar `SENDING`, o estado é tratado como ambíguo e o processamento é interrompido para revisão manual, evitando um segundo e-mail potencialmente duplicado.
+10. Cabeçalhos duplicados em abas de respostas interrompem o processamento até saneamento do Form.
 
 ## Estados de migração
 
