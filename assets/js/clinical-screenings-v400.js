@@ -21,6 +21,7 @@ const JOURNEY_URL='https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terape
 const DEFAULT_TITLE='Richelmy Murta — Clínica';
 let activeGroup='Todos';
 let searchTerm='';
+let toastTimer=null;
 
 const esc=value=>String(value??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
 const normalize=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -97,6 +98,7 @@ function renderPanel(){
 }
 
 function openPanel(){
+  document.querySelector('.sidebar')?.classList.remove('open');
   if(location.hash!=='#rastreios')history.pushState(null,'','#rastreios');
   renderPanel();
 }
@@ -138,16 +140,25 @@ function announce(message){
   box.textContent='';setTimeout(()=>{box.textContent=message},20);
 }
 
+function notify(message,type='ok'){
+  announce(message);
+  clearTimeout(toastTimer);
+  document.getElementById('screening-toast')?.remove();
+  const box=document.createElement('div');
+  box.id='screening-toast';box.className=`screening-toast ${type==='error'?'error':''}`;box.setAttribute('role','status');box.textContent=message;document.body.appendChild(box);
+  toastTimer=setTimeout(()=>box.remove(),3200);
+}
+
 async function handleAction(el){
   const action=el.dataset.screeningAction;
   const url=el.dataset.url;
   const name=el.dataset.name||'Rastreio';
   if(!url)return;
-  if(action==='copy'){await copyText(url);announce(`Link de ${name} copiado.`);return}
+  if(action==='copy'){await copyText(url);notify(`Link de ${name} copiado.`);return}
   if(action==='share'){
     const shareData={title:name,text:`${name} — acesso ao rastreio`,url};
     if(navigator.share){try{await navigator.share(shareData);return}catch(err){if(err?.name==='AbortError')return;console.warn('Compartilhamento nativo indisponível; copiando link.',err)}}
-    await copyText(url);announce(`Compartilhamento indisponível. Link de ${name} copiado.`);
+    await copyText(url);notify(`Compartilhamento indisponível neste navegador. O link de ${name} foi copiado.`);
   }
 }
 
@@ -165,7 +176,7 @@ document.addEventListener('click',event=>{
   const filter=event.target.closest?.('[data-screening-filter]');
   if(filter){activeGroup=filter.dataset.screeningFilter||'Todos';applyFilters();return}
   const action=event.target.closest?.('[data-screening-action]');
-  if(action){event.preventDefault();void handleAction(action).catch(err=>{console.error('Falha em ação do Painel de Rastreios',err);announce(err?.message||'Não foi possível concluir a ação.')})}
+  if(action){event.preventDefault();void handleAction(action).catch(err=>{console.error('Falha em ação do Painel de Rastreios',err);notify(err?.message||'Não foi possível concluir a ação.','error')})}
 },false);
 document.addEventListener('input',event=>{if(event.target?.id==='screening-search-input'){searchTerm=event.target.value||'';applyFilters()}},false);
 window.addEventListener('popstate',()=>{if(location.hash.replace(/^#/,'')==='rastreios')renderPanel()});
