@@ -5,28 +5,54 @@ const manifest=JSON.parse(fs.readFileSync('rastreios/pipeline/instruments.manife
 const code=fs.readFileSync('rastreios/pipeline/apps-script/Code.gs','utf8');
 const contract=fs.readFileSync('rastreios/pipeline/forms-contract.md','utf8');
 const seed=fs.readFileSync('rastreios/pipeline/RastreiosConfig.seed.tsv','utf8');
+const ui=fs.readFileSync('assets/js/clinical-screenings-v400.js','utf8');
+const css=fs.readFileSync('assets/css/clinical-screenings-v400.css','utf8');
 
 assert.doesNotThrow(()=>new Function(code),'Apps Script source must remain syntactically valid JavaScript');
+assert.doesNotThrow(()=>new Function(ui),'screenings UI source must remain syntactically valid JavaScript');
 assert.equal(manifest.instruments.length,15,'canonical screening inventory must contain 15 instruments');
 const ids=manifest.instruments.map(x=>x.id);
 assert.equal(new Set(ids).size,15,'instrument ids must be unique');
 for(const id of ['geral','tdah','bipolar','borderline','narcisismo','impulsividade','esquemas','modos','necessidades','codependencia','icaps','risco','humor','ansiedade','autoestima'])assert.ok(ids.includes(id),`missing canonical instrument: ${id}`);
-assert.equal(manifest.instruments.filter(x=>x.formState==='ACTIVE').length,3,'only the three existing monitoring Forms may be marked active before migration');
-assert.equal(manifest.instruments.filter(x=>x.formState==='CREATE_REQUIRED').length,12,'twelve Forms must remain explicitly pending creation');
-assert.equal(manifest.instruments.filter(x=>x.presentationMode==='EMBEDDED_IN_HOST_PAGE').length,3,'three catalog screenings must be recognized as embedded Forms');
+for(const item of manifest.instruments){
+  assert.ok(item.description?.trim(),`${item.id} must have a canonical public description`);
+  assert.match(item.publicUrl||'',/^https:\/\//,`${item.id} publicUrl must be absolute https`);
+  assert.doesNotMatch(item.publicUrl||'',/docs\.google\.com\/forms/i,`${item.id} must never expose a Forms URL as publicUrl`);
+}
+assert.equal(manifest.instruments.filter(x=>x.formState==='ACTIVE').length,3,'only the three existing monitoring collectors may be marked active before migration');
+assert.equal(manifest.instruments.filter(x=>x.formState==='CREATE_REQUIRED').length,12,'twelve collectors must remain explicitly pending creation');
+assert.equal(manifest.instruments.filter(x=>x.presentationMode==='BRANDED_HOST_PAGE').length,3,'three catalog screenings must use branded host pages');
 for(const id of ['humor','ansiedade','autoestima']){
   const item=manifest.instruments.find(x=>x.id===id);
-  assert.equal(item?.presentationMode,'EMBEDDED_IN_HOST_PAGE',`${id} must remain embedded in its host page`);
-  assert.match(item?.hostPage||'',/Inicio-de-Jornada-Terapeutica/,`${id} host page must remain Jornada Terapêutica`);
+  assert.equal(item?.presentationMode,'BRANDED_HOST_PAGE',`${id} must use the branded host page`);
+  assert.match(item?.publicUrl||'',/Inicio-de-Jornada-Terapeutica\/monitoramento\.html\?instrument=/,`${id} public URL must resolve to branded Jornada host`);
+  assert.equal(item?.hostPage,item?.publicUrl,`${id} hostPage and publicUrl must remain aligned`);
+  assert.match(item?.formUrl||'',/docs\.google\.com\/forms/i,`${id} internal collector metadata must remain traceable`);
 }
-assert.equal(manifest.supportInterfaces?.length,1,'the non-screening control Form must be tracked as a support interface');
-assert.equal(manifest.supportInterfaces?.[0]?.id,'controle-atendimento','control Form support interface missing');
-assert.equal(manifest.supportInterfaces?.[0]?.catalogScope,'SUPPORT_NOT_SCREENING','control Form must not inflate the 15-screening inventory');
-assert.match(manifest.presentationPolicy,/host page as the public interface/i,'embedded Form presentation policy missing');
+assert.equal(manifest.supportInterfaces?.length,1,'the non-screening control collector must be tracked as a support interface');
+assert.equal(manifest.supportInterfaces?.[0]?.id,'controle-atendimento','control support interface missing');
+assert.equal(manifest.supportInterfaces?.[0]?.catalogScope,'SUPPORT_NOT_SCREENING','control support interface must not inflate the 15-screening inventory');
+assert.equal(manifest.supportInterfaces?.[0]?.presentationMode,'BRANDED_HOST_PAGE','control support interface must use branded host UI');
+assert.doesNotMatch(manifest.supportInterfaces?.[0]?.publicUrl||'',/docs\.google\.com\/forms/i,'control public URL must not expose Forms');
+assert.match(manifest.presentationPolicy,/native interface, branding and direct response URLs must never be the patient-facing experience/i,'branded-host presentation policy missing');
 const risk=manifest.instruments.find(x=>x.id==='risco');
 assert.equal(risk?.criticality,'CRITICAL','suicide-risk screening must remain critical');
 assert.equal(risk?.requiresDedicatedSafetyFlow,true,'suicide-risk screening must require dedicated safety flow');
 assert.match(manifest.storagePolicy,/No clinical response data/i,'manifest must prohibit clinical response storage in GitHub');
+
+assert.match(ui,/MANIFEST_URL='rastreios\/pipeline\/instruments\.manifest\.json/, 'UI must load canonical manifest');
+assert.doesNotMatch(ui,/const\s+SCREENINGS\s*=\s*\[/,'UI must not duplicate the canonical screening catalog');
+assert.doesNotMatch(ui,/docs\.google\.com\/forms/i,'UI source must not contain public Forms endpoints');
+assert.doesNotMatch(ui,/Google Forms|Forms ativo|Com Forms|Forms\/Sheets/i,'UI copy must not expose collection-engine terminology');
+assert.match(ui,/Motor de coleta exposto como URL pública/,'runtime must fail closed if publicUrl regresses to Forms');
+assert.match(ui,/screening-result-status/,'filter results must be announced accessibly');
+assert.match(ui,/Abrir rastreio/,'primary action must be explicit');
+assert.match(ui,/Compartilhar/,'secondary share action must remain available');
+
+assert.match(css,/min-height:44px/,'interactive screening controls must retain touch-friendly targets');
+assert.match(css,/font-size:\.8rem/,'screening chips must not regress to undersized text');
+assert.match(css,/prefers-reduced-motion:reduce/,'reduced-motion support missing');
+assert.match(css,/screening-chip\.ok::before/,'semantic state must not depend on low-contrast text color alone');
 
 assert.ok(code.includes("REPORT_SUBJECT = 'Novo relatório de rastreio clínico'"),'email subject must remain generic and minimally sensitive');
 assert.ok(code.includes("getProperty('REPORT_RECIPIENT')"),'report recipient must come from Script Properties');
@@ -37,23 +63,26 @@ assert.ok(code.includes("__report_status: 'SENDING'"),'status must be persisted 
 assert.ok(code.includes('SpreadsheetApp.flush()'),'pre-send state must be flushed before email dispatch');
 assert.ok(code.includes('LockService.getDocumentLock()'),'document lock missing');
 assert.ok(code.includes("state: 'SCORER_PENDING'"),'unvalidated scorers must fail safe');
-assert.ok(code.includes("DUPLICATE_QUESTION_HEADER"),'ambiguous duplicate Form headers must fail closed');
+assert.ok(code.includes("DUPLICATE_QUESTION_HEADER"),'ambiguous duplicate source headers must fail closed');
 assert.ok(code.includes('Este relatório organiza dados de rastreio e não estabelece diagnóstico.'),'non-diagnostic report disclaimer missing');
 assert.ok(!/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(code),'Apps Script must not publish a recipient email address');
 assert.ok(!/console\.(log|debug)\(/.test(code),'Apps Script must not log response payloads');
 
 assert.ok(contract.includes('ATIVO → ESPELHADO → VALIDADO → REDIRECIONADO → ARQUIVADO → EXCLUÍVEL'),'migration state contract missing');
 assert.ok(contract.includes('GitHub nunca persiste respostas clínicas'),'public-repo clinical storage rule missing');
-assert.ok(contract.includes('títulos de perguntas devem ser únicos'),'unique Form header contract missing');
+assert.ok(contract.includes('títulos de perguntas devem ser únicos'),'unique source header contract missing');
 assert.ok(contract.includes('permanecer inativo até'),'unvalidated activation rule missing');
+assert.match(contract,/publicUrl` nunca pode apontar para `docs\.google\.com\/forms/,'public-interface anti-regression contract missing');
+assert.match(contract,/iframe` visível/,'visible iframe prohibition missing');
 
 const seedLines=seed.split(/\r?\n/).filter(Boolean);
 assert.equal(seedLines.length,16,'config seed must contain one header plus 15 instruments');
 const seedRows=seedLines.slice(1).map(line=>line.split('\t'));
-assert.equal(seedRows.filter(row=>row[6]==='TRUE').length,3,'only three existing Forms may be active in config seed');
+assert.equal(seedRows.filter(row=>row[6]==='TRUE').length,3,'only three existing collectors may be active in config seed');
 assert.equal(seedRows.filter(row=>row[5]==='pending'&&row[6]==='FALSE').length,12,'all pending scorers must remain inactive');
+assert.doesNotMatch(seed,/Google Forms/,'operational config must use neutral technical terminology');
 const riskSeed=seedRows.find(row=>row[1]==='risco');
 assert.equal(riskSeed?.[6],'FALSE','risk flow must stay inactive until dedicated validation');
 assert.equal(riskSeed?.[7],'TRUE','risk flow must retain dedicated safety flag');
 
-console.log('SCREENINGS_PIPELINE_V410_PASS');
+console.log('SCREENINGS_PIPELINE_V420_PASS');
