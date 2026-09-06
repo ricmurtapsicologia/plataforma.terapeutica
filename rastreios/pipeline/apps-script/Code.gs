@@ -54,7 +54,7 @@ function onScreeningFormSubmit(event) {
     if (currentStatus === 'SENT') return;
 
     const submissionId = String(sheet.getRange(row, headerMap.__submission_id).getValue() || '') || Utilities.getUuid();
-    const answers = readAnswerMap_(sheet, row, headerMap);
+    const answers = readAnswerMap_(sheet, row);
     const scoring = scoreSubmission_(config, answers);
 
     const report = {
@@ -136,13 +136,16 @@ function ensureDerivedHeaders_(sheet) {
   return Object.fromEntries(finalHeaders.map((header, i) => [header, i + 1]));
 }
 
-function readAnswerMap_(sheet, row, headerMap) {
+function readAnswerMap_(sheet, row) {
   const lastColumn = sheet.getLastColumn();
   const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(String);
   const values = sheet.getRange(row, 1, 1, lastColumn).getValues()[0];
   const answers = {};
+  const seen = new Set();
   headers.forEach((header, i) => {
     if (!header || header.startsWith('__')) return;
+    if (seen.has(header)) throw new Error('DUPLICATE_QUESTION_HEADER:' + header);
+    seen.add(header);
     answers[header] = values[i];
   });
   return answers;
