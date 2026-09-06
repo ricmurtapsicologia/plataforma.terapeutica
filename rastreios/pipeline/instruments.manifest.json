@@ -1,97 +1,25 @@
 {
-  "schemaVersion": "1.2.0",
-  "storagePolicy": "No clinical response data may be persisted in GitHub.",
-  "presentationPolicy": "Public URLs must always resolve to an ecosystem-owned clinical interface. External collection engines may receive submissions in the background, but their native interface, branding and direct response URLs must never be the patient-facing experience.",
-  "migrationStateOrder": ["ATIVO", "ESPELHADO", "VALIDADO", "REDIRECIONADO", "ARQUIVADO", "EXCLUIVEL"],
-  "supportInterfaces": [
-    {
-      "id": "controle-atendimento",
-      "publicName": "Dados para continuidade do atendimento",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=controle",
-      "formUrl": "https://docs.google.com/forms/d/e/1FAIpQLSfvrCtU4hn72xCYHPizP60GMIiRAm45KM-1k3z5_8VIOj6dMQ/viewform",
-      "presentationMode": "BRANDED_HOST_PAGE",
-      "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=controle",
-      "catalogScope": "SUPPORT_NOT_SCREENING"
-    }
-  ],
-  "instruments": [
-    {
-      "id": "geral", "group": "Geral", "publicName": "Rastreio Clínico Geral", "technicalName": "RAC-5TR",
-      "description": "Triagem ampla de domínios psicopatológicos para orientar aprofundamentos clínicos.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Rastreioclinico/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "HIGH", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "tdah", "group": "Neurodesenvolvimento", "publicName": "Rastreio de TDAH em Adultos", "technicalName": "EIR-TDAH-A",
-      "description": "Rastreio multidimensional de desatenção, hiperatividade/impulsividade, funções executivas e impacto funcional.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/rastreioTDAH/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "HIGH", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "bipolar", "group": "Humor", "publicName": "Rastreio do Espectro Bipolar", "technicalName": "Bateria TAB",
-      "description": "Bateria específica para investigação de indicadores compatíveis com espectro bipolar.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/tab-bateria-integrada/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "HIGH", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "borderline", "group": "Personalidade", "publicName": "Rastreio de Traços Borderline", "technicalName": "Triagem de traços",
-      "description": "Rastreio orientativo de padrões emocionais e relacionais associados a traços borderline.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Inventario-de-Tracos-Borderline/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "HIGH", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "narcisismo", "group": "Personalidade", "publicName": "Rastreio de Traços Narcisistas", "technicalName": "Bateria de traços",
-      "description": "Investigação dimensional de características narcisistas e traços de personalidade relacionados.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/bateria.narcisismo/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "HIGH", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "impulsividade", "group": "Dimensões clínicas", "publicName": "Perfil de Impulsividade", "technicalName": "Rastreio dimensional",
-      "description": "Avaliação complementar de impulsividade como dimensão transdiagnóstica.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Rastreio-de-Impulsividade/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "esquemas", "group": "Terapia do Esquema", "publicName": "Mapa de Esquemas", "technicalName": "Padrões emocionais",
-      "description": "Mapeamento de esquemas iniciais desadaptativos para apoio à formulação em Terapia do Esquema.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/rastreio.de.esquemas/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "modos", "group": "Terapia do Esquema", "publicName": "Mapa de Modos Esquemáticos", "technicalName": "SMI 1.1",
-      "description": "Mapeamento de modos esquemáticos e padrões de enfrentamento para formulação clínica.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/rastreiomodosesquematicos/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "necessidades", "group": "Terapia do Esquema", "publicName": "Necessidades Emocionais", "technicalName": "Escala complementar",
-      "description": "Exploração de necessidades emocionais relevantes para compreensão de padrões relacionais e esquemáticos.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Escala-de-Necessidades-Emocionais/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "codependencia", "group": "Relacionamentos", "publicName": "Dependência e Codependência Emocional", "technicalName": "Escala relacional",
-      "description": "Rastreio de padrões de dependência, autocancelamento, validação e limites em vínculos afetivos.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Escala-de-Co-Depenpencia-Emocional/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "icaps", "group": "Relacionamentos", "publicName": "ICAPS — Prontidão para Separação", "technicalName": "ICAPS",
-      "description": "Instrumento complementar para organizar indicadores relacionados à prontidão para processos de separação.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/ICAPS/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "HIGH", "repoState": "ATIVO", "version": "2.1", "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "risco", "group": "Risco e segurança", "publicName": "Avaliação Clínica de Risco Suicida", "technicalName": "EIR-RS",
-      "description": "Triagem clínica estruturada de risco suicida. Uso profissional requer integração com entrevista e manejo de segurança.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/TriagemRiscoSuicidio/", "formUrl": null, "formState": "CREATE_REQUIRED", "reportState": "PENDING", "criticality": "CRITICAL", "repoState": "ATIVO", "version": "1.0", "requiresDedicatedSafetyFlow": true, "presentationMode": "DEDICATED_PAGE_LEGACY", "hostPage": null
-    },
-    {
-      "id": "humor", "group": "Monitoramento", "publicName": "Monitoramento de Humor", "technicalName": "Acompanhamento longitudinal",
-      "description": "Acompanhamento estruturado do humor para comparação longitudinal ao longo do processo terapêutico.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=humor",
-      "formUrl": "https://docs.google.com/forms/d/e/1FAIpQLSfOwfOe9OAx_XgnsEMa8FzV2QJR8-ZkHmGD2gWEOcBeK41Odw/viewform", "formState": "ACTIVE", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "BRANDED_HOST_PAGE", "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=humor"
-    },
-    {
-      "id": "ansiedade", "group": "Monitoramento", "publicName": "Monitoramento de Ansiedade", "technicalName": "Escala de intensidade",
-      "description": "Acompanhamento estruturado de sintomas ansiosos e de sua variação ao longo do tratamento.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=ansiedade",
-      "formUrl": "https://docs.google.com/forms/d/e/1FAIpQLSdCuc1WnzTjMbRSyNmS5kuyG1NsaG95zMDO0v0GMABH8zodhg/viewform", "formState": "ACTIVE", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "BRANDED_HOST_PAGE", "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=ansiedade"
-    },
-    {
-      "id": "autoestima", "group": "Monitoramento", "publicName": "Monitoramento de Autoestima", "technicalName": "Rosenberg",
-      "description": "Acompanhamento complementar de autoestima para comparação longitudinal quando clinicamente pertinente.",
-      "publicUrl": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=autoestima",
-      "formUrl": "https://docs.google.com/forms/d/e/1FAIpQLScu5CuRbE_UB829g4GqzMJyfm6J6sEdfw_xPUPEA3yMy6-6aw/viewform", "formState": "ACTIVE", "reportState": "PENDING", "criticality": "MEDIUM", "repoState": "ATIVO", "version": "1.0", "presentationMode": "BRANDED_HOST_PAGE", "hostPage": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=autoestima"
-    }
+  "schemaVersion":"1.3.0",
+  "storagePolicy":"No clinical response data may be persisted in GitHub.",
+  "presentationPolicy":"Public URLs must always resolve to an ecosystem-owned clinical interface. External collection engines may receive submissions in the background, but their native interface, branding and direct response URLs must never be the patient-facing experience.",
+  "experiencePolicy":"All patient-facing screenings use the ICAPS-derived design system, patient-friendly public naming, short storytelling/onboarding and the identity fields Nome completo, Data de nascimento and Data de aplicação do rastreio. Items, answer options and scoring logic remain unchanged until separately validated.",
+  "migrationStateOrder":["ATIVO","ESPELHADO","VALIDADO","REDIRECIONADO","ARQUIVADO","EXCLUIVEL"],
+  "supportInterfaces":[{"id":"controle-atendimento","publicName":"Dados para continuidade do atendimento","publicUrl":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=controle","formUrl":"https://docs.google.com/forms/d/e/1FAIpQLSfvrCtU4hn72xCYHPizP60GMIiRAm45KM-1k3z5_8VIOj6dMQ/viewform","presentationMode":"BRANDED_HOST_PAGE","hostPage":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=controle","catalogScope":"SUPPORT_NOT_SCREENING"}],
+  "instruments":[
+    {"id":"geral","group":"Geral","publicName":"Como você tem se sentido?","technicalName":"Rastreio Clínico Geral · RAC-5TR","description":"Triagem ampla de domínios psicopatológicos para orientar aprofundamentos clínicos.","publicUrl":"https://ricmurtapsicologia.github.io/Rastreioclinico/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"HIGH","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"tdah","group":"Neurodesenvolvimento","publicName":"Atenção, organização e impulsividade no dia a dia","technicalName":"Rastreio de TDAH em Adultos · EIR-TDAH-A","description":"Rastreio multidimensional de desatenção, hiperatividade/impulsividade, funções executivas e impacto funcional.","publicUrl":"https://ricmurtapsicologia.github.io/rastreioTDAH/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"HIGH","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"bipolar","group":"Humor","publicName":"Oscilações de humor, energia e ritmo","technicalName":"Rastreio do Espectro Bipolar · Bateria TAB","description":"Bateria específica para investigação de indicadores compatíveis com espectro bipolar.","publicUrl":"https://ricmurtapsicologia.github.io/tab-bateria-integrada/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"HIGH","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"borderline","group":"Personalidade","publicName":"Emoções intensas, vínculos e estabilidade emocional","technicalName":"Rastreio de padrões associados a traços borderline","description":"Rastreio orientativo de padrões emocionais e relacionais associados a traços borderline.","publicUrl":"https://ricmurtapsicologia.github.io/Inventario-de-Tracos-Borderline/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"HIGH","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"narcisismo","group":"Personalidade","publicName":"Autoimagem, reconhecimento e relações","technicalName":"Rastreio de padrões narcisistas","description":"Investigação dimensional de características narcisistas e traços de personalidade relacionados.","publicUrl":"https://ricmurtapsicologia.github.io/bateria.narcisismo/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"HIGH","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"impulsividade","group":"Dimensões clínicas","publicName":"Impulsividade e tomada de decisão","technicalName":"Perfil de Impulsividade","description":"Avaliação complementar de impulsividade como dimensão transdiagnóstica.","publicUrl":"https://ricmurtapsicologia.github.io/Rastreio-de-Impulsividade/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"esquemas","group":"Terapia do Esquema","publicName":"Padrões emocionais que se repetem","technicalName":"Mapa de Esquemas","description":"Mapeamento de esquemas iniciais desadaptativos para apoio à formulação em Terapia do Esquema.","publicUrl":"https://ricmurtapsicologia.github.io/rastreio.de.esquemas/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"modos","group":"Terapia do Esquema","publicName":"Como você reage quando algo toca em pontos sensíveis?","technicalName":"Mapa de Modos Esquemáticos · SMI 1.1","description":"Mapeamento de modos esquemáticos e padrões de enfrentamento para formulação clínica.","publicUrl":"https://ricmurtapsicologia.github.io/rastreiomodosesquematicos/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"necessidades","group":"Terapia do Esquema","publicName":"O que você precisa emocionalmente?","technicalName":"Mapa de Necessidades Emocionais","description":"Exploração de necessidades emocionais relevantes para compreensão de padrões relacionais e esquemáticos.","publicUrl":"https://ricmurtapsicologia.github.io/Escala-de-Necessidades-Emocionais/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"codependencia","group":"Relacionamentos","publicName":"Limites, dependência e equilíbrio nos vínculos","technicalName":"Rastreio de Dependência e Codependência Emocional","description":"Rastreio de padrões de dependência, autocancelamento, validação e limites em vínculos afetivos.","publicUrl":"https://ricmurtapsicologia.github.io/Escala-de-Co-Depenpencia-Emocional/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"icaps","group":"Relacionamentos","publicName":"Estou pronto para me separar?","technicalName":"ICAPS · Mapa Clínico de Prontidão para Separação","description":"Instrumento complementar para organizar indicadores relacionados à prontidão para processos de separação.","publicUrl":"https://ricmurtapsicologia.github.io/ICAPS/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"HIGH","repoState":"ATIVO","version":"2.1","presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"risco","group":"Risco e segurança","publicName":"Segurança emocional e risco de autoagressão","technicalName":"Avaliação Clínica de Risco Suicida · EIR-RS","description":"Triagem clínica estruturada de risco suicida. Uso profissional requer integração com entrevista e manejo de segurança.","publicUrl":"https://ricmurtapsicologia.github.io/TriagemRiscoSuicidio/","formUrl":null,"formState":"CREATE_REQUIRED","reportState":"PENDING","criticality":"CRITICAL","repoState":"ATIVO","version":"1.0","requiresDedicatedSafetyFlow":true,"presentationMode":"DEDICATED_PAGE_LEGACY","hostPage":null},
+    {"id":"humor","group":"Monitoramento","publicName":"Como está seu humor?","technicalName":"Monitoramento de Humor","description":"Acompanhamento estruturado do humor para comparação longitudinal ao longo do processo terapêutico.","publicUrl":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=humor","formUrl":"https://docs.google.com/forms/d/e/1FAIpQLSfOwfOe9OAx_XgnsEMa8FzV2QJR8-ZkHmGD2gWEOcBeK41Odw/viewform","formState":"ACTIVE","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"BRANDED_HOST_PAGE","hostPage":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=humor"},
+    {"id":"ansiedade","group":"Monitoramento","publicName":"Como está sua ansiedade?","technicalName":"Monitoramento de Ansiedade","description":"Acompanhamento estruturado de sintomas ansiosos e de sua variação ao longo do tratamento.","publicUrl":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=ansiedade","formUrl":"https://docs.google.com/forms/d/e/1FAIpQLSdCuc1WnzTjMbRSyNmS5kuyG1NsaG95zMDO0v0GMABH8zodhg/viewform","formState":"ACTIVE","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"BRANDED_HOST_PAGE","hostPage":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=ansiedade"},
+    {"id":"autoestima","group":"Monitoramento","publicName":"Como você tem se percebido?","technicalName":"Monitoramento de Autoestima · Rosenberg","description":"Acompanhamento complementar de autoestima para comparação longitudinal quando clinicamente pertinente.","publicUrl":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=autoestima","formUrl":"https://docs.google.com/forms/d/e/1FAIpQLScu5CuRbE_UB829g4GqzMJyfm6J6sEdfw_xPUPEA3yMy6-6aw/viewform","formState":"ACTIVE","reportState":"PENDING","criticality":"MEDIUM","repoState":"ATIVO","version":"1.0","presentationMode":"BRANDED_HOST_PAGE","hostPage":"https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=autoestima"}
   ]
 }
