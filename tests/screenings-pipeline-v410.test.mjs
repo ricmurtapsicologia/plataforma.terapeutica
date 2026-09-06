@@ -17,7 +17,7 @@ assert.equal(manifest.instruments.filter(x=>x.presentationMode==='EMBEDDED_IN_HO
 for(const id of ['humor','ansiedade','autoestima']){
   const item=manifest.instruments.find(x=>x.id===id);
   assert.equal(item?.presentationMode,'EMBEDDED_IN_HOST_PAGE',`${id} must remain embedded in its host page`);
-  assert.match(item?.hostPage||'',/Inicio-de-Jornada-Terapeutica/`${id} host page must remain Jornada Terapêutica`);
+  assert.match(item?.hostPage||'',/Inicio-de-Jornada-Terapeutica/,`${id} host page must remain Jornada Terapêutica`);
 }
 assert.equal(manifest.supportInterfaces?.length,1,'the non-screening control Form must be tracked as a support interface');
 assert.equal(manifest.supportInterfaces?.[0]?.id,'controle-atendimento','control Form support interface missing');
