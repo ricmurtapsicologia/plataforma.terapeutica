@@ -95,5 +95,27 @@ Critérios mínimos:
 - Retorno às rotas existentes funciona.
 - Nenhuma resposta clínica é persistida pelo módulo.
 
+## Registro de execução — 05/09/2026
+### Ciclo 1 — concluído e sanitizado
+- Painel implementado em módulo isolado, sem alteração do cofre ou persistência clínica.
+- Design system corrigido para herdar os tokens nativos da Plataforma Clínica em tema claro e escuro.
+- Busca, filtros, abertura, cópia e compartilhamento implementados com fallback.
+- Jornada Terapêutica mantida como landing page independente.
+
+### Ciclo 2 — concluído e sanitizado
+- Detectada falha no contrato de saneamento do ecossistema por alteração indevida do marcador canônico de build.
+- Marcador restaurado para o contrato `APP_VERSION-main-v250`.
+- Gaveta móvel saneada ao abrir Rastreios.
+- Feedback visual e acessível de copiar/compartilhar incluído.
+- Contraste dos filtros ajustado para tema claro/escuro.
+
+### Ciclo 3 — concluído
+- Static integrity: aprovado.
+- P0 Public Repo Guard: aprovado.
+- Ecosystem sanitation: aprovado após correção.
+- Sintaxe JavaScript, testes clínicos de regressão, probes reais de navegador, imports locais, assets do index, invariantes arquiteturais e consistência de versão: aprovados.
+- Nenhum repositório legado excluído.
+- Catálogo permanece com links públicos compartilháveis por qualquer pessoa.
+
 ## Regra de exclusão
 Nenhum repositório individual deve ser excluído na fase atual. Estado obrigatório: ATIVO → MIGRADO → REDIRECIONADO → ARQUIVADO → EXCLUÍDO, somente após smoke test e estabilidade.
