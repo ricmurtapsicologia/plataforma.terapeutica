@@ -1,0 +1,16 @@
+response_sheet	instrument_id	version	public_name	technical_name	scorer	active	safety_flow
+FORM_Geral	geral	1.0	Rastreio Clínico Geral	RAC-5TR	pending	TRUE	FALSE
+FORM_TDAH	tdah	1.0	Rastreio de TDAH em Adultos	EIR-TDAH-A	pending	TRUE	FALSE
+FORM_Bipolar	bipolar	1.0	Rastreio do Espectro Bipolar	Bateria TAB	pending	TRUE	FALSE
+FORM_Borderline	borderline	1.0	Rastreio de Traços Borderline	Triagem de traços	pending	TRUE	FALSE
+FORM_Narcisismo	narcisismo	1.0	Rastreio de Traços Narcisistas	Bateria de traços	pending	TRUE	FALSE
+FORM_Impulsividade	impulsividade	1.0	Perfil de Impulsividade	Rastreio dimensional	pending	TRUE	FALSE
+FORM_Esquemas	esquemas	1.0	Mapa de Esquemas	Padrões emocionais	pending	TRUE	FALSE
+FORM_Modos	modos	1.0	Mapa de Modos Esquemáticos	SMI 1.1	pending	TRUE	FALSE
+FORM_Necessidades	necessidades	1.0	Necessidades Emocionais	Escala complementar	pending	TRUE	FALSE
+FORM_Codependencia	codependencia	1.0	Dependência e Codependência Emocional	Escala relacional	pending	TRUE	FALSE
+FORM_ICAPS	icaps	2.1	ICAPS — Prontidão para Separação	ICAPS	pending	TRUE	FALSE
+FORM_Risco	risco	1.0	Avaliação Clínica de Risco Suicida	EIR-RS	pending	TRUE	TRUE
+FORM_Humor	humor	1.0	Monitoramento de Humor	Google Forms	raw_only	TRUE	FALSE
+FORM_Ansiedade	ansiedade	1.0	Monitoramento de Ansiedade	Google Forms	raw_only	TRUE	FALSE
+FORM_Autoestima	autoestima	1.0	Monitoramento de Autoestima	Rosenberg · Google Forms	raw_only	TRUE	FALSE
