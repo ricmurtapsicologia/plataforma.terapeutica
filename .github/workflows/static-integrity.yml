@@ -8,6 +8,7 @@ on:
       - 'assets/js/**'
       - 'assets/css/**'
       - 'tests/**'
+      - 'rastreios/pipeline/**'
       - '.github/workflows/static-integrity.yml'
   pull_request:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - 'assets/js/**'
       - 'assets/css/**'
       - 'tests/**'
+      - 'rastreios/pipeline/**'
       - '.github/workflows/static-integrity.yml'
   workflow_dispatch:
 
@@ -53,6 +55,7 @@ jobs:
           node tests/platform-v300.test.mjs
           node tests/agenda-v330.test.mjs
           node tests/clinical-session-v370.test.mjs
+          node tests/screenings-pipeline-v410.test.mjs
 
       - name: Run real browser persistence and agenda probes
         shell: bash
