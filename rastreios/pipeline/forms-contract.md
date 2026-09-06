@@ -4,6 +4,19 @@
 
 A página pública é a interface de aplicação. O Google Forms é o registro canônico da submissão. O Google Sheets é a base tabular e de governança. O GitHub nunca persiste respostas clínicas, nomes de respondentes, resultados ou prontuários.
 
+## Interface hospedeira e Forms embutidos
+
+Quando um Google Form já estiver incorporado por `iframe` em uma página do ecossistema, essa página hospedeira deve ser preservada como interface pública e o Google Form deve ser tratado como motor interno de coleta. Não criar um novo Form apenas porque existe uma página HTML ao redor dele.
+
+Estado confirmado na Jornada Terapêutica:
+
+- Monitoramento de Humor — Google Form existente e embutido;
+- Monitoramento de Ansiedade — Google Form existente e embutido;
+- Monitoramento de Autoestima / Rosenberg — Google Form existente e embutido;
+- Formulário de Controle para Atendimento Clínico — Google Form existente e embutido, classificado como interface de apoio e não como um dos 15 rastreios.
+
+O manifesto deve distinguir `presentationMode` e `hostPage` para evitar que uma página hospedeira seja confundida com ausência de Form.
+
 ## Destino
 
 Todos os Forms devem ser vinculados ao mesmo arquivo mestre de respostas, criando uma aba própria por instrumento. A aba de configuração `RastreiosConfig` associa o nome da aba de respostas ao `instrument_id`, versão, nome público e função de correção.
@@ -63,7 +76,7 @@ Nenhum repositório individual deve avançar para `ARQUIVADO` antes de existir F
 
 ## Onda de implantação
 
-1. Humor, Ansiedade e Autoestima — Forms já existentes.
+1. Humor, Ansiedade e Autoestima — Forms já existentes e incorporados na Jornada Terapêutica; reutilizar os Forms atuais, sem recriação.
 2. Necessidades Emocionais, Codependência e ICAPS.
 3. Esquemas, Modos e Impulsividade.
 4. TDAH, TAB, Borderline, Narcisismo e Rastreio Geral.
