@@ -6,6 +6,7 @@ const code=fs.readFileSync('rastreios/pipeline/apps-script/Code.gs','utf8');
 const contract=fs.readFileSync('rastreios/pipeline/forms-contract.md','utf8');
 const seed=fs.readFileSync('rastreios/pipeline/RastreiosConfig.seed.tsv','utf8');
 
+assert.doesNotThrow(()=>new Function(code),'Apps Script source must remain syntactically valid JavaScript');
 assert.equal(manifest.instruments.length,15,'canonical screening inventory must contain 15 instruments');
 const ids=manifest.instruments.map(x=>x.id);
 assert.equal(new Set(ids).size,15,'instrument ids must be unique');
@@ -19,7 +20,11 @@ assert.match(manifest.storagePolicy,/No clinical response data/i,'manifest must 
 
 assert.ok(code.includes("REPORT_SUBJECT = 'Novo relatório de rastreio clínico'"),'email subject must remain generic and minimally sensitive');
 assert.ok(code.includes("getProperty('REPORT_RECIPIENT')"),'report recipient must come from Script Properties');
-assert.ok(code.includes("if (currentStatus === 'SENT') return"),'duplicate email guard missing');
+assert.ok(code.includes("if (currentStatus === 'SENT') return"),'sent-report duplicate guard missing');
+assert.ok(code.includes("currentStatus === 'SENDING'"),'ambiguous-delivery guard missing');
+assert.ok(code.includes('AMBIGUOUS_DELIVERY_STATE_MANUAL_REVIEW_REQUIRED'),'ambiguous delivery must fail closed');
+assert.ok(code.includes("__report_status: 'SENDING'"),'status must be persisted before email dispatch');
+assert.ok(code.includes('SpreadsheetApp.flush()'),'pre-send state must be flushed before email dispatch');
 assert.ok(code.includes('LockService.getDocumentLock()'),'document lock missing');
 assert.ok(code.includes("state: 'SCORER_PENDING'"),'unvalidated scorers must fail safe');
 assert.ok(code.includes("DUPLICATE_QUESTION_HEADER"),'ambiguous duplicate Form headers must fail closed');
@@ -37,5 +42,8 @@ assert.equal(seedLines.length,16,'config seed must contain one header plus 15 in
 const seedRows=seedLines.slice(1).map(line=>line.split('\t'));
 assert.equal(seedRows.filter(row=>row[6]==='TRUE').length,3,'only three existing Forms may be active in config seed');
 assert.equal(seedRows.filter(row=>row[5]==='pending'&&row[6]==='FALSE').length,12,'all pending scorers must remain inactive');
+const riskSeed=seedRows.find(row=>row[1]==='risco');
+assert.equal(riskSeed?.[6],'FALSE','risk flow must stay inactive until dedicated validation');
+assert.equal(riskSeed?.[7],'TRUE','risk flow must retain dedicated safety flag');
 
 console.log('SCREENINGS_PIPELINE_V410_PASS');
