@@ -90,12 +90,16 @@ assert.ok(code.includes("getProperty('REPORT_RECIPIENT')"),'report recipient mus
 assert.ok(code.includes("if (currentStatus === 'SENT') return"),'sent-report duplicate guard missing');
 assert.ok(code.includes("currentStatus === 'SENDING'"),'ambiguous-delivery guard missing');
 assert.ok(code.includes('AMBIGUOUS_DELIVERY_STATE_MANUAL_REVIEW_REQUIRED'),'ambiguous delivery must fail closed');
-assert.ok(code.includes("__report_status: 'SENDING'"),'status must be persisted before email dispatch');
+assert.match(code,/__report_status\s*:\s*'SENDING'/,'status must be persisted before email dispatch');
 assert.ok(code.includes('SpreadsheetApp.flush()'),'pre-send state must be flushed before email dispatch');
 assert.ok(code.includes('LockService.getDocumentLock()'),'document lock missing');
-assert.ok(code.includes("state: 'SCORER_PENDING'"),'unvalidated scorers must fail safe');
-assert.ok(code.includes("DUPLICATE_QUESTION_HEADER"),'ambiguous duplicate source headers must fail closed');
+assert.match(code,/state\s*:\s*'SCORER_PENDING'/,'unvalidated scorers must fail safe');
+assert.ok(code.includes('DUPLICATE_QUESTION_HEADER'),'ambiguous duplicate source headers must fail closed');
 assert.ok(code.includes('Este relatório organiza dados de rastreio e não estabelece diagnóstico.'),'non-diagnostic report disclaimer missing');
+assert.match(code,/birthDate\s*:/,'HTML report must capture birth date');
+assert.match(code,/applicationDate\s*:/,'HTML report must capture application date');
+assert.match(code,/function buildVisualHtml_/,'validated scorers must have an optional email-safe visual channel');
+assert.match(code,/Number\.isFinite\(pct\)/,'visual output must fail closed without a numeric validated percentage');
 assert.ok(!/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(code),'Apps Script must not publish a recipient email address');
 assert.ok(!/console\.(log|debug)\(/.test(code),'Apps Script must not log response payloads');
 
