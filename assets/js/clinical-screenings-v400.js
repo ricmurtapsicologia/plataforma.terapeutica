@@ -18,6 +18,7 @@ const SCREENINGS=[
 
 const GROUP_ORDER=['Geral','Neurodesenvolvimento','Humor','Personalidade','Dimensões clínicas','Terapia do Esquema','Relacionamentos','Monitoramento','Risco e segurança'];
 const JOURNEY_URL='https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/';
+const DEFAULT_TITLE='Richelmy Murta — Clínica';
 let activeGroup='Todos';
 let searchTerm='';
 
@@ -52,7 +53,7 @@ function panelMarkup(){
   const migrated=SCREENINGS.filter(item=>item.registry==='forms').length;
   return `<div class="screening-panel" id="screening-panel-root">
     <section class="screening-hero">
-      <div><div class="eyebrow">Plataforma Clínica</div><h1>Painel de Rastreios</h1><p>Central profissional para abrir, copiar e compartilhar rastreios públicos. O acesso aos instrumentos é livre por link; o painel apenas organiza a governança clínica e a migração para registro canônico em Forms/Sheets.</p></div>
+      <div><div class="eyebrow">Plataforma Clínica</div><h1>Painel de Rastreios</h1><p>Central profissional para abrir, copiar e compartilhar rastreios públicos. O acesso aos instrumentos é livre por link; o painel organiza a governança clínica e a migração para registro canônico em Forms/Sheets.</p></div>
       <div class="screening-hero-actions"><button type="button" class="btn secondary" data-screening-action="copy" data-url="${JOURNEY_URL}" data-name="Jornada Terapêutica">Copiar Jornada</button><a class="btn" href="${JOURNEY_URL}" target="_blank" rel="noopener noreferrer">Abrir Jornada</a></div>
     </section>
     <section class="screening-summary" aria-label="Resumo do catálogo">
@@ -75,6 +76,7 @@ function ensureNav(){
   button.type='button';
   button.className='nav-link';
   button.dataset.screeningsNav='true';
+  button.setAttribute('aria-label','Abrir Painel de Rastreios');
   button.innerHTML='<img src="assets/images/brand-symbol.svg" alt="">Rastreios';
   const resources=[...nav.querySelectorAll('.nav-link')].find(el=>el.dataset.route==='resources');
   if(resources?.nextSibling)nav.insertBefore(button,resources.nextSibling);else nav.appendChild(button);
@@ -100,9 +102,11 @@ function openPanel(){
 }
 
 function applyFilters(){
+  const root=document.getElementById('screening-panel-root');
+  if(!root)return;
   const term=normalize(searchTerm.trim());
   let visibleCards=0;
-  document.querySelectorAll('[data-screening-section]').forEach(section=>{
+  root.querySelectorAll('[data-screening-section]').forEach(section=>{
     let sectionVisible=0;
     section.querySelectorAll('[data-screening-card]').forEach(cardEl=>{
       const group=cardEl.dataset.group||'';
@@ -114,14 +118,18 @@ function applyFilters(){
     });
     section.hidden=sectionVisible===0;
   });
-  const empty=document.getElementById('screening-empty');
+  const empty=root.querySelector('#screening-empty');
   if(empty)empty.hidden=visibleCards>0;
-  document.querySelectorAll('[data-screening-filter]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.screeningFilter===activeGroup)));
+  root.querySelectorAll('[data-screening-filter]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.screeningFilter===activeGroup)));
 }
 
 async function copyText(text){
-  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return true}
-  const input=document.createElement('textarea');input.value=text;input.setAttribute('readonly','');input.style.position='fixed';input.style.opacity='0';document.body.appendChild(input);input.select();const ok=document.execCommand('copy');input.remove();return ok;
+  if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(text);return true}catch(err){console.warn('Clipboard API indisponível; usando fallback.',err)}}
+  const input=document.createElement('textarea');
+  input.value=text;input.setAttribute('readonly','');input.setAttribute('aria-hidden','true');input.style.position='fixed';input.style.opacity='0';input.style.pointerEvents='none';document.body.appendChild(input);input.select();
+  let ok=false;try{ok=document.execCommand('copy')}finally{input.remove()}
+  if(!ok)throw new Error('Não foi possível copiar o link neste navegador.');
+  return true;
 }
 
 function announce(message){
@@ -134,15 +142,20 @@ async function handleAction(el){
   const action=el.dataset.screeningAction;
   const url=el.dataset.url;
   const name=el.dataset.name||'Rastreio';
+  if(!url)return;
   if(action==='copy'){await copyText(url);announce(`Link de ${name} copiado.`);return}
   if(action==='share'){
     const shareData={title:name,text:`${name} — acesso ao rastreio`,url};
-    if(navigator.share){try{await navigator.share(shareData);return}catch(err){if(err?.name==='AbortError')return}}
+    if(navigator.share){try{await navigator.share(shareData);return}catch(err){if(err?.name==='AbortError')return;console.warn('Compartilhamento nativo indisponível; copiando link.',err)}}
     await copyText(url);announce(`Compartilhamento indisponível. Link de ${name} copiado.`);
   }
 }
 
-function onRendered(){ensureNav();if(location.hash.replace(/^#/,'')==='rastreios')renderPanel()}
+function onRendered(){
+  ensureNav();
+  if(location.hash.replace(/^#/,'')==='rastreios')renderPanel();
+  else document.title=DEFAULT_TITLE;
+}
 
 document.addEventListener('rm:rendered',onRendered);
 document.addEventListener('rm:app-ready',()=>setTimeout(onRendered,0));
@@ -152,7 +165,7 @@ document.addEventListener('click',event=>{
   const filter=event.target.closest?.('[data-screening-filter]');
   if(filter){activeGroup=filter.dataset.screeningFilter||'Todos';applyFilters();return}
   const action=event.target.closest?.('[data-screening-action]');
-  if(action){event.preventDefault();void handleAction(action)}
+  if(action){event.preventDefault();void handleAction(action).catch(err=>{console.error('Falha em ação do Painel de Rastreios',err);announce(err?.message||'Não foi possível concluir a ação.')})}
 },false);
 document.addEventListener('input',event=>{if(event.target?.id==='screening-search-input'){searchTerm=event.target.value||'';applyFilters()}},false);
 window.addEventListener('popstate',()=>{if(location.hash.replace(/^#/,'')==='rastreios')renderPanel()});
