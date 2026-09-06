@@ -49,9 +49,10 @@ O motor cria, quando ausentes, as seguintes colunas ao final da aba de respostas
 3. O destinatário deve ser definido em Script Properties como `REPORT_RECIPIENT`; não publicar e-mail pessoal no código.
 4. Não enviar diagnóstico automático. A linguagem deve ser dimensional e de rastreio.
 5. Instrumentos sem função de correção validada ficam com `SCORER_PENDING` e não recebem interpretação automatizada como se estivessem validados.
-6. EIR-RS usa fluxo separado de segurança e não pode depender apenas de escore global.
-7. O motor usa lock e `submission_id` para evitar e-mails duplicados.
-8. Cabeçalhos duplicados em abas de respostas interrompem o processamento até saneamento do Form.
+6. Todo instrumento com Form ausente ou scorer `pending` deve permanecer inativo até a validação clínica e técnica do espelho, da correção e do relatório.
+7. EIR-RS usa fluxo separado de segurança e não pode depender apenas de escore global.
+8. O motor usa lock e `submission_id` para evitar e-mails duplicados.
+9. Cabeçalhos duplicados em abas de respostas interrompem o processamento até saneamento do Form.
 
 ## Estados de migração
 
