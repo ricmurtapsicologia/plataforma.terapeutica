@@ -1,16 +1,16 @@
 response_sheet	instrument_id	version	public_name	technical_name	scorer	active	safety_flow
-FORM_Geral	geral	1.0	Rastreio Clínico Geral	RAC-5TR	pending	FALSE	FALSE
-FORM_TDAH	tdah	1.0	Rastreio de TDAH em Adultos	EIR-TDAH-A	pending	FALSE	FALSE
-FORM_Bipolar	bipolar	1.0	Rastreio do Espectro Bipolar	Bateria TAB	pending	FALSE	FALSE
-FORM_Borderline	borderline	1.0	Rastreio de Traços Borderline	Triagem de traços	pending	FALSE	FALSE
-FORM_Narcisismo	narcisismo	1.0	Rastreio de Traços Narcisistas	Bateria de traços	pending	FALSE	FALSE
-FORM_Impulsividade	impulsividade	1.0	Perfil de Impulsividade	Rastreio dimensional	pending	FALSE	FALSE
-FORM_Esquemas	esquemas	1.0	Mapa de Esquemas	Padrões emocionais	pending	FALSE	FALSE
-FORM_Modos	modos	1.0	Mapa de Modos Esquemáticos	SMI 1.1	pending	FALSE	FALSE
-FORM_Necessidades	necessidades	1.0	Necessidades Emocionais	Escala complementar	pending	FALSE	FALSE
-FORM_Codependencia	codependencia	1.0	Dependência e Codependência Emocional	Escala relacional	pending	FALSE	FALSE
-FORM_ICAPS	icaps	2.1	ICAPS — Prontidão para Separação	ICAPS	pending	FALSE	FALSE
-FORM_Risco	risco	1.0	Avaliação Clínica de Risco Suicida	EIR-RS	pending	FALSE	TRUE
-FORM_Humor	humor	1.0	Monitoramento de Humor	Acompanhamento longitudinal	raw_only	TRUE	FALSE
-FORM_Ansiedade	ansiedade	1.0	Monitoramento de Ansiedade	Escala de intensidade	raw_only	TRUE	FALSE
-FORM_Autoestima	autoestima	1.0	Monitoramento de Autoestima	Rosenberg	raw_only	TRUE	FALSE
+FORM_Geral	geral	1.0	Como você tem se sentido?	Rastreio Clínico Geral · RAC-5TR	pending	FALSE	FALSE
+FORM_TDAH	tdah	1.0	Atenção, organização e impulsividade no dia a dia	Rastreio de TDAH em Adultos · EIR-TDAH-A	pending	FALSE	FALSE
+FORM_Bipolar	bipolar	1.0	Oscilações de humor, energia e ritmo	Rastreio do Espectro Bipolar · Bateria TAB	pending	FALSE	FALSE
+FORM_Borderline	borderline	1.0	Emoções intensas, vínculos e estabilidade emocional	Rastreio de padrões associados a traços borderline	pending	FALSE	FALSE
+FORM_Narcisismo	narcisismo	1.0	Autoimagem, reconhecimento e relações	Rastreio de padrões narcisistas	pending	FALSE	FALSE
+FORM_Impulsividade	impulsividade	1.0	Impulsividade e tomada de decisão	Perfil de Impulsividade	pending	FALSE	FALSE
+FORM_Esquemas	esquemas	1.0	Padrões emocionais que se repetem	Mapa de Esquemas	pending	FALSE	FALSE
+FORM_Modos	modos	1.0	Como você reage quando algo toca em pontos sensíveis?	Mapa de Modos Esquemáticos · SMI 1.1	pending	FALSE	FALSE
+FORM_Necessidades	necessidades	1.0	O que você precisa emocionalmente?	Mapa de Necessidades Emocionais	pending	FALSE	FALSE
+FORM_Codependencia	codependencia	1.0	Limites, dependência e equilíbrio nos vínculos	Rastreio de Dependência e Codependência Emocional	pending	FALSE	FALSE
+FORM_ICAPS	icaps	2.1	Estou pronto para me separar?	ICAPS · Mapa Clínico de Prontidão para Separação	pending	FALSE	FALSE
+FORM_Risco	risco	1.0	Segurança emocional e risco de autoagressão	Avaliação Clínica de Risco Suicida · EIR-RS	pending	FALSE	TRUE
+FORM_Humor	humor	1.0	Como está seu humor?	Monitoramento de Humor	raw_only	TRUE	FALSE
+FORM_Ansiedade	ansiedade	1.0	Como está sua ansiedade?	Monitoramento de Ansiedade	raw_only	TRUE	FALSE
+FORM_Autoestima	autoestima	1.0	Como você tem se percebido?	Monitoramento de Autoestima · Rosenberg	raw_only	TRUE	FALSE
