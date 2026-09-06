@@ -22,12 +22,14 @@ assert.ok(code.includes("getProperty('REPORT_RECIPIENT')"),'report recipient mus
 assert.ok(code.includes("if (currentStatus === 'SENT') return"),'duplicate email guard missing');
 assert.ok(code.includes('LockService.getDocumentLock()'),'document lock missing');
 assert.ok(code.includes("state: 'SCORER_PENDING'"),'unvalidated scorers must fail safe');
+assert.ok(code.includes("DUPLICATE_QUESTION_HEADER"),'ambiguous duplicate Form headers must fail closed');
 assert.ok(code.includes('Este relatório organiza dados de rastreio e não estabelece diagnóstico.'),'non-diagnostic report disclaimer missing');
 assert.ok(!/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(code),'Apps Script must not publish a recipient email address');
 assert.ok(!/console\.(log|debug)\(/.test(code),'Apps Script must not log response payloads');
 
 assert.ok(contract.includes('ATIVO → ESPELHADO → VALIDADO → REDIRECIONADO → ARQUIVADO → EXCLUÍVEL'),'migration state contract missing');
 assert.ok(contract.includes('GitHub nunca persiste respostas clínicas'),'public-repo clinical storage rule missing');
+assert.ok(contract.includes('títulos de perguntas devem ser únicos'),'unique Form header contract missing');
 assert.ok(seed.split(/\r?\n/).filter(Boolean).length===16,'config seed must contain one header plus 15 instruments');
 
 console.log('SCREENINGS_PIPELINE_V410_PASS');
