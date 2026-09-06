@@ -22,6 +22,8 @@ Campos padronizados quando aplicáveis:
 - `Código clínico` — opcional; nunca obrigatório para acesso público;
 - `Ciência de finalidade e limites` — obrigatória, deixando claro que rastreio não equivale a diagnóstico.
 
+Os títulos de perguntas devem ser únicos em cada Form. Quando o texto clínico de dois itens for igual ou muito semelhante, usar um prefixo técnico estável, como `Q01 ·`, `Q02 ·`, preservando o texto do item após o identificador. O motor falha de forma fechada quando encontra cabeçalhos duplicados para impedir perda ou sobrescrita silenciosa de respostas.
+
 `submission_id`, `instrument_id`, `instrument_version`, escores e status de relatório são derivados pelo Apps Script e não precisam ser perguntas visíveis no Form.
 
 ## Colunas derivadas
@@ -49,6 +51,7 @@ O motor cria, quando ausentes, as seguintes colunas ao final da aba de respostas
 5. Instrumentos sem função de correção validada ficam com `SCORER_PENDING` e não recebem interpretação automatizada como se estivessem validados.
 6. EIR-RS usa fluxo separado de segurança e não pode depender apenas de escore global.
 7. O motor usa lock e `submission_id` para evitar e-mails duplicados.
+8. Cabeçalhos duplicados em abas de respostas interrompem o processamento até saneamento do Form.
 
 ## Estados de migração
 
