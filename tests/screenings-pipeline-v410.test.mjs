@@ -30,6 +30,12 @@ assert.ok(!/console\.(log|debug)\(/.test(code),'Apps Script must not log respons
 assert.ok(contract.includes('ATIVO → ESPELHADO → VALIDADO → REDIRECIONADO → ARQUIVADO → EXCLUÍVEL'),'migration state contract missing');
 assert.ok(contract.includes('GitHub nunca persiste respostas clínicas'),'public-repo clinical storage rule missing');
 assert.ok(contract.includes('títulos de perguntas devem ser únicos'),'unique Form header contract missing');
-assert.ok(seed.split(/\r?\n/).filter(Boolean).length===16,'config seed must contain one header plus 15 instruments');
+assert.ok(contract.includes('permanecer inativo até'),'unvalidated activation rule missing');
+
+const seedLines=seed.split(/\r?\n/).filter(Boolean);
+assert.equal(seedLines.length,16,'config seed must contain one header plus 15 instruments');
+const seedRows=seedLines.slice(1).map(line=>line.split('\t'));
+assert.equal(seedRows.filter(row=>row[6]==='TRUE').length,3,'only three existing Forms may be active in config seed');
+assert.equal(seedRows.filter(row=>row[5]==='pending'&&row[6]==='FALSE').length,12,'all pending scorers must remain inactive');
 
 console.log('SCREENINGS_PIPELINE_V410_PASS');
