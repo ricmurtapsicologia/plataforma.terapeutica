@@ -13,6 +13,16 @@ assert.equal(new Set(ids).size,15,'instrument ids must be unique');
 for(const id of ['geral','tdah','bipolar','borderline','narcisismo','impulsividade','esquemas','modos','necessidades','codependencia','icaps','risco','humor','ansiedade','autoestima'])assert.ok(ids.includes(id),`missing canonical instrument: ${id}`);
 assert.equal(manifest.instruments.filter(x=>x.formState==='ACTIVE').length,3,'only the three existing monitoring Forms may be marked active before migration');
 assert.equal(manifest.instruments.filter(x=>x.formState==='CREATE_REQUIRED').length,12,'twelve Forms must remain explicitly pending creation');
+assert.equal(manifest.instruments.filter(x=>x.presentationMode==='EMBEDDED_IN_HOST_PAGE').length,3,'three catalog screenings must be recognized as embedded Forms');
+for(const id of ['humor','ansiedade','autoestima']){
+  const item=manifest.instruments.find(x=>x.id===id);
+  assert.equal(item?.presentationMode,'EMBEDDED_IN_HOST_PAGE',`${id} must remain embedded in its host page`);
+  assert.match(item?.hostPage||'',/Inicio-de-Jornada-Terapeutica/,`${id} host page must remain Jornada Terapêutica`);
+}
+assert.equal(manifest.supportInterfaces?.length,1,'the non-screening control Form must be tracked as a support interface');
+assert.equal(manifest.supportInterfaces?.[0]?.id,'controle-atendimento','control Form support interface missing');
+assert.equal(manifest.supportInterfaces?.[0]?.catalogScope,'SUPPORT_NOT_SCREENING','control Form must not inflate the 15-screening inventory');
+assert.match(manifest.presentationPolicy,/host page as the public interface/i,'embedded Form presentation policy missing');
 const risk=manifest.instruments.find(x=>x.id==='risco');
 assert.equal(risk?.criticality,'CRITICAL','suicide-risk screening must remain critical');
 assert.equal(risk?.requiresDedicatedSafetyFlow,true,'suicide-risk screening must require dedicated safety flow');
