@@ -52,6 +52,7 @@ function onScreeningFormSubmit(event) {
     const headerMap = ensureDerivedHeaders_(sheet);
     const currentStatus = String(sheet.getRange(row, headerMap.__report_status).getValue() || '');
     if (currentStatus === 'SENT') return;
+    if (currentStatus === 'SENDING') throw new Error('AMBIGUOUS_DELIVERY_STATE_MANUAL_REVIEW_REQUIRED');
 
     const submissionId = String(sheet.getRange(row, headerMap.__submission_id).getValue() || '') || Utilities.getUuid();
     const answers = readAnswerMap_(sheet, row);
@@ -203,11 +204,12 @@ function writeDerived_(sheet, row, headerMap, report) {
     __interpretation: scoring.interpretation || '',
     __attention_points: JSON.stringify(scoring.attentionPoints || []),
     __next_step: scoring.nextStep || '',
-    __report_status: 'PROCESSING',
+    __report_status: 'SENDING',
     __report_sent_at: '',
     __report_error: ''
   };
   Object.keys(values).forEach(header => sheet.getRange(row, headerMap[header]).setValue(values[header]));
+  SpreadsheetApp.flush();
 }
 
 function buildReportHtml_(report) {
