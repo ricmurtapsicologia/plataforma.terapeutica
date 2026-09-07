@@ -1,4 +1,4 @@
-// Trigger: live browser matrix 15 instruments x 2 viewports.
+// Live browser matrix: 15 instruments x 2 viewports.
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 
@@ -41,13 +41,20 @@ try{
       try{
         const response=await openWithRetry(page,instrument.publicUrl);
         await page.waitForTimeout(2500);
-        const snapshot=await page.evaluate(({profile})=>{
+        const snapshot=await page.evaluate(({profile,identitySelectors})=>{
           const visible=el=>!!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden'&&getComputedStyle(el).display!=='none');
+          const safeQuery=sel=>{if(!sel)return null;try{return document.querySelector(sel)}catch{return null}};
           const shell=document.querySelector('.rm-screening-shell');
           const identity=document.querySelector('.rm-identity');
-          const name=identity?.querySelector('[data-rm="name"]');
-          const birth=identity?.querySelector('[data-rm="birth"]');
-          const application=identity?.querySelector('[data-rm="application"]');
+          const injectedName=identity?.querySelector('[data-rm="name"]');
+          const injectedBirth=identity?.querySelector('[data-rm="birth"]');
+          const injectedApplication=identity?.querySelector('[data-rm="application"]');
+          const nativeName=safeQuery(identitySelectors?.name);
+          const nativeBirth=safeQuery(identitySelectors?.birth);
+          const nativeApplication=safeQuery(identitySelectors?.application);
+          const name=[injectedName,nativeName].some(visible);
+          const birth=[injectedBirth,nativeBirth].some(visible);
+          const application=[injectedApplication,nativeApplication].some(visible);
           const visibleFormLeaks=[...document.querySelectorAll('iframe,a')].filter(el=>visible(el)&&/(docs\.google\.com\/forms|forms\.gle)/i.test(el.src||el.href||''));
           const failBox=document.querySelector('.rm-unavailable');
           return {
@@ -55,15 +62,15 @@ try{
             bodyText:(document.body?.innerText||'').trim().length,
             shell:visible(shell),
             identity:visible(identity),
-            name:visible(name),
-            birth:visible(birth),
-            application:visible(application),
+            name,
+            birth,
+            application,
             visibleFormLeaks:visibleFormLeaks.length,
             failBox:visible(failBox),
             overflow:Math.max(0,document.documentElement.scrollWidth-window.innerWidth),
             profile
           };
-        },{profile:adapter.identityProfile});
+        },{profile:adapter.identityProfile,identitySelectors:adapter.identity||{}});
 
         if(!response.ok()) localFailures.push(`HTTP_${response.status()}`);
         if(snapshot.bodyText<80) localFailures.push('EMPTY_OR_TOO_SHORT_BODY');
