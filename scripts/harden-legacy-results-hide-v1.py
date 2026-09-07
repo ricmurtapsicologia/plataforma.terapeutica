@@ -12,7 +12,7 @@ elif new not in s:
 
 # Guardas: não alterar política de submissão ou contrato clínico.
 for sentinel in [
-    "const VERSION='2.2.0'",
+    "const VERSION='2.2.1'",
     "function blockUnvalidatedActions()",
     "if(cfg?.productionReady===true&&adapter?.submissionSupported!==false)return",
     "function confirmDelivery(detail={})",

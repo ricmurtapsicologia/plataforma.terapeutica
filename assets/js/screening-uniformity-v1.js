@@ -1,10 +1,10 @@
 (()=>{
 'use strict';
-const SRC='https://ricmurtapsicologia.github.io/plataforma.terapeutica/assets/js/screening-system-v2.js?v=2.1.0';
+const SRC='https://ricmurtapsicologia.github.io/plataforma.terapeutica/assets/js/screening-system-v2.js?v=2.2.1';
 window.__RM_PENDING_DELIVERY=window.__RM_PENDING_DELIVERY||[];
 if(!window.RMScreeningUI){
   window.RMScreeningUI={
-    version:'2.1.0-loading',
+    version:'2.2.1-loading',
     confirmDelivery(detail={}){window.__RM_PENDING_DELIVERY.push(detail)},
     getIdentity(){return {}}
   };

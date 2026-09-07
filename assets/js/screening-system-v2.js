@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='2.2.0';
+const VERSION='2.2.1';
 const CONFIG='https://ricmurtapsicologia.github.io/plataforma.terapeutica/rastreios/pipeline/public-experience-v2.json?v=2.0.0';
 const ADAPTER_CONFIG='https://ricmurtapsicologia.github.io/plataforma.terapeutica/rastreios/pipeline/screening-adapters-v2.json?v=2.2.0';
 const REPOS={
