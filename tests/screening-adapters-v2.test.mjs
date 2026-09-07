@@ -3,9 +3,12 @@ import fs from 'node:fs/promises';
 const OWNER='ricmurtapsicologia';
 const EXPECTED=['geral','tdah','bipolar','borderline','narcisismo','impulsividade','esquemas','modos','necessidades','codependencia','icaps','risco','humor','ansiedade','autoestima'];
 const LEGACY=new Set(['esquemas']);
-const NO_DELIVERY=new Set(['bipolar','narcisismo','esquemas']);
 const contract=JSON.parse(await fs.readFile('rastreios/pipeline/screening-adapters-v2.json','utf8'));
+const manifest=JSON.parse(await fs.readFile('rastreios/pipeline/instruments.manifest.json','utf8'));
 const runtime=await fs.readFile('assets/js/screening-system-v2.js','utf8');
+const manifestById=Object.fromEntries((manifest.instruments||[]).map(item=>[item.id,item]));
+const DELIVERY_READY=new Set((manifest.instruments||[]).filter(item=>item.formState==='ACTIVE').map(item=>item.id));
+const NO_DELIVERY=new Set(EXPECTED.filter(id=>!DELIVERY_READY.has(id)));
 const failures=[];
 const ok=(condition,message)=>{if(!condition)failures.push(message)};
 
@@ -13,6 +16,7 @@ ok(contract?.contract?.noHeuristicFormSelection===true,'contract.noHeuristicForm
 ok(typeof contract?.contract?.formWithoutSubmissionPolicy==='string','contract.formWithoutSubmissionPolicy ausente');
 const ids=Object.keys(contract.instruments||{}).sort();
 ok(JSON.stringify(ids)===JSON.stringify([...EXPECTED].sort()),`IDs de adapters divergentes: ${ids.join(',')}`);
+ok(JSON.stringify([...DELIVERY_READY].sort())===JSON.stringify(['ansiedade','autoestima','humor']),`formState ACTIVE inesperado: ${[...DELIVERY_READY].sort().join(',')}`);
 ok(!runtime.includes('const ADAPTERS='),'runtime ainda contém tabela ADAPTERS embutida');
 ok(!runtime.includes("document.querySelector('form')"),'runtime ainda seleciona o primeiro form genericamente');
 ok(!runtime.includes('document.querySelector("form")'),'runtime ainda seleciona o primeiro form genericamente');
@@ -92,14 +96,16 @@ async function sourceAfterConvergence(a){
 
 for(const id of EXPECTED){
   const a=contract.instruments[id];
+  const m=manifestById[id];
   ok(a&&typeof a.repo==='string'&&typeof a.sourcePath==='string',`${id}: repo/sourcePath ausentes`);
+  ok(m&&typeof m.formState==='string',`${id}: ausente do manifesto canônico`);
   ok(a?.mode==='form'||a?.mode==='legacyContainer',`${id}: mode inválido`);
   ok(a?.identity&&typeof a.identity.name==='string',`${id}: seletor explícito de nome ausente`);
   for(const [field,selector] of Object.entries(a?.identity||{})){
     ok(selector===null||typeof selector==='string',`${id}: identity.${field} inválido`);
     ok(selector===null||!selector.includes(','),`${id}: identity.${field} contém fallback múltiplo`);
   }
-  ok(a?.submissionSupported===!NO_DELIVERY.has(id),`${id}: submissionSupported divergente do contrato de entrega`);
+  ok(a?.submissionSupported===DELIVERY_READY.has(id),`${id}: submissionSupported diverge de formState=${m?.formState}`);
   if(LEGACY.has(id)){
     ok(a.mode==='legacyContainer',`${id}: deveria ser legacyContainer`);
     ok(typeof a.containerSelector==='string',`${id}: containerSelector ausente`);
@@ -120,19 +126,20 @@ for(const id of EXPECTED){
 }
 
 ok(contract.instruments.bipolar.mode==='form','Bipolaridade deve usar form nativo');
-ok(contract.instruments.bipolar.formSelector==='#screeningForm','Bipolaridade deve resolver #screeningForm');
 ok(contract.instruments.bipolar.submissionSupported===false,'Bipolaridade não pode habilitar entrega nesta fase');
 ok(contract.instruments.narcisismo.mode==='form','Narcisismo deve usar form nativo');
-ok(contract.instruments.narcisismo.formSelector==='#screeningForm','Narcisismo deve resolver #screeningForm');
 ok(contract.instruments.narcisismo.submissionSupported===false,'Narcisismo não pode habilitar entrega nesta fase');
+ok(contract.instruments.risco.submissionSupported===false,'Risco não pode habilitar entrega antes da validação dedicada');
+ok(manifestById.risco?.requiresDedicatedSafetyFlow===true,'Risco deve exigir fluxo dedicado de segurança');
+ok(contract.instruments.icaps.submissionSupported===false,'ICAPS não pode habilitar entrega com backend ausente');
 ok(contract.instruments.icaps.identity.birth==='#birth-date','ICAPS deve manter nascimento nativo explícito');
-ok(contract.instruments.humor.formSelector==='#clinical-form','Humor deve resolver #clinical-form');
-ok(contract.instruments.ansiedade.formSelector==='#clinical-form','Ansiedade deve resolver #clinical-form');
-ok(contract.instruments.autoestima.formSelector==='#clinical-form','Autoestima deve resolver #clinical-form');
+ok(contract.instruments.humor.submissionSupported===true,'Humor ACTIVE deve manter transporte estrutural');
+ok(contract.instruments.ansiedade.submissionSupported===true,'Ansiedade ACTIVE deve manter transporte estrutural');
+ok(contract.instruments.autoestima.submissionSupported===true,'Autoestima ACTIVE deve manter transporte estrutural');
 
 if(failures.length){
   console.error(JSON.stringify({status:'FAIL',failures},null,2));
   process.exit(1);
 }
-console.log(JSON.stringify({status:'PASS',instruments:EXPECTED.length,legacyContainers:[...LEGACY],structuralNoDelivery:[...NO_DELIVERY],heuristicFormSelection:false,liveSourceRetry:true},null,2));
+console.log(JSON.stringify({status:'PASS',instruments:EXPECTED.length,legacyContainers:[...LEGACY],deliveryReady:[...DELIVERY_READY].sort(),deliveryBlocked:[...NO_DELIVERY].sort(),heuristicFormSelection:false,liveSourceRetry:true,manifestDrivenDelivery:true},null,2));
 console.log('SCREENING_ADAPTERS_V2_PASS');
