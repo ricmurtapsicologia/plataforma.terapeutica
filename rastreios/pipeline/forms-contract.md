@@ -30,6 +30,15 @@ O manifesto distingue `publicUrl`, `formUrl`, `presentationMode` e `hostPage`. `
 
 Todos os mecanismos de coleta devem ser vinculados ao arquivo mestre de respostas, criando uma aba própria por instrumento quando a migração estiver concluída. A aba de configuração `RastreiosConfig` associa o nome da aba de respostas ao `instrument_id`, versão, nome público e função de correção.
 
+## Perfis de identidade
+
+A identidade da interface deve refletir apenas dados que possuem destino persistente real. Há dois perfis canônicos:
+
+- `screening_canonical` — rastreios clínicos dedicados: `Nome completo`, `Data de nascimento` e `Data de aplicação do rastreio`, todos com destino persistente explícito antes de qualquer liberação de entrega em produção.
+- `monitoring_longitudinal` — Humor, Ansiedade e Autoestima: exige `Nome completo`; a data de aplicação usa o campo real do coletor quando existente ou o carimbo de data/hora do Google Forms. `Data de nascimento` não é solicitada nem sintetizada enquanto o coletor ativo não possuir campo persistente próprio.
+
+É proibido criar campo visual ou hidden de identidade que não seja efetivamente persistido pelo mecanismo de coleta.
+
 ## Campos do respondente
 
 Cada aplicação deve pedir apenas o necessário ao instrumento e ao contexto. A identificação não pressupõe vínculo terapêutico.
