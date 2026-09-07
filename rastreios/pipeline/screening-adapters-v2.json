@@ -12,7 +12,7 @@
       "mode": "form",
       "formSelector": "#racForm",
       "submissionSupported": true,
-      "identity": {"name": "#patientName", "birth": null, "application": "#responseDate"}
+      "identity": {"name": "#patientName", "birth": "#birthDate", "application": "#responseDate"}
     },
     "tdah": {
       "repo": "rastreioTDAH",
