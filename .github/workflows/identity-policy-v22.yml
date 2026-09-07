@@ -1,0 +1,54 @@
+name: Identity Policy v2.2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/migrate-identity-policy-v22.py'
+      - '.github/workflows/identity-policy-v22.yml'
+      - 'rastreios/pipeline/instruments.manifest.json'
+      - 'rastreios/pipeline/public-experience-v2.json'
+      - 'rastreios/pipeline/forms-contract.md'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reconcile identity policy
+        run: python scripts/migrate-identity-policy-v22.py
+      - name: Validate policy coherence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          m=json.load(open('rastreios/pipeline/instruments.manifest.json',encoding='utf-8'))
+          p=json.load(open('rastreios/pipeline/public-experience-v2.json',encoding='utf-8'))
+          a=json.load(open('rastreios/pipeline/screening-adapters-v2.json',encoding='utf-8'))
+          ids={x['id'] for x in m['instruments']}
+          assert ids==set(p['instruments'])==set(a['instruments'])
+          for iid in ids:
+              expected='monitoring_longitudinal' if iid in {'humor','ansiedade','autoestima'} else 'screening_canonical'
+              assert next(x for x in m['instruments'] if x['id']==iid)['identityProfile']==expected
+              assert p['instruments'][iid]['identityProfile']==expected
+              assert a['instruments'][iid]['identityProfile']==expected
+          assert 'não é solicitada nem sintetizada' in open('rastreios/pipeline/forms-contract.md',encoding='utf-8').read()
+          print('IDENTITY_POLICY_V22_PASS')
+          PY
+      - name: Commit reconciled policy
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json rastreios/pipeline/forms-contract.md
+          git commit -m 'Reconcilia política documental de identidade v2.2'
+          git push
