@@ -74,7 +74,7 @@
       "mode": "form",
       "formSelector": "#smi-form",
       "submissionSupported": true,
-      "identity": {"name": "#name", "birth": null, "application": "#date"}
+      "identity": {"name": "#name", "birth": "#birthDate", "application": "#date"}
     },
     "necessidades": {
       "repo": "Escala-de-Necessidades-Emocionais",
