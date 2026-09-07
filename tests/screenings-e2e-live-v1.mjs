@@ -1,4 +1,4 @@
-// Final certification trigger after TDAH/Modos live fixes — 15 instruments x 2 viewports.
+// Live public certification: 15 instruments x 2 viewports.
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 
@@ -56,6 +56,9 @@ try{
           const birth=[injectedBirth,nativeBirth].some(visible);
           const application=[injectedApplication,nativeApplication].some(visible);
           const visibleFormLeaks=[...document.querySelectorAll('iframe,a')].filter(el=>visible(el)&&/(docs\.google\.com\/forms|forms\.gle)/i.test(el.src||el.href||''));
+          const resultSelectors='#results,#resultsSection,#resultsPanel,.results-panel,.results,#reportBox,#report,.out[id*="out"],.gauge-container,#actionsSection,.result-actions,.result-section';
+          const visibleLegacyResults=[...document.querySelectorAll(resultSelectors)].filter(el=>!el.closest('.rm-completion')&&visible(el));
+          const visibleWhatsApp=[...document.querySelectorAll('a[href*="wa.me"],a[href*="whatsapp" i],[id*="whats" i],[class*="whats" i]')].filter(visible);
           const failBox=document.querySelector('.rm-unavailable');
           return {
             title:document.title,
@@ -66,6 +69,8 @@ try{
             birth,
             application,
             visibleFormLeaks:visibleFormLeaks.length,
+            visibleLegacyResults:visibleLegacyResults.length,
+            visibleWhatsApp:visibleWhatsApp.length,
             failBox:visible(failBox),
             overflow:Math.max(0,document.documentElement.scrollWidth-window.innerWidth),
             profile
@@ -86,6 +91,8 @@ try{
           if(expectsApplication!==snapshot.application) localFailures.push('MONITORING_APPLICATION_PROFILE_MISMATCH');
         }
         if(snapshot.visibleFormLeaks) localFailures.push('VISIBLE_GOOGLE_FORMS');
+        if(snapshot.visibleLegacyResults) localFailures.push(`VISIBLE_LEGACY_RESULTS_${snapshot.visibleLegacyResults}`);
+        if(snapshot.visibleWhatsApp) localFailures.push(`VISIBLE_WHATSAPP_${snapshot.visibleWhatsApp}`);
         if(snapshot.failBox) localFailures.push('FAIL_SAFE_BOX_VISIBLE_ON_INITIAL_LOAD');
         if(snapshot.overflow>8) localFailures.push(`HORIZONTAL_OVERFLOW_${snapshot.overflow}px`);
         if(runtimeErrors.length) localFailures.push(`PAGEERROR:${runtimeErrors.slice(0,3).join(' | ')}`);
