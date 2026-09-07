@@ -38,7 +38,7 @@
       "mode": "form",
       "formSelector": "#form",
       "submissionSupported": true,
-      "identity": {"name": "#fullName", "birth": null, "application": "#date"}
+      "identity": {"name": "#fullName", "birth": "#birthDate", "application": "#date"}
     },
     "narcisismo": {
       "repo": "bateria.narcisismo",
