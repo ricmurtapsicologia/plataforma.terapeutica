@@ -14,6 +14,7 @@ const ok=(condition,message)=>{if(!condition)failures.push(message)};
 
 ok(contract?.contract?.noHeuristicFormSelection===true,'contract.noHeuristicFormSelection deve ser true');
 ok(typeof contract?.contract?.formWithoutSubmissionPolicy==='string','contract.formWithoutSubmissionPolicy ausente');
+ok(contract?.contract?.defaultVisualProfile==='canonical_shell','perfil visual padrão deve ser canonical_shell');
 const ids=Object.keys(contract.instruments||{}).sort();
 ok(JSON.stringify(ids)===JSON.stringify([...EXPECTED].sort()),`IDs de adapters divergentes: ${ids.join(',')}`);
 ok(JSON.stringify([...DELIVERY_READY].sort())===JSON.stringify(['ansiedade','autoestima','humor']),`formState ACTIVE inesperado: ${[...DELIVERY_READY].sort().join(',')}`);
@@ -106,6 +107,9 @@ for(const id of EXPECTED){
     ok(selector===null||!selector.includes(','),`${id}: identity.${field} contém fallback múltiplo`);
   }
   ok(a?.submissionSupported===DELIVERY_READY.has(id),`${id}: submissionSupported diverge de formState=${m?.formState}`);
+  const visualProfile=a?.visualProfile||contract?.contract?.defaultVisualProfile;
+  ok(['canonical_shell','native_icaps'].includes(visualProfile),`${id}: visualProfile inválido`);
+  ok(id==='icaps'?visualProfile==='native_icaps':visualProfile==='canonical_shell',`${id}: exceção visual inesperada`);
   if(LEGACY.has(id)){
     ok(a.mode==='legacyContainer',`${id}: deveria ser legacyContainer`);
     ok(typeof a.containerSelector==='string',`${id}: containerSelector ausente`);
@@ -137,6 +141,7 @@ ok(contract.instruments.risco.submissionSupported===false,'Risco não pode habil
 ok(manifestById.risco?.requiresDedicatedSafetyFlow===true,'Risco deve exigir fluxo dedicado de segurança');
 ok(contract.instruments.icaps.submissionSupported===false,'ICAPS não pode habilitar entrega com backend ausente');
 ok(contract.instruments.icaps.identity.birth==='#birth-date','ICAPS deve manter nascimento nativo explícito');
+ok(contract.instruments.icaps.visualProfile==='native_icaps','ICAPS deve preservar seu visual nativo');
 ok(contract.instruments.humor.submissionSupported===true,'Humor ACTIVE deve manter transporte estrutural');
 ok(contract.instruments.ansiedade.submissionSupported===true,'Ansiedade ACTIVE deve manter transporte estrutural');
 ok(contract.instruments.autoestima.submissionSupported===true,'Autoestima ACTIVE deve manter transporte estrutural');

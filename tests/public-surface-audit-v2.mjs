@@ -21,8 +21,16 @@ const HARD = [
   ['SPLASH', /(?:id|class)=["'][^"']*splash|splash\s*screen/i],
   ['WHATSAPP', /wa\.me|api\.whatsapp\.com|whatsapp:\/\//i],
   ['FIREBASE_CLINICAL_STORAGE', /firebase(?:js|Config|app|firestore)|getFirestore|addDoc\s*\(/i],
-  ['VISIBLE_GOOGLE_FORMS', /<(?:iframe|a)\b[^>]*(?:docs\.google\.com\/forms|forms\.gle)/i]
+  ['VISIBLE_GOOGLE_FORMS', /<(?:iframe|a)\b[^>]*(?:docs\.google\.com\/forms|forms\.gle)/i],
+  ['BROKEN_SHARED_ASSET_PATH', /Inicio-de-Jornada-Terapeutica\/assets\/(?:css|js)\/screening-(?:uniformity-v1|system-v2)/i]
 ];
+
+const SHARED_SHELL_IDS = new Set([
+  'geral','tdah','bipolar','borderline','narcisismo','impulsividade',
+  'esquemas','modos','necessidades','codependencia','risco'
+]);
+const SHARED_CSS = 'https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/assets/screening-uniformity-v1.css?v=2.2.1-decoupled';
+const SHARED_JS = 'https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/assets/screening-uniformity-v1.js?v=2.2.1-decoupled';
 
 const WARN = [
   ['DEBUG_CONSOLE', /console\.(?:log|debug)\s*\(/i],
@@ -64,6 +72,13 @@ for (const [instrumentId, repo, paths] of TARGETS) {
     }
     report.files.push({ instrumentId, repo, path, bytes: Buffer.byteLength(text) });
     for (const [rule, rx] of HARD) if (rx.test(text)) report.hardFailures.push({ instrumentId, repo, path, rule });
+    if (path === 'index.html' && SHARED_SHELL_IDS.has(instrumentId)) {
+      if (!text.includes(SHARED_CSS)) report.hardFailures.push({ instrumentId, repo, path, rule: 'CANONICAL_CSS_MISSING' });
+      if (!text.includes(SHARED_JS)) report.hardFailures.push({ instrumentId, repo, path, rule: 'CANONICAL_JS_MISSING' });
+    }
+    if (instrumentId === 'icaps' && path === 'index.html' && /Inicio-de-Jornada-Terapeutica\/assets\/[^\s"'<>]*screening-/i.test(text)) {
+      report.hardFailures.push({ instrumentId, repo, path, rule: 'ICAPS_SHARED_VISUAL_OVERRIDE' });
+    }
     if (hasUnsafeLocalStorage(text)) report.hardFailures.push({ instrumentId, repo, path, rule: 'LOCAL_CLINICAL_STORAGE' });
     if (hasBackstageResidue(text)) report.hardFailures.push({ instrumentId, repo, path, rule: 'BACKSTAGE_TODO' });
     for (const [rule, rx] of WARN) if (rx.test(text)) report.warnings.push({ instrumentId, repo, path, rule });

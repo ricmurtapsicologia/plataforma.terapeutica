@@ -41,7 +41,8 @@ try{
       try{
         const response=await openWithRetry(page,instrument.publicUrl);
         await page.waitForTimeout(2500);
-        const snapshot=await page.evaluate(({profile,identitySelectors})=>{
+        const visualProfile=adapter.visualProfile||adapters.contract.defaultVisualProfile;
+        const snapshot=await page.evaluate(({profile,visualProfile,formSelector,identitySelectors})=>{
           const visible=el=>!!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden'&&getComputedStyle(el).display!=='none');
           const safeQuery=sel=>{if(!sel)return null;try{return document.querySelector(sel)}catch{return null}};
           const shell=document.querySelector('.rm-screening-shell');
@@ -52,6 +53,7 @@ try{
           const nativeName=safeQuery(identitySelectors?.name);
           const nativeBirth=safeQuery(identitySelectors?.birth);
           const nativeApplication=safeQuery(identitySelectors?.application);
+          const targetForm=safeQuery(formSelector);
           const name=[injectedName,nativeName].some(visible);
           const birth=[injectedBirth,nativeBirth].some(visible);
           const application=[injectedApplication,nativeApplication].some(visible);
@@ -65,6 +67,7 @@ try{
             bodyText:(document.body?.innerText||'').trim().length,
             shell:visible(shell),
             identity:visible(identity),
+            targetForm:visible(targetForm),
             name,
             birth,
             application,
@@ -73,14 +76,20 @@ try{
             visibleWhatsApp:visibleWhatsApp.length,
             failBox:visible(failBox),
             overflow:Math.max(0,document.documentElement.scrollWidth-window.innerWidth),
-            profile
+            profile,
+            visualProfile
           };
-        },{profile:adapter.identityProfile,identitySelectors:adapter.identity||{}});
+        },{profile:adapter.identityProfile,visualProfile,formSelector:adapter.formSelector,identitySelectors:adapter.identity||{}});
 
         if(!response.ok()) localFailures.push(`HTTP_${response.status()}`);
         if(snapshot.bodyText<80) localFailures.push('EMPTY_OR_TOO_SHORT_BODY');
-        if(!snapshot.shell) localFailures.push('CANONICAL_SHELL_NOT_VISIBLE');
-        if(!snapshot.identity) localFailures.push('IDENTITY_NOT_VISIBLE');
+        if(visualProfile==='native_icaps'){
+          if(!snapshot.targetForm) localFailures.push('ICAPS_NATIVE_FORM_NOT_VISIBLE');
+          if(snapshot.shell) localFailures.push('ICAPS_SHARED_SHELL_VISIBLE');
+        }else{
+          if(!snapshot.shell) localFailures.push('CANONICAL_SHELL_NOT_VISIBLE');
+          if(!snapshot.identity) localFailures.push('IDENTITY_NOT_VISIBLE');
+        }
         if(!snapshot.name) localFailures.push('NAME_NOT_VISIBLE');
         if(adapter.identityProfile==='screening_canonical'){
           if(!snapshot.birth) localFailures.push('CANONICAL_BIRTH_NOT_VISIBLE');

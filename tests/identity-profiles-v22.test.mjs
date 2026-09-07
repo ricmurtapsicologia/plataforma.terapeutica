@@ -30,7 +30,7 @@ for(const [id,item] of Object.entries(adapters.instruments||{})){
 ok(adapters.instruments.humor.identityTransport.application==='collector_timestamp','humor: aplicação deve vir do timestamp');
 ok(adapters.instruments.ansiedade.identityTransport.application==='collector_field','ansiedade: aplicação deve usar campo do coletor');
 ok(adapters.instruments.autoestima.identityTransport.application==='collector_field','autoestima: aplicação deve usar campo do coletor');
-ok(runtime.includes("VERSION='2.2.0'"),'runtime deve estar em 2.2.0');
+ok(runtime.includes("VERSION='2.2.1'"),'runtime deve estar em 2.2.1');
 ok(runtime.includes("identityProfile==='monitoring_longitudinal'"),'runtime deve diferenciar monitoramentos');
 ok(runtime.includes('if(!monitoring&&mount.form)'), 'runtime não pode sintetizar hidden fields nos monitoramentos');
 ok(apps.includes("'Carimbo de data/hora'")&&apps.includes("'Timestamp'"),'Apps Script deve manter fallback de timestamp');
