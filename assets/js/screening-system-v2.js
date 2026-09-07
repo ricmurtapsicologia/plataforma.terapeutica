@@ -85,7 +85,7 @@ function mountIdentityWhenReady(){
   identityObserver.observe(document.body,{childList:true,subtree:true});
   window.setTimeout(()=>{identityObserver?.disconnect();identityObserver=null},15000);
 }
-function hideLegacyResults(){document.body.classList.add('rm-hide-legacy-results');['#results','#resultsSection','#resultsPanel','.results-panel','.results','#reportBox','#report','.out[id*="out"]','.gauge-container','#actionsSection','.result-actions','.result-section'].forEach(sel=>document.querySelectorAll(sel).forEach(n=>{if(!n.closest('.rm-completion'))n.hidden=true}))}
+function hideLegacyResults(){document.body.classList.add('rm-hide-legacy-results');['#results','#resultsSection','#resultsPanel','.results-panel','.results','#reportBox','#report','.out[id*="out"]','.gauge-container','#actionsSection','.result-actions','.result-section'].forEach(sel=>document.querySelectorAll(sel).forEach(n=>{if(!n.closest('.rm-completion')){n.hidden=true;n.style.setProperty('display','none','important');n.setAttribute('aria-hidden','true')}}))}
 function showHold(){let box=document.querySelector('.rm-unavailable');if(!box){box=document.createElement('section');box.className='rm-unavailable';box.setAttribute('role','status');box.setAttribute('aria-live','polite');box.innerHTML='<h2>Envio temporariamente indisponível</h2><p>Este rastreio está passando por validação clínica e técnica antes da liberação do envio. Suas respostas não foram encaminhadas.</p>';const target=resolveTarget();(target?.parentElement||target||document.body).appendChild(box)}box.scrollIntoView({behavior:'smooth',block:'center'})}
 function blockUnvalidatedActions(){
   if(cfg?.productionReady===true&&adapter?.submissionSupported!==false)return;
