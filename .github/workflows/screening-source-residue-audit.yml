@@ -26,9 +26,12 @@ jobs:
           from pathlib import Path
           p=Path('rastreios/pipeline/source-residue-audit.json')
           d=json.loads(p.read_text(encoding='utf-8'))
+          assert d['schemaVersion'] == '1.1.0'
           assert len(d['instruments']) == 13
           assert all(v['cloneState'] == 'OK' for v in d['instruments'].values())
-          assert len(d['rankedByStaticMarkerScore']) == 13
+          ranked=d['rankedSimplestFirstByStaticMarkerScore']
+          assert len(ranked) == 13
+          assert [x['markerScore'] for x in ranked] == sorted(x['markerScore'] for x in ranked)
           PY
       - name: Commit audit snapshot
         run: |
