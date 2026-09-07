@@ -159,7 +159,7 @@
       "publicUrl": "https://ricmurtapsicologia.github.io/Escala-de-Necessidades-Emocionais/",
       "formUrl": null,
       "formState": "CREATE_REQUIRED",
-      "contractState": "BROWSER_STORAGE_AND_FIRESTORE_BLOCKER",
+      "contractState": "SANITIZED_REVALIDATION_REQUIRED",
       "reportState": "PENDING",
       "scorerState": "NOT_VALIDATED",
       "criticality": "HIGH",
@@ -175,7 +175,7 @@
       "publicUrl": "https://ricmurtapsicologia.github.io/Escala-de-Co-Depenpencia-Emocional/",
       "formUrl": null,
       "formState": "CREATE_REQUIRED",
-      "contractState": "COLLECTOR_SPEC_PREPARED_DEPLOYMENT_REQUIRED",
+      "contractState": "GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED",
       "reportState": "PENDING",
       "scorerState": "NOT_VALIDATED",
       "criticality": "MEDIUM",
@@ -186,7 +186,7 @@
         "repository": "ricmurtapsicologia/Escala-de-Co-Depenpencia-Emocional",
         "path": "contracts/collector-v1.json",
         "version": "1.0.0",
-        "deploymentState": "SPEC_ONLY"
+        "deploymentState": "GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED"
       }
     },
     {
@@ -197,7 +197,7 @@
       "publicUrl": "https://ricmurtapsicologia.github.io/ICAPS/",
       "formUrl": null,
       "formState": "CREATE_REQUIRED",
-      "contractState": "BACKEND_ROUTE_MISSING",
+      "contractState": "BACKEND_ROUTE_INTEGRATED_UPSTREAM_REQUIRED",
       "reportState": "PENDING",
       "scorerState": "DESCRIPTIVE_NON_PSYCHOMETRIC",
       "criticality": "HIGH",

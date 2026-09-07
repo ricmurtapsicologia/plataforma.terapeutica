@@ -197,8 +197,8 @@
         "Responda pelo que acontece de fato, sem antecipar a decisão final.",
         "A análise será integrada ao contexto clínico pelo psicólogo."
       ],
-      "collectorReady": true,
-      "scorerValidated": true,
+      "collectorReady": false,
+      "scorerValidated": false,
       "productionReady": false,
       "identityProfile": "screening_canonical"
     },
