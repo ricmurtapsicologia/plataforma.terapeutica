@@ -1,0 +1,31 @@
+name: Harden Legacy Results Hide v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/harden-legacy-results-hide-v1.py'
+      - '.github/workflows/harden-legacy-results-hide-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Harden central legacy result hiding
+        run: python scripts/harden-legacy-results-hide-v1.py
+      - name: Commit protected runtime change
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/js/screening-system-v2.js
+          git commit -m "Endurece ocultação de resultados legados"
+          git push
