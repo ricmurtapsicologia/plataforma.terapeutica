@@ -20,11 +20,14 @@ jobs:
       - name: Normalize canonical states
         run: |
           python3 - <<'PY'
+          import csv
+          import io
           import json
           from pathlib import Path
 
           manifest_path = Path('rastreios/pipeline/instruments.manifest.json')
           experience_path = Path('rastreios/pipeline/public-experience-v2.json')
+          seed_path = Path('rastreios/pipeline/RastreiosConfig.seed.tsv')
           test_path = Path('tests/screenings-pipeline-v410.test.mjs')
 
           manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
@@ -42,6 +45,30 @@ jobs:
           experience['instruments']['icaps']['scorerValidated'] = False
           experience_path.write_text(json.dumps(experience, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
+          # Keep the seed aligned with the canonical manifest instead of maintaining
+          # a second set of patient-facing names and versions by hand.
+          rows = list(csv.DictReader(io.StringIO(seed_path.read_text(encoding='utf-8')), delimiter='\t'))
+          monitoring = {'humor', 'ansiedade', 'autoestima'}
+          for row in rows:
+              item = by_id[row['instrument_id']]
+              row['version'] = item['instrumentVersion']
+              row['public_name'] = item['publicName']
+              row['technical_name'] = item['technicalName']
+              row['active'] = 'TRUE' if row['instrument_id'] in monitoring else 'FALSE'
+              if row['instrument_id'] == 'impulsividade':
+                  row['scorer'] = 'blocked_scoring_defect'
+              elif row['instrument_id'] == 'icaps':
+                  row['scorer'] = 'descriptive_non_psychometric'
+              elif row['instrument_id'] in monitoring or row['instrument_id'] == 'codependencia':
+                  row['scorer'] = 'raw_only'
+              else:
+                  row['scorer'] = 'pending'
+          out = io.StringIO()
+          writer = csv.DictWriter(out, fieldnames=['response_sheet','instrument_id','version','public_name','technical_name','scorer','active','safety_flow'], delimiter='\t', lineterminator='\n')
+          writer.writeheader()
+          writer.writerows(rows)
+          seed_path.write_text(out.getvalue(), encoding='utf-8')
+
           test = test_path.read_text(encoding='utf-8')
           test = test.replace(
               "assert.equal(icaps?.contractState,'BACKEND_ROUTE_MISSING','ICAPS backend blocker must remain explicit until repaired');",
@@ -50,6 +77,10 @@ jobs:
           test = test.replace(
               "assert.equal(needs?.contractState,'BROWSER_STORAGE_AND_FIRESTORE_BLOCKER','needs-screening privacy blocker must remain traceable until source sanitization is recertified');",
               "assert.equal(needs?.contractState,'SANITIZED_REVALIDATION_REQUIRED','needs-screening source sanitization must remain traceable until recertified');"
+          )
+          test = test.replace(
+              "assert.equal(seedRows.filter(row=>row[5]==='pending'&&row[6]==='FALSE').length,12,'all pending scorers must remain inactive');",
+              "assert.equal(seedRows.filter(row=>row[6]==='FALSE').length,12,'all twelve non-monitoring instruments must remain inactive');"
           )
           marker = "assert.equal(experience.designSystem,'RM Clinical Screening System v2','v2 design system reference missing');\n"
           addition = (
@@ -60,6 +91,17 @@ jobs:
           )
           if addition not in test:
               test = test.replace(marker, marker + addition)
+
+          seed_marker = "const riskSeed=seedRows.find(row=>row[1]==='risco');\n"
+          seed_addition = (
+              "const impulseSeed=seedRows.find(row=>row[1]==='impulsividade');\n"
+              "assert.equal(impulseSeed?.[5],'blocked_scoring_defect','impulsivity seed must preserve the confirmed scoring blocker');\n"
+              "const icapsSeed=seedRows.find(row=>row[1]==='icaps');\n"
+              "assert.equal(icapsSeed?.[2],'2.0.0','ICAPS seed must use the instrument version, not the scoring version');\n"
+              "assert.equal(icapsSeed?.[5],'descriptive_non_psychometric','ICAPS seed must preserve descriptive non-psychometric scoring status');\n"
+          )
+          if seed_addition not in test:
+              test = test.replace(seed_marker, seed_addition + seed_marker)
           test_path.write_text(test, encoding='utf-8')
           PY
 
@@ -68,12 +110,12 @@ jobs:
 
       - name: Commit normalized state
         run: |
-          if git diff --quiet -- rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json tests/screenings-pipeline-v410.test.mjs; then
+          if git diff --quiet -- rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json rastreios/pipeline/RastreiosConfig.seed.tsv tests/screenings-pipeline-v410.test.mjs; then
             echo 'No normalization needed.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json tests/screenings-pipeline-v410.test.mjs
+          git add rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json rastreios/pipeline/RastreiosConfig.seed.tsv tests/screenings-pipeline-v410.test.mjs
           git commit -m 'Normaliza governança clínica dos rastreios'
           git push
