@@ -1,0 +1,99 @@
+name: Rastreios RC 2026-09-07
+
+on:
+  push:
+    branches: [rastreios-pipeline-rc-20260907]
+    paths:
+      - '.github/workflows/rastreios-rc-20260907.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'rastreios/pipeline/**'
+      - 'tests/screenings-pipeline-v410.test.mjs'
+      - '.github/workflows/rastreios-rc-20260907.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-and-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Normalize BDI-II identity and lock policy
+        if: github.event_name == 'push'
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest_path=Path('rastreios/pipeline/instruments.manifest.json')
+          experience_path=Path('rastreios/pipeline/public-experience-v2.json')
+          contract_path=Path('rastreios/pipeline/forms-contract.md')
+          test_path=Path('tests/screenings-pipeline-v410.test.mjs')
+
+          manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
+          humor=next(x for x in manifest['instruments'] if x['id']=='humor')
+          humor['publicName']='Humor e sintomas depressivos nas últimas duas semanas'
+          humor['technicalName']='Inventário de Depressão de Beck · BDI-II'
+          humor['contentLock']={
+            'policy':'PRESERVE_EXISTING_ITEMS_EXACTLY',
+            'source':'Inicio-de-Jornada-Terapeutica/assets/monitoramentos-v2.js',
+            'questionCount':21,
+            'lockedAt':'2026-09-07'
+          }
+          manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          experience=json.loads(experience_path.read_text(encoding='utf-8'))
+          experience['instruments']['humor']['publicName']='Humor e sintomas depressivos nas últimas duas semanas'
+          experience['instruments']['humor']['contentLocked']=True
+          experience_path.write_text(json.dumps(experience,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          contract=contract_path.read_text(encoding='utf-8')
+          lock='''\n\n## Trava de conteúdo · BDI-II\n\nO fluxo `humor` corresponde ao BDI-II já existente no ecossistema. Seus 21 grupos de itens, ordem e alternativas são conteúdo bloqueado para esta migração: branding, layout, transporte, relatório e automações podem mudar, mas os itens existentes não podem ser reescritos, resumidos, reordenados ou substituídos sem uma revisão clínica/versionamento separados. O CI do repositório de interface mantém um fingerprint do bloco vigente.\n'''
+          if '## Trava de conteúdo · BDI-II' not in contract:
+              contract_path.write_text(contract.rstrip()+lock+'\n',encoding='utf-8')
+
+          test=test_path.read_text(encoding='utf-8')
+          marker="const risk=manifest.instruments.find(x=>x.id==='risco');\n"
+          addition="const bdi=manifest.instruments.find(x=>x.id==='humor');\nassert.equal(bdi?.technicalName,'Inventário de Depressão de Beck · BDI-II','BDI-II technical identity drift');\nassert.equal(bdi?.contentLock?.policy,'PRESERVE_EXISTING_ITEMS_EXACTLY','BDI-II content lock missing');\nassert.equal(bdi?.contentLock?.questionCount,21,'BDI-II locked question count drift');\nassert.equal(experience.instruments.humor?.contentLocked,true,'BDI-II public-experience lock missing');\n"
+          if addition not in test:
+              test=test.replace(marker,addition+marker)
+          test_path.write_text(test,encoding='utf-8')
+          PY
+
+      - name: Validate canonical pipeline
+        run: node tests/screenings-pipeline-v410.test.mjs
+
+      - name: Static clinical-data guard
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          roots=[Path('rastreios/pipeline')]
+          forbidden=[re.compile(r'localStorage',re.I),re.compile(r'sessionStorage',re.I)]
+          bad=[]
+          for root in roots:
+            for p in root.rglob('*'):
+              if not p.is_file() or p.suffix.lower() not in {'.js','.gs','.json','.md','.tsv'}: continue
+              text=p.read_text(encoding='utf-8',errors='ignore')
+              if p.name in {'source-residue-audit.json'}: continue
+              for rx in forbidden:
+                if rx.search(text): bad.append(f'{p}:{rx.pattern}')
+          if bad:
+            raise SystemExit('PUBLIC_CLINICAL_STORAGE_GUARD '+','.join(bad))
+          PY
+
+      - name: Commit RC normalization
+        if: github.event_name == 'push'
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json rastreios/pipeline/forms-contract.md tests/screenings-pipeline-v410.test.mjs
+          git commit -m 'Trava conteúdo do BDI-II e normaliza identidade'
+          git push
