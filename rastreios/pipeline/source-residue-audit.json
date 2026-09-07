@@ -1,0 +1,484 @@
+{
+  "schemaVersion": "1.0.0",
+  "purpose": "Static source-residue inventory only; marker presence is not proof of patient exposure or clinical validity.",
+  "scope": "public frontend source files; workflows/tests/scripts excluded",
+  "instruments": {
+    "geral": {
+      "repository": "ricmurtapsicologia/Rastreioclinico",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 2,
+      "markers": {
+        "dev_residue": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "tdah": {
+      "repository": "ricmurtapsicologia/rastreioTDAH",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 21,
+      "markers": {
+        "patient_result_ui": {
+          "count": 3,
+          "files": [
+            "index.html"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 29,
+          "files": [
+            "index.html"
+          ]
+        },
+        "splash_or_loader": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "bipolar": {
+      "repository": "ricmurtapsicologia/tab-bateria-integrada",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 49,
+      "markers": {
+        "whatsapp_result_channel": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        },
+        "browser_clinical_storage": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 5,
+          "files": [
+            "index.html"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 33,
+          "files": [
+            "index.html"
+          ]
+        },
+        "dev_residue": {
+          "count": 3,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "borderline": {
+      "repository": "ricmurtapsicologia/Inventario-de-Tracos-Borderline",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 45,
+      "markers": {
+        "patient_result_ui": {
+          "count": 6,
+          "files": [
+            "index.html"
+          ]
+        },
+        "client_scorer": {
+          "count": 6,
+          "files": [
+            "index.html"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 16,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "narcisismo": {
+      "repository": "ricmurtapsicologia/bateria.narcisismo",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 39,
+      "markers": {
+        "browser_clinical_storage": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 3,
+          "files": [
+            "index.html"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 51,
+          "files": [
+            "index.html"
+          ]
+        },
+        "dev_residue": {
+          "count": 7,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "impulsividade": {
+      "repository": "ricmurtapsicologia/Rastreio-de-Impulsividade",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 3,
+      "markers": {
+        "patient_result_ui": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "esquemas": {
+      "repository": "ricmurtapsicologia/rastreio.de.esquemas",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 59,
+      "markers": {
+        "whatsapp_result_channel": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        },
+        "browser_clinical_storage": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 17,
+          "files": [
+            "index.html"
+          ]
+        },
+        "client_scorer": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 4,
+          "files": [
+            "index.html"
+          ]
+        },
+        "hardcoded_email": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        },
+        "dev_residue": {
+          "count": 8,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "modos": {
+      "repository": "ricmurtapsicologia/rastreiomodosesquematicos",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 24,
+      "markers": {
+        "whatsapp_result_channel": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 10,
+          "files": [
+            "index.html"
+          ]
+        },
+        "splash_or_loader": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        },
+        "dev_residue": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "necessidades": {
+      "repository": "ricmurtapsicologia/Escala-de-Necessidades-Emocionais",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 42,
+      "markers": {
+        "whatsapp_result_channel": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 4,
+          "files": [
+            "index.html"
+          ]
+        },
+        "client_scorer": {
+          "count": 9,
+          "files": [
+            "index.html"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "codependencia": {
+      "repository": "ricmurtapsicologia/Escala-de-Co-Depenpencia-Emocional",
+      "cloneState": "OK",
+      "scannedFiles": 2,
+      "markerScore": 7,
+      "markers": {
+        "splash_or_loader": {
+          "count": 2,
+          "files": [
+            "index.html"
+          ]
+        },
+        "google_form_surface": {
+          "count": 1,
+          "files": [
+            "contracts/collector-v1.json"
+          ]
+        },
+        "dev_residue": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "icaps": {
+      "repository": "ricmurtapsicologia/ICAPS",
+      "cloneState": "OK",
+      "scannedFiles": 12,
+      "markerScore": 65,
+      "markers": {
+        "whatsapp_result_channel": {
+          "count": 7,
+          "files": [
+            "index.html",
+            "js/share.js",
+            "privacidade.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 7,
+          "files": [
+            "index.html",
+            "js/interpretation.js",
+            "js/share.js",
+            "privacidade.html"
+          ]
+        },
+        "client_scorer": {
+          "count": 3,
+          "files": [
+            "js/scoring.js"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 8,
+          "files": [
+            "data/icaps-v2.json",
+            "index.html",
+            "js/interpretation.js",
+            "js/share.js",
+            "privacidade.html"
+          ]
+        },
+        "hardcoded_email": {
+          "count": 2,
+          "files": [
+            "privacidade.html"
+          ]
+        }
+      }
+    },
+    "risco": {
+      "repository": "ricmurtapsicologia/TriagemRiscoSuicidio",
+      "cloneState": "OK",
+      "scannedFiles": 1,
+      "markerScore": 26,
+      "markers": {
+        "whatsapp_result_channel": {
+          "count": 1,
+          "files": [
+            "index.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 4,
+          "files": [
+            "index.html"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 18,
+          "files": [
+            "index.html"
+          ]
+        }
+      }
+    },
+    "monitoramentos": {
+      "repository": "ricmurtapsicologia/Inicio-de-Jornada-Terapeutica",
+      "cloneState": "OK",
+      "scannedFiles": 10,
+      "markerScore": 51,
+      "markers": {
+        "whatsapp_result_channel": {
+          "count": 25,
+          "files": [
+            "assets/monitoramentos-v2.js",
+            "index.html"
+          ]
+        },
+        "patient_result_ui": {
+          "count": 1,
+          "files": [
+            "assets/monitoramentos-v2.js"
+          ]
+        },
+        "diagnostic_priming": {
+          "count": 37,
+          "files": [
+            "assets/monitoramentos-v2.js",
+            "index.html"
+          ]
+        },
+        "splash_or_loader": {
+          "count": 20,
+          "files": [
+            "index.html"
+          ]
+        },
+        "google_form_surface": {
+          "count": 1,
+          "files": [
+            "assets/monitoramentos-v2.js"
+          ]
+        },
+        "dev_residue": {
+          "count": 9,
+          "files": [
+            "assets/monitoramentos-v2.js",
+            "index.html"
+          ]
+        }
+      }
+    }
+  },
+  "rankedByStaticMarkerScore": [
+    {
+      "id": "icaps",
+      "repository": "ricmurtapsicologia/ICAPS",
+      "markerScore": 65
+    },
+    {
+      "id": "esquemas",
+      "repository": "ricmurtapsicologia/rastreio.de.esquemas",
+      "markerScore": 59
+    },
+    {
+      "id": "monitoramentos",
+      "repository": "ricmurtapsicologia/Inicio-de-Jornada-Terapeutica",
+      "markerScore": 51
+    },
+    {
+      "id": "bipolar",
+      "repository": "ricmurtapsicologia/tab-bateria-integrada",
+      "markerScore": 49
+    },
+    {
+      "id": "borderline",
+      "repository": "ricmurtapsicologia/Inventario-de-Tracos-Borderline",
+      "markerScore": 45
+    },
+    {
+      "id": "necessidades",
+      "repository": "ricmurtapsicologia/Escala-de-Necessidades-Emocionais",
+      "markerScore": 42
+    },
+    {
+      "id": "narcisismo",
+      "repository": "ricmurtapsicologia/bateria.narcisismo",
+      "markerScore": 39
+    },
+    {
+      "id": "risco",
+      "repository": "ricmurtapsicologia/TriagemRiscoSuicidio",
+      "markerScore": 26
+    },
+    {
+      "id": "modos",
+      "repository": "ricmurtapsicologia/rastreiomodosesquematicos",
+      "markerScore": 24
+    },
+    {
+      "id": "tdah",
+      "repository": "ricmurtapsicologia/rastreioTDAH",
+      "markerScore": 21
+    },
+    {
+      "id": "codependencia",
+      "repository": "ricmurtapsicologia/Escala-de-Co-Depenpencia-Emocional",
+      "markerScore": 7
+    },
+    {
+      "id": "impulsividade",
+      "repository": "ricmurtapsicologia/Rastreio-de-Impulsividade",
+      "markerScore": 3
+    },
+    {
+      "id": "geral",
+      "repository": "ricmurtapsicologia/Rastreioclinico",
+      "markerScore": 2
+    }
+  ]
+}
