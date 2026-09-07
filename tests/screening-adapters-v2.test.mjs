@@ -27,8 +27,11 @@ function idEvidence(text,selector){
   return new RegExp(`\\bid\\s*=\\s*["']${id}["']`,'i').test(text);
 }
 function classEvidence(text,selector){
-  const cls=selector.slice(1).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  return new RegExp(`\\bclass\\s*=\\s*["'][^"']*(?:^|\\s)${cls}(?:\\s|$)[^"']*["']`,'im').test(text);
+  const wanted=selector.slice(1);
+  for(const match of text.matchAll(/\bclass\s*=\s*["']([^"']+)["']/gi)){
+    if(match[1].split(/\s+/).includes(wanted))return true;
+  }
+  return false;
 }
 function evidence(text,selector){
   if(!selector)return true;
