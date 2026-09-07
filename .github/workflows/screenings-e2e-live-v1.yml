@@ -25,6 +25,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify published runtime 2.2.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_url="https://ricmurtapsicologia.github.io/plataforma.terapeutica/assets/js/screening-system-v2.js"
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --location --no-cache "$runtime_url?cert=${GITHUB_SHA}-${attempt}" -o /tmp/screening-system-v2.js && grep -Fq "const VERSION='2.2.1';" /tmp/screening-system-v2.js; then
+              echo "Published runtime 2.2.1 confirmed."
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "Published runtime is not 2.2.1 after retries." >&2
+          exit 1
       - name: Install Playwright Chromium
         run: |
           npm install --no-save playwright@1.55.0
