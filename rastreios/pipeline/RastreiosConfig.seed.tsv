@@ -8,7 +8,7 @@ FORM_Impulsividade	impulsividade	1.0	Impulsividade e tomada de decisão	Perfil d
 FORM_Esquemas	esquemas	1.0	Padrões emocionais que se repetem	Mapa de Esquemas	pending	FALSE	FALSE
 FORM_Modos	modos	1.0	Como você reage quando algo toca em pontos sensíveis?	Mapa de Modos Esquemáticos · SMI 1.1	pending	FALSE	FALSE
 FORM_Necessidades	necessidades	1.0	O que você precisa emocionalmente?	Mapa de Necessidades Emocionais	pending	FALSE	FALSE
-FORM_Codependencia	codependencia	1.0	Limites, dependência e equilíbrio nos vínculos	Rastreio de Dependência e Codependência Emocional	pending	FALSE	FALSE
+FORM_Codependencia	codependencia	1.0	Limites, dependência e equilíbrio nos vínculos	Rastreio de Dependência e Codependência Emocional	raw_only	FALSE	FALSE
 FORM_ICAPS	icaps	2.1	Estou pronto para me separar?	ICAPS · Mapa Clínico de Prontidão para Separação	pending	FALSE	FALSE
 FORM_Risco	risco	1.0	Segurança emocional e risco de autoagressão	Avaliação Clínica de Risco Suicida · EIR-RS	pending	FALSE	TRUE
 FORM_Humor	humor	1.0	Como está seu humor?	Monitoramento de Humor	raw_only	TRUE	FALSE
