@@ -1,0 +1,79 @@
+name: Normalize screening governance v3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/normalize-screening-governance-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Normalize canonical states
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest_path = Path('rastreios/pipeline/instruments.manifest.json')
+          experience_path = Path('rastreios/pipeline/public-experience-v2.json')
+          test_path = Path('tests/screenings-pipeline-v410.test.mjs')
+
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          by_id = {item['id']: item for item in manifest['instruments']}
+
+          by_id['necessidades']['contractState'] = 'SANITIZED_REVALIDATION_REQUIRED'
+          by_id['codependencia']['contractState'] = 'GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED'
+          by_id['codependencia']['collectorContract']['deploymentState'] = 'GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED'
+          by_id['icaps']['contractState'] = 'BACKEND_ROUTE_INTEGRATED_UPSTREAM_REQUIRED'
+
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          experience = json.loads(experience_path.read_text(encoding='utf-8'))
+          experience['instruments']['icaps']['collectorReady'] = False
+          experience['instruments']['icaps']['scorerValidated'] = False
+          experience_path.write_text(json.dumps(experience, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          test = test_path.read_text(encoding='utf-8')
+          test = test.replace(
+              "assert.equal(icaps?.contractState,'BACKEND_ROUTE_MISSING','ICAPS backend blocker must remain explicit until repaired');",
+              "assert.equal(icaps?.contractState,'BACKEND_ROUTE_INTEGRATED_UPSTREAM_REQUIRED','ICAPS must remain blocked until the persistent upstream is configured and certified');"
+          )
+          test = test.replace(
+              "assert.equal(needs?.contractState,'BROWSER_STORAGE_AND_FIRESTORE_BLOCKER','needs-screening privacy blocker must remain traceable until source sanitization is recertified');",
+              "assert.equal(needs?.contractState,'SANITIZED_REVALIDATION_REQUIRED','needs-screening source sanitization must remain traceable until recertified');"
+          )
+          marker = "assert.equal(experience.designSystem,'RM Clinical Screening System v2','v2 design system reference missing');\n"
+          addition = (
+              "const codependencia=manifest.instruments.find(x=>x.id==='codependencia');\n"
+              "assert.equal(codependencia?.contractState,'GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED','Codependência must remain blocked until Google upstream provisioning and receipt certification');\n"
+              "assert.equal(experience.instruments.icaps?.collectorReady,false,'ICAPS collector must remain unavailable until the upstream persistence path is ready');\n"
+              "assert.equal(experience.instruments.icaps?.scorerValidated,false,'ICAPS descriptive scoring must not be labeled psychometrically validated');\n"
+          )
+          if addition not in test:
+              test = test.replace(marker, marker + addition)
+          test_path.write_text(test, encoding='utf-8')
+          PY
+
+      - name: Validate canonical pipeline
+        run: node tests/screenings-pipeline-v410.test.mjs
+
+      - name: Commit normalized state
+        run: |
+          if git diff --quiet -- rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json tests/screenings-pipeline-v410.test.mjs; then
+            echo 'No normalization needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rastreios/pipeline/instruments.manifest.json rastreios/pipeline/public-experience-v2.json tests/screenings-pipeline-v410.test.mjs
+          git commit -m 'Normaliza governança clínica dos rastreios'
+          git push
