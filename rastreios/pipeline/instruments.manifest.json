@@ -227,8 +227,8 @@
     {
       "id": "humor",
       "group": "Monitoramento",
-      "publicName": "Como seu humor tem mudado nas últimas semanas",
-      "technicalName": "Monitoramento de Humor",
+      "publicName": "Humor e sintomas depressivos nas últimas duas semanas",
+      "technicalName": "Inventário de Depressão de Beck · BDI-II",
       "publicUrl": "https://ricmurtapsicologia.github.io/Inicio-de-Jornada-Terapeutica/monitoramento.html?instrument=humor",
       "formUrl": "https://docs.google.com/forms/d/e/1FAIpQLSfOwfOe9OAx_XgnsEMa8FzV2QJR8-ZkHmGD2gWEOcBeK41Odw/viewform",
       "formState": "ACTIVE",
@@ -239,7 +239,13 @@
       "instrumentVersion": "1.0",
       "containsSafetyItem": true,
       "productionReady": false,
-      "identityProfile": "monitoring_longitudinal"
+      "identityProfile": "monitoring_longitudinal",
+      "contentLock": {
+        "policy": "PRESERVE_EXISTING_ITEMS_EXACTLY",
+        "source": "Inicio-de-Jornada-Terapeutica/assets/monitoramentos-v2.js",
+        "questionCount": 21,
+        "lockedAt": "2026-09-07"
+      }
     },
     {
       "id": "ansiedade",

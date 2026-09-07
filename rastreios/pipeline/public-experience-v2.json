@@ -219,7 +219,7 @@
       "identityProfile": "screening_canonical"
     },
     "humor": {
-      "publicName": "Como seu humor tem mudado nas últimas semanas",
+      "publicName": "Humor e sintomas depressivos nas últimas duas semanas",
       "eyebrow": "Monitoramento clínico · últimas duas semanas",
       "story": "Mudanças no humor, interesse, energia, sono e percepção de si podem ser acompanhadas ao longo do tratamento para revelar tendências que uma conversa isolada não mostra.",
       "intro": "Escolha, em cada grupo, a alternativa que melhor descreve como você tem se sentido nas últimas duas semanas, incluindo hoje.",
@@ -232,7 +232,8 @@
       "scorerValidated": false,
       "productionReady": false,
       "containsSafetyItem": true,
-      "identityProfile": "monitoring_longitudinal"
+      "identityProfile": "monitoring_longitudinal",
+      "contentLocked": true
     },
     "ansiedade": {
       "publicName": "Tensão e sinais de ansiedade no momento atual",

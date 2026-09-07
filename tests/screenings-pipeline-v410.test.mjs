@@ -48,6 +48,11 @@ for(const item of manifest.instruments){
   assert.equal(adapters.instruments[item.id]?.identityProfile,expected,`${item.id} adapter identity profile drift`);
 }
 
+const bdi=manifest.instruments.find(x=>x.id==='humor');
+assert.equal(bdi?.technicalName,'Inventário de Depressão de Beck · BDI-II','BDI-II technical identity drift');
+assert.equal(bdi?.contentLock?.policy,'PRESERVE_EXISTING_ITEMS_EXACTLY','BDI-II content lock missing');
+assert.equal(bdi?.contentLock?.questionCount,21,'BDI-II locked question count drift');
+assert.equal(experience.instruments.humor?.contentLocked,true,'BDI-II public-experience lock missing');
 const risk=manifest.instruments.find(x=>x.id==='risco');
 assert.equal(risk?.criticality,'CRITICAL','suicide-risk screening must remain critical');
 assert.equal(risk?.requiresDedicatedSafetyFlow,true,'suicide-risk screening must require dedicated safety flow');

@@ -99,3 +99,8 @@ Nenhum repositório individual deve avançar para `ARQUIVADO` antes de existir e
 3. Esquemas, Modos e Impulsividade.
 4. TDAH, TAB, Borderline, Narcisismo e Rastreio Geral.
 5. Risco suicida — último, após validação específica de segurança.
+
+## Trava de conteúdo · BDI-II
+
+O fluxo `humor` corresponde ao BDI-II já existente no ecossistema. Seus 21 grupos de itens, ordem e alternativas são conteúdo bloqueado para esta migração: branding, layout, transporte, relatório e automações podem mudar, mas os itens existentes não podem ser reescritos, resumidos, reordenados ou substituídos sem uma revisão clínica/versionamento separados. O CI do repositório de interface mantém um fingerprint do bloco vigente.
+
