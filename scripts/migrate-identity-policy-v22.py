@@ -1,3 +1,4 @@
+# Reconciliation gate trigger: identity policy v2.2
 from pathlib import Path
 import json
 
