@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "purpose": "Static source-residue inventory only; marker presence is not proof of patient exposure or clinical validity.",
   "scope": "public frontend source files; workflows/tests/scripts excluded",
   "instruments": {
@@ -7,21 +7,14 @@
       "repository": "ricmurtapsicologia/Rastreioclinico",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 2,
-      "markers": {
-        "dev_residue": {
-          "count": 1,
-          "files": [
-            "index.html"
-          ]
-        }
-      }
+      "markerScore": 0,
+      "markers": {}
     },
     "tdah": {
       "repository": "ricmurtapsicologia/rastreioTDAH",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 21,
+      "markerScore": 19,
       "markers": {
         "patient_result_ui": {
           "count": 3,
@@ -30,13 +23,7 @@
           ]
         },
         "diagnostic_priming": {
-          "count": 29,
-          "files": [
-            "index.html"
-          ]
-        },
-        "splash_or_loader": {
-          "count": 2,
+          "count": 27,
           "files": [
             "index.html"
           ]
@@ -47,7 +34,7 @@
       "repository": "ricmurtapsicologia/tab-bateria-integrada",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 49,
+      "markerScore": 43,
       "markers": {
         "whatsapp_result_channel": {
           "count": 2,
@@ -68,13 +55,7 @@
           ]
         },
         "diagnostic_priming": {
-          "count": 33,
-          "files": [
-            "index.html"
-          ]
-        },
-        "dev_residue": {
-          "count": 3,
+          "count": 31,
           "files": [
             "index.html"
           ]
@@ -85,7 +66,7 @@
       "repository": "ricmurtapsicologia/Inventario-de-Tracos-Borderline",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 45,
+      "markerScore": 33,
       "markers": {
         "patient_result_ui": {
           "count": 6,
@@ -94,7 +75,7 @@
           ]
         },
         "client_scorer": {
-          "count": 6,
+          "count": 2,
           "files": [
             "index.html"
           ]
@@ -111,7 +92,7 @@
       "repository": "ricmurtapsicologia/bateria.narcisismo",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 39,
+      "markerScore": 29,
       "markers": {
         "browser_clinical_storage": {
           "count": 2,
@@ -127,12 +108,6 @@
         },
         "diagnostic_priming": {
           "count": 51,
-          "files": [
-            "index.html"
-          ]
-        },
-        "dev_residue": {
-          "count": 7,
           "files": [
             "index.html"
           ]
@@ -157,7 +132,7 @@
       "repository": "ricmurtapsicologia/rastreio.de.esquemas",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 59,
+      "markerScore": 43,
       "markers": {
         "whatsapp_result_channel": {
           "count": 2,
@@ -177,26 +152,14 @@
             "index.html"
           ]
         },
-        "client_scorer": {
-          "count": 1,
-          "files": [
-            "index.html"
-          ]
-        },
         "diagnostic_priming": {
-          "count": 4,
+          "count": 3,
           "files": [
             "index.html"
           ]
         },
         "hardcoded_email": {
           "count": 1,
-          "files": [
-            "index.html"
-          ]
-        },
-        "dev_residue": {
-          "count": 8,
           "files": [
             "index.html"
           ]
@@ -207,7 +170,7 @@
       "repository": "ricmurtapsicologia/rastreiomodosesquematicos",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 24,
+      "markerScore": 21,
       "markers": {
         "whatsapp_result_channel": {
           "count": 1,
@@ -221,14 +184,8 @@
             "index.html"
           ]
         },
-        "splash_or_loader": {
-          "count": 1,
-          "files": [
-            "index.html"
-          ]
-        },
         "dev_residue": {
-          "count": 2,
+          "count": 1,
           "files": [
             "index.html"
           ]
@@ -239,22 +196,22 @@
       "repository": "ricmurtapsicologia/Escala-de-Necessidades-Emocionais",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 42,
+      "markerScore": 31,
       "markers": {
         "whatsapp_result_channel": {
-          "count": 2,
+          "count": 1,
           "files": [
             "index.html"
           ]
         },
         "patient_result_ui": {
-          "count": 4,
+          "count": 3,
           "files": [
             "index.html"
           ]
         },
         "client_scorer": {
-          "count": 9,
+          "count": 4,
           "files": [
             "index.html"
           ]
@@ -271,36 +228,17 @@
       "repository": "ricmurtapsicologia/Escala-de-Co-Depenpencia-Emocional",
       "cloneState": "OK",
       "scannedFiles": 2,
-      "markerScore": 7,
-      "markers": {
-        "splash_or_loader": {
-          "count": 2,
-          "files": [
-            "index.html"
-          ]
-        },
-        "google_form_surface": {
-          "count": 1,
-          "files": [
-            "contracts/collector-v1.json"
-          ]
-        },
-        "dev_residue": {
-          "count": 1,
-          "files": [
-            "index.html"
-          ]
-        }
-      }
+      "markerScore": 0,
+      "markers": {}
     },
     "icaps": {
       "repository": "ricmurtapsicologia/ICAPS",
       "cloneState": "OK",
       "scannedFiles": 12,
-      "markerScore": 65,
+      "markerScore": 57,
       "markers": {
         "whatsapp_result_channel": {
-          "count": 7,
+          "count": 4,
           "files": [
             "index.html",
             "js/share.js",
@@ -317,7 +255,7 @@
           ]
         },
         "client_scorer": {
-          "count": 3,
+          "count": 2,
           "files": [
             "js/scoring.js"
           ]
@@ -359,7 +297,7 @@
           ]
         },
         "diagnostic_priming": {
-          "count": 18,
+          "count": 12,
           "files": [
             "index.html"
           ]
@@ -370,7 +308,7 @@
       "repository": "ricmurtapsicologia/Inicio-de-Jornada-Terapeutica",
       "cloneState": "OK",
       "scannedFiles": 10,
-      "markerScore": 51,
+      "markerScore": 48,
       "markers": {
         "whatsapp_result_channel": {
           "count": 25,
@@ -386,14 +324,14 @@
           ]
         },
         "diagnostic_priming": {
-          "count": 37,
+          "count": 36,
           "files": [
             "assets/monitoramentos-v2.js",
             "index.html"
           ]
         },
         "splash_or_loader": {
-          "count": 20,
+          "count": 2,
           "files": [
             "index.html"
           ]
@@ -405,70 +343,24 @@
           ]
         },
         "dev_residue": {
-          "count": 9,
+          "count": 5,
           "files": [
-            "assets/monitoramentos-v2.js",
-            "index.html"
+            "assets/monitoramentos-v2.js"
           ]
         }
       }
     }
   },
-  "rankedByStaticMarkerScore": [
-    {
-      "id": "icaps",
-      "repository": "ricmurtapsicologia/ICAPS",
-      "markerScore": 65
-    },
-    {
-      "id": "esquemas",
-      "repository": "ricmurtapsicologia/rastreio.de.esquemas",
-      "markerScore": 59
-    },
-    {
-      "id": "monitoramentos",
-      "repository": "ricmurtapsicologia/Inicio-de-Jornada-Terapeutica",
-      "markerScore": 51
-    },
-    {
-      "id": "bipolar",
-      "repository": "ricmurtapsicologia/tab-bateria-integrada",
-      "markerScore": 49
-    },
-    {
-      "id": "borderline",
-      "repository": "ricmurtapsicologia/Inventario-de-Tracos-Borderline",
-      "markerScore": 45
-    },
-    {
-      "id": "necessidades",
-      "repository": "ricmurtapsicologia/Escala-de-Necessidades-Emocionais",
-      "markerScore": 42
-    },
-    {
-      "id": "narcisismo",
-      "repository": "ricmurtapsicologia/bateria.narcisismo",
-      "markerScore": 39
-    },
-    {
-      "id": "risco",
-      "repository": "ricmurtapsicologia/TriagemRiscoSuicidio",
-      "markerScore": 26
-    },
-    {
-      "id": "modos",
-      "repository": "ricmurtapsicologia/rastreiomodosesquematicos",
-      "markerScore": 24
-    },
-    {
-      "id": "tdah",
-      "repository": "ricmurtapsicologia/rastreioTDAH",
-      "markerScore": 21
-    },
+  "rankedSimplestFirstByStaticMarkerScore": [
     {
       "id": "codependencia",
       "repository": "ricmurtapsicologia/Escala-de-Co-Depenpencia-Emocional",
-      "markerScore": 7
+      "markerScore": 0
+    },
+    {
+      "id": "geral",
+      "repository": "ricmurtapsicologia/Rastreioclinico",
+      "markerScore": 0
     },
     {
       "id": "impulsividade",
@@ -476,9 +368,54 @@
       "markerScore": 3
     },
     {
-      "id": "geral",
-      "repository": "ricmurtapsicologia/Rastreioclinico",
-      "markerScore": 2
+      "id": "tdah",
+      "repository": "ricmurtapsicologia/rastreioTDAH",
+      "markerScore": 19
+    },
+    {
+      "id": "modos",
+      "repository": "ricmurtapsicologia/rastreiomodosesquematicos",
+      "markerScore": 21
+    },
+    {
+      "id": "risco",
+      "repository": "ricmurtapsicologia/TriagemRiscoSuicidio",
+      "markerScore": 26
+    },
+    {
+      "id": "narcisismo",
+      "repository": "ricmurtapsicologia/bateria.narcisismo",
+      "markerScore": 29
+    },
+    {
+      "id": "necessidades",
+      "repository": "ricmurtapsicologia/Escala-de-Necessidades-Emocionais",
+      "markerScore": 31
+    },
+    {
+      "id": "borderline",
+      "repository": "ricmurtapsicologia/Inventario-de-Tracos-Borderline",
+      "markerScore": 33
+    },
+    {
+      "id": "bipolar",
+      "repository": "ricmurtapsicologia/tab-bateria-integrada",
+      "markerScore": 43
+    },
+    {
+      "id": "esquemas",
+      "repository": "ricmurtapsicologia/rastreio.de.esquemas",
+      "markerScore": 43
+    },
+    {
+      "id": "monitoramentos",
+      "repository": "ricmurtapsicologia/Inicio-de-Jornada-Terapeutica",
+      "markerScore": 48
+    },
+    {
+      "id": "icaps",
+      "repository": "ricmurtapsicologia/ICAPS",
+      "markerScore": 57
     }
   ]
 }
