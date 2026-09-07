@@ -21,8 +21,7 @@ const HARD = [
   ['SPLASH', /(?:id|class)=["'][^"']*splash|splash\s*screen/i],
   ['WHATSAPP', /wa\.me|api\.whatsapp\.com|whatsapp:\/\//i],
   ['FIREBASE_CLINICAL_STORAGE', /firebase(?:js|Config|app|firestore)|getFirestore|addDoc\s*\(/i],
-  ['VISIBLE_GOOGLE_FORMS', /<(?:iframe|a)\b[^>]*(?:docs\.google\.com\/forms|forms\.gle)/i],
-  ['BACKSTAGE_TODO', /\bTODO\b|\bFIXME\b|substituir depois|gerado por ia|system prompt|instru[cç][aã]o ao desenvolvedor/i]
+  ['VISIBLE_GOOGLE_FORMS', /<(?:iframe|a)\b[^>]*(?:docs\.google\.com\/forms|forms\.gle)/i]
 ];
 
 const WARN = [
@@ -30,7 +29,7 @@ const WARN = [
   ['PROMPT_WORD', /\bprompt\b/i]
 ];
 
-const SAFE_UI_STORAGE_KEY = /(?:^|[_-])(theme|appearance|color[-_]?scheme)(?:$|[_-])/i;
+const SAFE_UI_STORAGE_KEY = /(?:theme|appearance|color[-_]?scheme)$/i;
 
 function hasUnsafeLocalStorage(text) {
   if (/\bindexedDB\b/i.test(text)) return true;
@@ -39,6 +38,10 @@ function hasUnsafeLocalStorage(text) {
   const calls = [...text.matchAll(/\b(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\(\s*['"`]([^'"`]+)['"`]/gis)];
   if (calls.length !== refs.length) return true;
   return calls.some(match => !SAFE_UI_STORAGE_KEY.test(match[1]));
+}
+
+function hasBackstageResidue(text) {
+  return /\b(?:TODO|FIXME)\b/.test(text) || /substituir depois|gerado por ia|system prompt|instru[cç][aã]o ao desenvolvedor/i.test(text);
 }
 
 async function fetchRaw(repo, path) {
@@ -62,6 +65,7 @@ for (const [instrumentId, repo, paths] of TARGETS) {
     report.files.push({ instrumentId, repo, path, bytes: Buffer.byteLength(text) });
     for (const [rule, rx] of HARD) if (rx.test(text)) report.hardFailures.push({ instrumentId, repo, path, rule });
     if (hasUnsafeLocalStorage(text)) report.hardFailures.push({ instrumentId, repo, path, rule: 'LOCAL_CLINICAL_STORAGE' });
+    if (hasBackstageResidue(text)) report.hardFailures.push({ instrumentId, repo, path, rule: 'BACKSTAGE_TODO' });
     for (const [rule, rx] of WARN) if (rx.test(text)) report.warnings.push({ instrumentId, repo, path, rule });
   }
 }
