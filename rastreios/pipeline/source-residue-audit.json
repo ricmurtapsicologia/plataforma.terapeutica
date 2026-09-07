@@ -14,16 +14,10 @@
       "repository": "ricmurtapsicologia/rastreioTDAH",
       "cloneState": "OK",
       "scannedFiles": 1,
-      "markerScore": 19,
+      "markerScore": 6,
       "markers": {
-        "patient_result_ui": {
-          "count": 3,
-          "files": [
-            "index.html"
-          ]
-        },
         "diagnostic_priming": {
-          "count": 27,
+          "count": 3,
           "files": [
             "index.html"
           ]
@@ -307,27 +301,32 @@
     "monitoramentos": {
       "repository": "ricmurtapsicologia/Inicio-de-Jornada-Terapeutica",
       "cloneState": "OK",
-      "scannedFiles": 10,
-      "markerScore": 48,
+      "scannedFiles": 15,
+      "markerScore": 51,
       "markers": {
         "whatsapp_result_channel": {
-          "count": 25,
+          "count": 32,
           "files": [
             "assets/monitoramentos-v2.js",
+            "assets/screening-system-v2.css",
+            "assets/screening-system-v2.js",
             "index.html"
           ]
         },
         "patient_result_ui": {
-          "count": 1,
+          "count": 2,
           "files": [
-            "assets/monitoramentos-v2.js"
+            "assets/monitoramentos-v2.js",
+            "assets/screening-system-v2.js"
           ]
         },
         "diagnostic_priming": {
-          "count": 36,
+          "count": 50,
           "files": [
             "assets/monitoramentos-v2.js",
-            "index.html"
+            "assets/screening-system-v2.js",
+            "index.html",
+            "painel-rastreios/index.html"
           ]
         },
         "splash_or_loader": {
@@ -370,7 +369,7 @@
     {
       "id": "tdah",
       "repository": "ricmurtapsicologia/rastreioTDAH",
-      "markerScore": 19
+      "markerScore": 6
     },
     {
       "id": "modos",
@@ -410,7 +409,7 @@
     {
       "id": "monitoramentos",
       "repository": "ricmurtapsicologia/Inicio-de-Jornada-Terapeutica",
-      "markerScore": 48
+      "markerScore": 51
     },
     {
       "id": "icaps",

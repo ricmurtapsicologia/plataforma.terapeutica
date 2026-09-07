@@ -64,7 +64,7 @@ assert.equal(needs?.contractState,'SANITIZED_REVALIDATION_REQUIRED','needs-scree
 assert.equal(experience.schemaVersion,'2.1.0','public experience must use v2.1 schema');
 assert.equal(experience.designSystem,'RM Clinical Screening System v2','v2 design system reference missing');
 const codependencia=manifest.instruments.find(x=>x.id==='codependencia');
-assert.equal(codependencia?.contractState,'GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED','Codependência must remain blocked until Google upstream provisioning and receipt certification');
+assert.equal(codependencia?.contractState,'COLLECTOR_SPEC_PREPARED_DEPLOYMENT_REQUIRED','Codependência collector spec must remain deployment-blocked');
 assert.equal(experience.instruments.icaps?.collectorReady,false,'ICAPS collector must remain unavailable until the upstream persistence path is ready');
 assert.equal(experience.instruments.icaps?.scorerValidated,false,'ICAPS descriptive scoring must not be labeled psychometrically validated');
 assert.equal(experience.technicalLabelsInternalOnly,true,'technical labels must remain internal-only');

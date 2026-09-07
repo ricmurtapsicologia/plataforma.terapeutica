@@ -34,8 +34,8 @@ jobs:
           by_id = {item['id']: item for item in manifest['instruments']}
 
           by_id['necessidades']['contractState'] = 'SANITIZED_REVALIDATION_REQUIRED'
-          by_id['codependencia']['contractState'] = 'GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED'
-          by_id['codependencia']['collectorContract']['deploymentState'] = 'GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED'
+          by_id['codependencia']['contractState'] = 'COLLECTOR_SPEC_PREPARED_DEPLOYMENT_REQUIRED'
+          by_id['codependencia']['collectorContract']['deploymentState'] = 'SPEC_ONLY'
           by_id['icaps']['contractState'] = 'BACKEND_ROUTE_INTEGRATED_UPSTREAM_REQUIRED'
 
           manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -85,7 +85,7 @@ jobs:
           marker = "assert.equal(experience.designSystem,'RM Clinical Screening System v2','v2 design system reference missing');\n"
           addition = (
               "const codependencia=manifest.instruments.find(x=>x.id==='codependencia');\n"
-              "assert.equal(codependencia?.contractState,'GATEWAY_READY_GOOGLE_UPSTREAM_REQUIRED','Codependência must remain blocked until Google upstream provisioning and receipt certification');\n"
+              "assert.equal(codependencia?.contractState,'COLLECTOR_SPEC_PREPARED_DEPLOYMENT_REQUIRED','Codependência collector spec must remain deployment-blocked');\n"
               "assert.equal(experience.instruments.icaps?.collectorReady,false,'ICAPS collector must remain unavailable until the upstream persistence path is ready');\n"
               "assert.equal(experience.instruments.icaps?.scorerValidated,false,'ICAPS descriptive scoring must not be labeled psychometrically validated');\n"
           )
