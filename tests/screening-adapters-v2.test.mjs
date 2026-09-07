@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 
 const OWNER='ricmurtapsicologia';
 const EXPECTED=['geral','tdah','bipolar','borderline','narcisismo','impulsividade','esquemas','modos','necessidades','codependencia','icaps','risco','humor','ansiedade','autoestima'];
-const LEGACY=new Set(['esquemas']);
+const LEGACY=new Set([]);
 const contract=JSON.parse(await fs.readFile('rastreios/pipeline/screening-adapters-v2.json','utf8'));
 const manifest=JSON.parse(await fs.readFile('rastreios/pipeline/instruments.manifest.json','utf8'));
 const runtime=await fs.readFile('assets/js/screening-system-v2.js','utf8');
@@ -125,10 +125,14 @@ for(const id of EXPECTED){
   for(const [field,selector] of Object.entries(a.identity||{}))if(selector)ok(evidence(source,selector),`${id}: identity.${field} ${selector} não encontrado na fonte após retentativas`);
 }
 
+ok(LEGACY.size===0,'Nenhum rastreio deve permanecer em legacyContainer após a migração estrutural');
 ok(contract.instruments.bipolar.mode==='form','Bipolaridade deve usar form nativo');
 ok(contract.instruments.bipolar.submissionSupported===false,'Bipolaridade não pode habilitar entrega nesta fase');
 ok(contract.instruments.narcisismo.mode==='form','Narcisismo deve usar form nativo');
 ok(contract.instruments.narcisismo.submissionSupported===false,'Narcisismo não pode habilitar entrega nesta fase');
+ok(contract.instruments.esquemas.mode==='form','Esquemas deve usar form nativo');
+ok(contract.instruments.esquemas.formSelector==='#screeningForm','Esquemas deve resolver #screeningForm');
+ok(contract.instruments.esquemas.submissionSupported===false,'Esquemas não pode habilitar entrega nesta fase');
 ok(contract.instruments.risco.submissionSupported===false,'Risco não pode habilitar entrega antes da validação dedicada');
 ok(manifestById.risco?.requiresDedicatedSafetyFlow===true,'Risco deve exigir fluxo dedicado de segurança');
 ok(contract.instruments.icaps.submissionSupported===false,'ICAPS não pode habilitar entrega com backend ausente');
