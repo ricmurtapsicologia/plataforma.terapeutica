@@ -1,3 +1,4 @@
+// Gate ativo dos perfis de identidade v2.2.
 import fs from 'node:fs/promises';
 
 const adapters=JSON.parse(await fs.readFile('rastreios/pipeline/screening-adapters-v2.json','utf8'));
