@@ -1,3 +1,4 @@
+# Identity profiles v2.2 — active migration gate
 name: Identity Profiles v2.2
 
 on:
@@ -27,7 +28,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import json, re
+          import json
 
           p=Path('rastreios/pipeline/screening-adapters-v2.json')
           data=json.loads(p.read_text(encoding='utf-8'))
@@ -45,10 +46,7 @@ jobs:
           }
           monitoring={'humor','ansiedade','autoestima'}
           for iid,a in data['instruments'].items():
-            if iid in monitoring:
-              a['identityProfile']='monitoring_longitudinal'
-            else:
-              a['identityProfile']='screening_canonical'
+            a['identityProfile']='monitoring_longitudinal' if iid in monitoring else 'screening_canonical'
           data['instruments']['humor']['identityTransport']={'name':'collector_field','birth':'not_collected','application':'collector_timestamp'}
           data['instruments']['ansiedade']['identityTransport']={'name':'collector_field','birth':'not_collected','application':'collector_field'}
           data['instruments']['autoestima']['identityTransport']={'name':'collector_field','birth':'not_collected','application':'collector_field'}
@@ -121,7 +119,7 @@ ok(a.instruments.autoestima.identityTransport.application==='collector_field','a
 ok(runtime.includes("VERSION='2.2.0'"),'runtime não está em 2.2.0');
 ok(runtime.includes("identityProfile==='monitoring_longitudinal'"),'runtime não diferencia monitoramentos');
 ok(runtime.includes('if(!monitoring&&mount.form)'), 'runtime ainda pode sintetizar hidden fields nos monitoramentos');
-ok(apps.includes("'Carimbo de data/hora'" )&&apps.includes("'Timestamp'"),'Apps Script deve manter fallback de timestamp');
+ok(apps.includes("'Carimbo de data/hora'")&&apps.includes("'Timestamp'"),'Apps Script deve manter fallback de timestamp');
 ok(apps.includes("'Data de nascimento'"),'Apps Script deve reconhecer nascimento quando existir no coletor');
 if(failures.length){console.error(JSON.stringify({status:'FAIL',failures},null,2));process.exit(1)}
 console.log(JSON.stringify({status:'PASS',schema:a.schemaVersion,screeningCanonical:12,monitoringLongitudinal:3,syntheticBirthForMonitoring:false},null,2));
