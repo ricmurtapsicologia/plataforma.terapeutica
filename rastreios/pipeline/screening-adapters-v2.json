@@ -1,14 +1,15 @@
 {
-  "schemaVersion": "2.0.0",
+  "schemaVersion": "2.1.0",
   "contract": {
     "purpose": "Resolve explicitamente o alvo estrutural e os campos de identificação de cada fluxo público de rastreio.",
     "noHeuristicFormSelection": true,
-    "legacyContainerPolicy": "Fluxos sem form nativo podem receber a camada visual e sincronizar campos legados, mas não podem presumir submissão nem entrega até refatoração nativa."
+    "legacyContainerPolicy": "Fluxos sem form nativo podem receber a camada visual e sincronizar campos legados, mas não podem presumir submissão nem entrega até refatoração nativa.",
+    "formWithoutSubmissionPolicy": "A presença de form nativo é estrutural e não autoriza entrega. submissionSupported=false deve permanecer até integração e validação explícitas do transporte."
   },
   "instruments": {
     "geral": {"repo":"Rastreioclinico","sourcePath":"index.html","mode":"form","formSelector":"#racForm","submissionSupported":true,"identity":{"name":"#patientName","birth":"#birthDate","application":"#responseDate"}},
     "tdah": {"repo":"rastreioTDAH","sourcePath":"index.html","mode":"form","formSelector":"#form","submissionSupported":true,"identity":{"name":"#name","birth":"#birthDate","application":"#date"}},
-    "bipolar": {"repo":"tab-bateria-integrada","sourcePath":"index.html","mode":"legacyContainer","containerSelector":".wrap","identityAnchorSelector":"#nome","identityBlockSelector":"section.card","submissionSupported":false,"identity":{"name":"#nome","birth":"#dataNascimento","application":"#data"}},
+    "bipolar": {"repo":"tab-bateria-integrada","sourcePath":"index.html","mode":"form","formSelector":"#screeningForm","submissionSupported":false,"identity":{"name":"#nome","birth":"#dataNascimento","application":"#data"}},
     "borderline": {"repo":"Inventario-de-Tracos-Borderline","sourcePath":"index.html","mode":"form","formSelector":"#form","submissionSupported":true,"identity":{"name":"#fullName","birth":"#birthDate","application":"#date"}},
     "narcisismo": {"repo":"bateria.narcisismo","sourcePath":"index.html","mode":"legacyContainer","containerSelector":".wrap","identityAnchorSelector":"#nome","identityBlockSelector":"section.card","submissionSupported":false,"identity":{"name":"#nome","birth":"#dataNascimento","application":"#data"}},
     "impulsividade": {"repo":"Rastreio-de-Impulsividade","sourcePath":"index.html","mode":"form","formSelector":"#scaleForm","submissionSupported":true,"identity":{"name":"#fullName","birth":"#birthDate","application":"#date"}},

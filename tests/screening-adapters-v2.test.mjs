@@ -2,13 +2,15 @@ import fs from 'node:fs/promises';
 
 const OWNER='ricmurtapsicologia';
 const EXPECTED=['geral','tdah','bipolar','borderline','narcisismo','impulsividade','esquemas','modos','necessidades','codependencia','icaps','risco','humor','ansiedade','autoestima'];
-const LEGACY=new Set(['bipolar','narcisismo','esquemas']);
+const LEGACY=new Set(['narcisismo','esquemas']);
+const NO_DELIVERY=new Set(['bipolar','narcisismo','esquemas']);
 const contract=JSON.parse(await fs.readFile('rastreios/pipeline/screening-adapters-v2.json','utf8'));
 const runtime=await fs.readFile('assets/js/screening-system-v2.js','utf8');
 const failures=[];
 const ok=(condition,message)=>{if(!condition)failures.push(message)};
 
 ok(contract?.contract?.noHeuristicFormSelection===true,'contract.noHeuristicFormSelection deve ser true');
+ok(typeof contract?.contract?.formWithoutSubmissionPolicy==='string','contract.formWithoutSubmissionPolicy ausente');
 const ids=Object.keys(contract.instruments||{}).sort();
 ok(JSON.stringify(ids)===JSON.stringify([...EXPECTED].sort()),`IDs de adapters divergentes: ${ids.join(',')}`);
 ok(!runtime.includes('const ADAPTERS='),'runtime ainda contém tabela ADAPTERS embutida');
@@ -97,16 +99,16 @@ for(const id of EXPECTED){
     ok(selector===null||typeof selector==='string',`${id}: identity.${field} inválido`);
     ok(selector===null||!selector.includes(','),`${id}: identity.${field} contém fallback múltiplo`);
   }
+  ok(a?.submissionSupported===!NO_DELIVERY.has(id),`${id}: submissionSupported divergente do contrato de entrega`);
   if(LEGACY.has(id)){
     ok(a.mode==='legacyContainer',`${id}: deveria ser legacyContainer`);
-    ok(a.submissionSupported===false,`${id}: legacy sem form não pode suportar submissão`);
     ok(typeof a.containerSelector==='string',`${id}: containerSelector ausente`);
     ok(typeof a.identityAnchorSelector==='string',`${id}: identityAnchorSelector ausente`);
     ok(!a.formSelector,`${id}: legacy não deve declarar formSelector`);
   }else{
     ok(a.mode==='form',`${id}: deveria resolver form explicitamente`);
     ok(typeof a.formSelector==='string'&&a.formSelector.startsWith('#'),`${id}: formSelector explícito ausente`);
-    ok(a.submissionSupported===true,`${id}: fluxo com form deve declarar suporte estrutural`);
+    ok(!a.containerSelector,`${id}: form nativo não deve depender de containerSelector`);
   }
   let source='';
   try{source=await sourceAfterConvergence(a)}catch(error){failures.push(`${id}: ${error.message}`);continue}
@@ -117,6 +119,9 @@ for(const id of EXPECTED){
   for(const [field,selector] of Object.entries(a.identity||{}))if(selector)ok(evidence(source,selector),`${id}: identity.${field} ${selector} não encontrado na fonte após retentativas`);
 }
 
+ok(contract.instruments.bipolar.mode==='form','Bipolaridade deve usar form nativo');
+ok(contract.instruments.bipolar.formSelector==='#screeningForm','Bipolaridade deve resolver #screeningForm');
+ok(contract.instruments.bipolar.submissionSupported===false,'Bipolaridade não pode habilitar entrega nesta fase');
 ok(contract.instruments.icaps.identity.birth==='#birth-date','ICAPS deve manter nascimento nativo explícito');
 ok(contract.instruments.humor.formSelector==='#clinical-form','Humor deve resolver #clinical-form');
 ok(contract.instruments.ansiedade.formSelector==='#clinical-form','Ansiedade deve resolver #clinical-form');
@@ -126,5 +131,5 @@ if(failures.length){
   console.error(JSON.stringify({status:'FAIL',failures},null,2));
   process.exit(1);
 }
-console.log(JSON.stringify({status:'PASS',instruments:EXPECTED.length,legacyContainers:[...LEGACY],heuristicFormSelection:false,liveSourceRetry:true},null,2));
+console.log(JSON.stringify({status:'PASS',instruments:EXPECTED.length,legacyContainers:[...LEGACY],structuralNoDelivery:[...NO_DELIVERY],heuristicFormSelection:false,liveSourceRetry:true},null,2));
 console.log('SCREENING_ADAPTERS_V2_PASS');
