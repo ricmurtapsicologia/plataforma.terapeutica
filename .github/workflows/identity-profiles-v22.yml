@@ -1,0 +1,143 @@
+name: Identity Profiles v2.2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/identity-profiles-v22.yml'
+      - 'rastreios/pipeline/screening-adapters-v2.json'
+      - 'assets/js/screening-system-v2.js'
+      - 'tests/identity-profiles-v22.test.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Separate screening and monitoring identity profiles
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          p=Path('rastreios/pipeline/screening-adapters-v2.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          data['schemaVersion']='2.2.0'
+          data['contract']['identityProfiles']={
+            'screening_canonical':{
+              'required':['name','birth','application'],
+              'policy':'Rastreios clínicos exigem nome completo, data de nascimento e data de aplicação com destino persistente explícito.'
+            },
+            'monitoring_longitudinal':{
+              'required':['name'],
+              'derived':['application'],
+              'policy':'Monitoramentos longitudinais reutilizam somente identidade realmente persistida no coletor; data de aplicação pode ser derivada do timestamp. Não sintetizar nascimento sem campo de destino.'
+            }
+          }
+          monitoring={'humor','ansiedade','autoestima'}
+          for iid,a in data['instruments'].items():
+            if iid in monitoring:
+              a['identityProfile']='monitoring_longitudinal'
+            else:
+              a['identityProfile']='screening_canonical'
+          data['instruments']['humor']['identityTransport']={'name':'collector_field','birth':'not_collected','application':'collector_timestamp'}
+          data['instruments']['ansiedade']['identityTransport']={'name':'collector_field','birth':'not_collected','application':'collector_field'}
+          data['instruments']['autoestima']['identityTransport']={'name':'collector_field','birth':'not_collected','application':'collector_field'}
+          for iid,a in data['instruments'].items():
+            if iid not in monitoring:
+              a['identityTransport']={'name':'native_field','birth':'native_field','application':'native_field'}
+          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          rp=Path('assets/js/screening-system-v2.js')
+          s=rp.read_text(encoding='utf-8')
+          s=s.replace("const VERSION='2.1.0';","const VERSION='2.2.0';")
+          s=s.replace("screening-adapters-v2.json?v=2.1.0","screening-adapters-v2.json?v=2.2.0")
+          start=s.index('function injectIdentity(){')
+          end=s.index('\nfunction mountIdentityWhenReady()',start)
+          new_fn=r'''function injectIdentity(){
+  if(document.querySelector('.rm-identity'))return true;
+  const mount=resolveIdentityMount();
+  if(!mount)return false;
+  const a=adapter.identity||{};
+  const monitoring=adapter.identityProfile==='monitoring_longitudinal';
+  const nameSource=first(a.name),appSource=first(a.application),birthSource=first(a.birth);
+  const showBirth=!monitoring;
+  const showApplication=!monitoring||Boolean(appSource);
+  const sec=document.createElement('section');sec.className='rm-identity';
+  const fields=[`<label class="rm-field"><span>Nome completo</span><input data-rm="name" type="text" autocomplete="name" maxlength="120" required></label>`];
+  if(showBirth)fields.push(`<label class="rm-field"><span>Data de nascimento</span><input data-rm="birth" type="date" required></label>`);
+  if(showApplication)fields.push(`<label class="rm-field"><span>Data de aplicação do rastreio</span><input data-rm="application" type="date" required></label>`);
+  sec.innerHTML=`<h2>Identificação</h2><div class="rm-identity-grid">${fields.join('')}</div>`;
+  mount.host.insertBefore(sec,mount.before||null);
+  const n=sec.querySelector('[data-rm="name"]'),b=sec.querySelector('[data-rm="birth"]'),d=sec.querySelector('[data-rm="application"]');
+  n.value=nameSource?.value||'';
+  if(b)b.value=birthSource?.value||'';
+  if(d)d.value=appSource?.value||today();
+  const sync=()=>{
+    identityState={name:n.value.trim(),birthDate:b?.value||'',applicationDate:d?.value||'',profile:adapter.identityProfile||'screening_canonical'};
+    setSource(nameSource,n.value);if(b)setSource(birthSource,b.value);if(d)setSource(appSource,d.value);
+    if(!monitoring&&mount.form){ensureHidden(mount.form,'rm_full_name',n.value);ensureHidden(mount.form,'rm_birth_date',b?.value||'');ensureHidden(mount.form,'rm_application_date',d?.value||'')}
+  };
+  [n,b,d].filter(Boolean).forEach(x=>x.addEventListener('input',sync));sync();
+  hideDuplicateSource(nameSource);if(b)hideDuplicateSource(birthSource);if(d)hideDuplicateSource(appSource);
+  if(mount.form){mount.form.addEventListener('submit',e=>{const missing=!n.value.trim()||(b&&!b.value)||(d&&!d.value);if(missing){e.preventDefault();e.stopImmediatePropagation();sec.scrollIntoView({behavior:'smooth',block:'center'});(!n.value.trim()?n:(b&&!b.value?b:d))?.focus()}else sync()},true)}
+  return true;
+}'''
+          s=s[:start]+new_fn+s[end:]
+          rp.write_text(s,encoding='utf-8')
+
+          tp=Path('tests/identity-profiles-v22.test.mjs')
+          tp.write_text(r'''import fs from 'node:fs/promises';
+const a=JSON.parse(await fs.readFile('rastreios/pipeline/screening-adapters-v2.json','utf8'));
+const runtime=await fs.readFile('assets/js/screening-system-v2.js','utf8');
+const apps=await fs.readFile('rastreios/pipeline/apps-script/Code.gs','utf8');
+const monitorings=['humor','ansiedade','autoestima'];
+const failures=[]; const ok=(c,m)=>{if(!c)failures.push(m)};
+ok(a.schemaVersion==='2.2.0','schemaVersion deve ser 2.2.0');
+for(const [id,x] of Object.entries(a.instruments)){
+  if(monitorings.includes(id)){
+    ok(x.identityProfile==='monitoring_longitudinal',`${id}: perfil longitudinal ausente`);
+    ok(x.identityTransport?.birth==='not_collected',`${id}: nascimento deve declarar not_collected`);
+    ok(x.identity?.birth===null,`${id}: não deve inventar seletor de nascimento`);
+    ok(x.submissionSupported===true,`${id}: monitoramento ativo deve continuar operacional`);
+  }else{
+    ok(x.identityProfile==='screening_canonical',`${id}: perfil canônico ausente`);
+    for(const f of ['name','birth','application'])ok(typeof x.identity?.[f]==='string'&&x.identity[f],`${id}: ${f} canônico sem seletor explícito`);
+    ok(x.identityTransport?.name==='native_field'&&x.identityTransport?.birth==='native_field'&&x.identityTransport?.application==='native_field',`${id}: transporte nativo incompleto`);
+  }
+}
+ok(a.instruments.humor.identityTransport.application==='collector_timestamp','humor: aplicação deve vir do timestamp');
+ok(a.instruments.ansiedade.identityTransport.application==='collector_field','ansiedade: aplicação deve usar campo do coletor');
+ok(a.instruments.autoestima.identityTransport.application==='collector_field','autoestima: aplicação deve usar campo do coletor');
+ok(runtime.includes("VERSION='2.2.0'"),'runtime não está em 2.2.0');
+ok(runtime.includes("identityProfile==='monitoring_longitudinal'"),'runtime não diferencia monitoramentos');
+ok(runtime.includes('if(!monitoring&&mount.form)'), 'runtime ainda pode sintetizar hidden fields nos monitoramentos');
+ok(apps.includes("'Carimbo de data/hora'" )&&apps.includes("'Timestamp'"),'Apps Script deve manter fallback de timestamp');
+ok(apps.includes("'Data de nascimento'"),'Apps Script deve reconhecer nascimento quando existir no coletor');
+if(failures.length){console.error(JSON.stringify({status:'FAIL',failures},null,2));process.exit(1)}
+console.log(JSON.stringify({status:'PASS',schema:a.schemaVersion,screeningCanonical:12,monitoringLongitudinal:3,syntheticBirthForMonitoring:false},null,2));
+console.log('IDENTITY_PROFILES_V22_PASS');
+''',encoding='utf-8')
+          PY
+      - name: Validate identity profiles
+        run: |
+          node tests/identity-profiles-v22.test.mjs
+          node tests/screening-adapters-v2.test.mjs
+      - name: Commit migration
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rastreios/pipeline/screening-adapters-v2.json assets/js/screening-system-v2.js tests/identity-profiles-v22.test.mjs
+          git commit -m 'Separa identidade canônica de rastreios e monitoramentos'
+          git push
