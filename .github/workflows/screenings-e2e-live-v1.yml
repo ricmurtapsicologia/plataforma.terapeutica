@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           runtime_url="https://ricmurtapsicologia.github.io/plataforma.terapeutica/assets/js/screening-system-v2.js"
           for attempt in 1 2 3 4 5 6; do
-            if curl --fail --silent --show-error --location --no-cache "$runtime_url?cert=${GITHUB_SHA}-${attempt}" -o /tmp/screening-system-v2.js && grep -Fq "const VERSION='2.2.1';" /tmp/screening-system-v2.js; then
+            if curl --fail --silent --show-error --location -H 'Cache-Control: no-cache' "$runtime_url?cert=${GITHUB_SHA}-${attempt}" -o /tmp/screening-system-v2.js && grep -Fq "const VERSION='2.2.1';" /tmp/screening-system-v2.js; then
               echo "Published runtime 2.2.1 confirmed."
               exit 0
             fi
