@@ -1,0 +1,43 @@
+name: Screenings E2E Live v1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/screenings-e2e-live-v1.mjs'
+      - '.github/workflows/screenings-e2e-live-v1.yml'
+      - 'assets/js/screening-system-v2.js'
+      - 'assets/css/screening-system-v2.css'
+      - 'rastreios/pipeline/**'
+  schedule:
+    - cron: '37 6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  browser-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run live browser matrix
+        shell: bash
+        run: |
+          set -o pipefail
+          node tests/screenings-e2e-live-v1.mjs | tee screenings-e2e-live-v1.json
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenings-e2e-live-v1
+          path: screenings-e2e-live-v1.json
+          retention-days: 14
