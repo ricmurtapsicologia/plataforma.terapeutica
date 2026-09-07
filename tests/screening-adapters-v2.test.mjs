@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 
 const OWNER='ricmurtapsicologia';
 const EXPECTED=['geral','tdah','bipolar','borderline','narcisismo','impulsividade','esquemas','modos','necessidades','codependencia','icaps','risco','humor','ansiedade','autoestima'];
-const LEGACY=new Set(['narcisismo','esquemas']);
+const LEGACY=new Set(['esquemas']);
 const NO_DELIVERY=new Set(['bipolar','narcisismo','esquemas']);
 const contract=JSON.parse(await fs.readFile('rastreios/pipeline/screening-adapters-v2.json','utf8'));
 const runtime=await fs.readFile('assets/js/screening-system-v2.js','utf8');
@@ -122,6 +122,9 @@ for(const id of EXPECTED){
 ok(contract.instruments.bipolar.mode==='form','Bipolaridade deve usar form nativo');
 ok(contract.instruments.bipolar.formSelector==='#screeningForm','Bipolaridade deve resolver #screeningForm');
 ok(contract.instruments.bipolar.submissionSupported===false,'Bipolaridade não pode habilitar entrega nesta fase');
+ok(contract.instruments.narcisismo.mode==='form','Narcisismo deve usar form nativo');
+ok(contract.instruments.narcisismo.formSelector==='#screeningForm','Narcisismo deve resolver #screeningForm');
+ok(contract.instruments.narcisismo.submissionSupported===false,'Narcisismo não pode habilitar entrega nesta fase');
 ok(contract.instruments.icaps.identity.birth==='#birth-date','ICAPS deve manter nascimento nativo explícito');
 ok(contract.instruments.humor.formSelector==='#clinical-form','Humor deve resolver #clinical-form');
 ok(contract.instruments.ansiedade.formSelector==='#clinical-form','Ansiedade deve resolver #clinical-form');
