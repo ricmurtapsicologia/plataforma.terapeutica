@@ -1,8 +1,8 @@
 (()=>{
 'use strict';
-const VERSION='2.1.0';
+const VERSION='2.2.0';
 const CONFIG='https://ricmurtapsicologia.github.io/plataforma.terapeutica/rastreios/pipeline/public-experience-v2.json?v=2.0.0';
-const ADAPTER_CONFIG='https://ricmurtapsicologia.github.io/plataforma.terapeutica/rastreios/pipeline/screening-adapters-v2.json?v=2.1.0';
+const ADAPTER_CONFIG='https://ricmurtapsicologia.github.io/plataforma.terapeutica/rastreios/pipeline/screening-adapters-v2.json?v=2.2.0';
 const REPOS={
   'Rastreioclinico':'geral','rastreioTDAH':'tdah','tab-bateria-integrada':'bipolar',
   'Inventario-de-Tracos-Borderline':'borderline','bateria.narcisismo':'narcisismo',
@@ -54,19 +54,28 @@ function injectIdentity(){
   const mount=resolveIdentityMount();
   if(!mount)return false;
   const a=adapter.identity||{};
+  const monitoring=adapter.identityProfile==='monitoring_longitudinal';
   const nameSource=first(a.name),appSource=first(a.application),birthSource=first(a.birth);
-  const sec=document.createElement('section');sec.className='rm-identity';sec.innerHTML=`<h2>Identificação</h2><div class="rm-identity-grid"><label class="rm-field"><span>Nome completo</span><input data-rm="name" type="text" autocomplete="name" maxlength="120" required></label><label class="rm-field"><span>Data de nascimento</span><input data-rm="birth" type="date" required></label><label class="rm-field"><span>Data de aplicação do rastreio</span><input data-rm="application" type="date" required></label></div>`;
+  const showBirth=!monitoring;
+  const showApplication=!monitoring||Boolean(appSource);
+  const sec=document.createElement('section');sec.className='rm-identity';
+  const fields=[`<label class="rm-field"><span>Nome completo</span><input data-rm="name" type="text" autocomplete="name" maxlength="120" required></label>`];
+  if(showBirth)fields.push(`<label class="rm-field"><span>Data de nascimento</span><input data-rm="birth" type="date" required></label>`);
+  if(showApplication)fields.push(`<label class="rm-field"><span>Data de aplicação do rastreio</span><input data-rm="application" type="date" required></label>`);
+  sec.innerHTML=`<h2>Identificação</h2><div class="rm-identity-grid">${fields.join('')}</div>`;
   mount.host.insertBefore(sec,mount.before||null);
   const n=sec.querySelector('[data-rm="name"]'),b=sec.querySelector('[data-rm="birth"]'),d=sec.querySelector('[data-rm="application"]');
-  n.value=nameSource?.value||'';b.value=birthSource?.value||'';d.value=appSource?.value||today();
+  n.value=nameSource?.value||'';
+  if(b)b.value=birthSource?.value||'';
+  if(d)d.value=appSource?.value||today();
   const sync=()=>{
-    identityState={name:n.value.trim(),birthDate:b.value,applicationDate:d.value};
-    setSource(nameSource,n.value);setSource(birthSource,b.value);setSource(appSource,d.value);
-    if(mount.form){ensureHidden(mount.form,'rm_full_name',n.value);ensureHidden(mount.form,'rm_birth_date',b.value);ensureHidden(mount.form,'rm_application_date',d.value)}
+    identityState={name:n.value.trim(),birthDate:b?.value||'',applicationDate:d?.value||'',profile:adapter.identityProfile||'screening_canonical'};
+    setSource(nameSource,n.value);if(b)setSource(birthSource,b.value);if(d)setSource(appSource,d.value);
+    if(!monitoring&&mount.form){ensureHidden(mount.form,'rm_full_name',n.value);ensureHidden(mount.form,'rm_birth_date',b?.value||'');ensureHidden(mount.form,'rm_application_date',d?.value||'')}
   };
-  [n,b,d].forEach(x=>x.addEventListener('input',sync));sync();
-  hideDuplicateSource(nameSource);hideDuplicateSource(birthSource);hideDuplicateSource(appSource);
-  if(mount.form){mount.form.addEventListener('submit',e=>{if(!n.value.trim()||!b.value||!d.value){e.preventDefault();e.stopImmediatePropagation();sec.scrollIntoView({behavior:'smooth',block:'center'});(!n.value.trim()?n:!b.value?b:d).focus()}else sync()},true)}
+  [n,b,d].filter(Boolean).forEach(x=>x.addEventListener('input',sync));sync();
+  hideDuplicateSource(nameSource);if(b)hideDuplicateSource(birthSource);if(d)hideDuplicateSource(appSource);
+  if(mount.form){mount.form.addEventListener('submit',e=>{const missing=!n.value.trim()||(b&&!b.value)||(d&&!d.value);if(missing){e.preventDefault();e.stopImmediatePropagation();sec.scrollIntoView({behavior:'smooth',block:'center'});(!n.value.trim()?n:(b&&!b.value?b:d))?.focus()}else sync()},true)}
   return true;
 }
 function mountIdentityWhenReady(){
