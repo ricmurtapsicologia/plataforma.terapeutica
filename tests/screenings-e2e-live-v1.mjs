@@ -1,3 +1,4 @@
+// Trigger: live browser matrix 15 instruments x 2 viewports.
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 
