@@ -1,0 +1,43 @@
+name: Mark Codependencia Collector Spec v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/mark-codependencia-collector-spec-v1.py'
+      - '.github/workflows/mark-codependencia-collector-spec-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconcile manifest state
+        run: python scripts/mark-codependencia-collector-spec-v1.py
+      - name: Validate fail-safe state
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('rastreios/pipeline/instruments.manifest.json',encoding='utf-8'))
+          i=next(x for x in d['instruments'] if x['id']=='codependencia')
+          assert i['formState']=='CREATE_REQUIRED'
+          assert i['productionReady'] is False
+          assert i['contractState']=='COLLECTOR_SPEC_PREPARED_DEPLOYMENT_REQUIRED'
+          assert i['collectorContract']['deploymentState']=='SPEC_ONLY'
+          print('CODEPENDENCIA_COLLECTOR_SPEC_STATE_PASS')
+          PY
+      - name: Commit reconciled manifest
+        run: |
+          git add rastreios/pipeline/instruments.manifest.json
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Registra especificação de coletor da Codependência"
+          git push
