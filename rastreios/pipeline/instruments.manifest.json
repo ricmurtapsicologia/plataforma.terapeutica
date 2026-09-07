@@ -175,13 +175,19 @@
       "publicUrl": "https://ricmurtapsicologia.github.io/Escala-de-Co-Depenpencia-Emocional/",
       "formUrl": null,
       "formState": "CREATE_REQUIRED",
-      "contractState": "NOT_VALIDATED",
+      "contractState": "COLLECTOR_SPEC_PREPARED_DEPLOYMENT_REQUIRED",
       "reportState": "PENDING",
       "scorerState": "NOT_VALIDATED",
       "criticality": "MEDIUM",
       "instrumentVersion": "1.0",
       "productionReady": false,
-      "identityProfile": "screening_canonical"
+      "identityProfile": "screening_canonical",
+      "collectorContract": {
+        "repository": "ricmurtapsicologia/Escala-de-Co-Depenpencia-Emocional",
+        "path": "contracts/collector-v1.json",
+        "version": "1.0.0",
+        "deploymentState": "SPEC_ONLY"
+      }
     },
     {
       "id": "icaps",
