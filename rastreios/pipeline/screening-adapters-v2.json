@@ -1,0 +1,136 @@
+{
+  "schemaVersion": "2.0.0",
+  "contract": {
+    "purpose": "Resolve explicitamente o alvo estrutural e os campos de identificação de cada fluxo público de rastreio.",
+    "noHeuristicFormSelection": true,
+    "legacyContainerPolicy": "Fluxos sem form nativo podem receber a camada visual e sincronizar campos legados, mas não podem presumir submissão nem entrega até refatoração nativa."
+  },
+  "instruments": {
+    "geral": {
+      "repo": "Rastreioclinico",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#racForm",
+      "submissionSupported": true,
+      "identity": {"name": "#patientName", "birth": null, "application": "#responseDate"}
+    },
+    "tdah": {
+      "repo": "rastreioTDAH",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#form",
+      "submissionSupported": true,
+      "identity": {"name": "#name", "birth": null, "application": "#date"}
+    },
+    "bipolar": {
+      "repo": "tab-bateria-integrada",
+      "sourcePath": "index.html",
+      "mode": "legacyContainer",
+      "containerSelector": ".wrap",
+      "identityAnchorSelector": "#nome",
+      "identityBlockSelector": "section.card",
+      "submissionSupported": false,
+      "identity": {"name": "#nome", "birth": null, "application": "#data"}
+    },
+    "borderline": {
+      "repo": "Inventario-de-Tracos-Borderline",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#form",
+      "submissionSupported": true,
+      "identity": {"name": "#fullName", "birth": null, "application": "#date"}
+    },
+    "narcisismo": {
+      "repo": "bateria.narcisismo",
+      "sourcePath": "index.html",
+      "mode": "legacyContainer",
+      "containerSelector": ".wrap",
+      "identityAnchorSelector": "#nome",
+      "identityBlockSelector": "section.card",
+      "submissionSupported": false,
+      "identity": {"name": "#nome", "birth": null, "application": "#data"}
+    },
+    "impulsividade": {
+      "repo": "Rastreio-de-Impulsividade",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#scaleForm",
+      "submissionSupported": true,
+      "identity": {"name": "#fullName", "birth": null, "application": "#date"}
+    },
+    "esquemas": {
+      "repo": "rastreio.de.esquemas",
+      "sourcePath": "index.html",
+      "mode": "legacyContainer",
+      "containerSelector": ".container",
+      "identityAnchorSelector": "#nomeCompleto",
+      "identityBlockSelector": "#userdataSection",
+      "submissionSupported": false,
+      "identity": {"name": "#nomeCompleto", "birth": null, "application": "#dataAplicacao"}
+    },
+    "modos": {
+      "repo": "rastreiomodosesquematicos",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#smi-form",
+      "submissionSupported": true,
+      "identity": {"name": "#name", "birth": null, "application": "#date"}
+    },
+    "necessidades": {
+      "repo": "Escala-de-Necessidades-Emocionais",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#emotionScale",
+      "submissionSupported": true,
+      "identity": {"name": "#name", "birth": null, "application": "#date"}
+    },
+    "codependencia": {
+      "repo": "Escala-de-Co-Depenpencia-Emocional",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#scaleForm",
+      "submissionSupported": true,
+      "identity": {"name": "#fullName", "birth": null, "application": "#date"}
+    },
+    "icaps": {
+      "repo": "ICAPS",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#icaps-form",
+      "submissionSupported": true,
+      "identity": {"name": "#name", "birth": "#birth-date", "application": "#application-date"}
+    },
+    "risco": {
+      "repo": "TriagemRiscoSuicidio",
+      "sourcePath": "index.html",
+      "mode": "form",
+      "formSelector": "#eirForm",
+      "submissionSupported": true,
+      "identity": {"name": "#paciente", "birth": null, "application": "#data"}
+    },
+    "humor": {
+      "repo": "Inicio-de-Jornada-Terapeutica",
+      "sourcePath": "assets/monitoramentos-v2.js",
+      "mode": "form",
+      "formSelector": "#clinical-form",
+      "submissionSupported": true,
+      "identity": {"name": "input[name=\"entry.1449005772\"]", "birth": null, "application": null}
+    },
+    "ansiedade": {
+      "repo": "Inicio-de-Jornada-Terapeutica",
+      "sourcePath": "assets/monitoramentos-v2.js",
+      "mode": "form",
+      "formSelector": "#clinical-form",
+      "submissionSupported": true,
+      "identity": {"name": "input[name=\"entry.1449005772\"]", "birth": null, "application": "input[name=\"entry.99768501\"]"}
+    },
+    "autoestima": {
+      "repo": "Inicio-de-Jornada-Terapeutica",
+      "sourcePath": "assets/monitoramentos-v2.js",
+      "mode": "form",
+      "formSelector": "#clinical-form",
+      "submissionSupported": true,
+      "identity": {"name": "input[name=\"entry.1449005772\"]", "birth": null, "application": "input[name=\"entry.444633849\"]"}
+    }
+  }
+}
