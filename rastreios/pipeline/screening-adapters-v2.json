@@ -1,26 +1,37 @@
 {
-  "schemaVersion": "2.1.0",
+  "schemaVersion": "2.2.0",
   "contract": {
-    "purpose": "Resolve explicitamente o alvo estrutural e os campos de identificação de cada fluxo público de rastreio.",
+    "purpose": "Resolve explicitamente o alvo estrutural, o perfil de identidade e o transporte real de cada fluxo público.",
     "noHeuristicFormSelection": true,
     "legacyContainerPolicy": "Fluxos sem form nativo podem receber a camada visual e sincronizar campos legados, mas não podem presumir submissão nem entrega até refatoração nativa.",
-    "formWithoutSubmissionPolicy": "A presença de form nativo é estrutural e não autoriza entrega. submissionSupported=true só é permitido quando o manifesto canônico declara formState=ACTIVE."
+    "formWithoutSubmissionPolicy": "A presença de form nativo é estrutural e não autoriza entrega. submissionSupported=true só é permitido quando o manifesto canônico declara formState=ACTIVE.",
+    "identityProfiles": {
+      "screening_canonical": {
+        "required": ["name", "birth", "application"],
+        "policy": "Rastreios clínicos exigem nome completo, data de nascimento e data de aplicação com destino persistente explícito."
+      },
+      "monitoring_longitudinal": {
+        "required": ["name"],
+        "derived": ["application"],
+        "policy": "Monitoramentos longitudinais reutilizam somente identidade realmente persistida no coletor; data de aplicação pode ser derivada do timestamp. Não sintetizar nascimento sem campo de destino."
+      }
+    }
   },
   "instruments": {
-    "geral": {"repo":"Rastreioclinico","sourcePath":"index.html","mode":"form","formSelector":"#racForm","submissionSupported":false,"identity":{"name":"#patientName","birth":"#birthDate","application":"#responseDate"}},
-    "tdah": {"repo":"rastreioTDAH","sourcePath":"index.html","mode":"form","formSelector":"#form","submissionSupported":false,"identity":{"name":"#name","birth":"#birthDate","application":"#date"}},
-    "bipolar": {"repo":"tab-bateria-integrada","sourcePath":"index.html","mode":"form","formSelector":"#screeningForm","submissionSupported":false,"identity":{"name":"#nome","birth":"#dataNascimento","application":"#data"}},
-    "borderline": {"repo":"Inventario-de-Tracos-Borderline","sourcePath":"index.html","mode":"form","formSelector":"#form","submissionSupported":false,"identity":{"name":"#fullName","birth":"#birthDate","application":"#date"}},
-    "narcisismo": {"repo":"bateria.narcisismo","sourcePath":"index.html","mode":"form","formSelector":"#screeningForm","submissionSupported":false,"identity":{"name":"#nome","birth":"#dataNascimento","application":"#data"}},
-    "impulsividade": {"repo":"Rastreio-de-Impulsividade","sourcePath":"index.html","mode":"form","formSelector":"#scaleForm","submissionSupported":false,"identity":{"name":"#fullName","birth":"#birthDate","application":"#date"}},
-    "esquemas": {"repo":"rastreio.de.esquemas","sourcePath":"index.html","mode":"form","formSelector":"#screeningForm","submissionSupported":false,"identity":{"name":"#nomeCompleto","birth":"#dataNascimento","application":"#dataAplicacao"}},
-    "modos": {"repo":"rastreiomodosesquematicos","sourcePath":"index.html","mode":"form","formSelector":"#smi-form","submissionSupported":false,"identity":{"name":"#name","birth":"#birthDate","application":"#date"}},
-    "necessidades": {"repo":"Escala-de-Necessidades-Emocionais","sourcePath":"index.html","mode":"form","formSelector":"#emotionScale","submissionSupported":false,"identity":{"name":"#name","birth":"#birthDate","application":"#date"}},
-    "codependencia": {"repo":"Escala-de-Co-Depenpencia-Emocional","sourcePath":"index.html","mode":"form","formSelector":"#scaleForm","submissionSupported":false,"identity":{"name":"#fullName","birth":"#birthDate","application":"#date"}},
-    "icaps": {"repo":"ICAPS","sourcePath":"index.html","mode":"form","formSelector":"#icaps-form","submissionSupported":false,"identity":{"name":"#name","birth":"#birth-date","application":"#application-date"}},
-    "risco": {"repo":"TriagemRiscoSuicidio","sourcePath":"index.html","mode":"form","formSelector":"#eirForm","submissionSupported":false,"identity":{"name":"#paciente","birth":"#dataNascimento","application":"#data"}},
-    "humor": {"repo":"Inicio-de-Jornada-Terapeutica","sourcePath":"assets/monitoramentos-v2.js","mode":"form","formSelector":"#clinical-form","submissionSupported":true,"identity":{"name":"input[name=\"entry.1449005772\"]","birth":null,"application":null}},
-    "ansiedade": {"repo":"Inicio-de-Jornada-Terapeutica","sourcePath":"assets/monitoramentos-v2.js","mode":"form","formSelector":"#clinical-form","submissionSupported":true,"identity":{"name":"input[name=\"entry.1449005772\"]","birth":null,"application":"input[name=\"entry.99768501\"]"}},
-    "autoestima": {"repo":"Inicio-de-Jornada-Terapeutica","sourcePath":"assets/monitoramentos-v2.js","mode":"form","formSelector":"#clinical-form","submissionSupported":true,"identity":{"name":"input[name=\"entry.1449005772\"]","birth":null,"application":"input[name=\"entry.444633849\"]"}}
+    "geral": {"repo":"Rastreioclinico","sourcePath":"index.html","mode":"form","formSelector":"#racForm","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#patientName","birth":"#birthDate","application":"#responseDate"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "tdah": {"repo":"rastreioTDAH","sourcePath":"index.html","mode":"form","formSelector":"#form","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#name","birth":"#birthDate","application":"#date"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "bipolar": {"repo":"tab-bateria-integrada","sourcePath":"index.html","mode":"form","formSelector":"#screeningForm","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#nome","birth":"#dataNascimento","application":"#data"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "borderline": {"repo":"Inventario-de-Tracos-Borderline","sourcePath":"index.html","mode":"form","formSelector":"#form","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#fullName","birth":"#birthDate","application":"#date"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "narcisismo": {"repo":"bateria.narcisismo","sourcePath":"index.html","mode":"form","formSelector":"#screeningForm","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#nome","birth":"#dataNascimento","application":"#data"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "impulsividade": {"repo":"Rastreio-de-Impulsividade","sourcePath":"index.html","mode":"form","formSelector":"#scaleForm","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#fullName","birth":"#birthDate","application":"#date"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "esquemas": {"repo":"rastreio.de.esquemas","sourcePath":"index.html","mode":"form","formSelector":"#screeningForm","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#nomeCompleto","birth":"#dataNascimento","application":"#dataAplicacao"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "modos": {"repo":"rastreiomodosesquematicos","sourcePath":"index.html","mode":"form","formSelector":"#smi-form","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#name","birth":"#birthDate","application":"#date"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "necessidades": {"repo":"Escala-de-Necessidades-Emocionais","sourcePath":"index.html","mode":"form","formSelector":"#emotionScale","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#name","birth":"#birthDate","application":"#date"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "codependencia": {"repo":"Escala-de-Co-Depenpencia-Emocional","sourcePath":"index.html","mode":"form","formSelector":"#scaleForm","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#fullName","birth":"#birthDate","application":"#date"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "icaps": {"repo":"ICAPS","sourcePath":"index.html","mode":"form","formSelector":"#icaps-form","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#name","birth":"#birth-date","application":"#application-date"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "risco": {"repo":"TriagemRiscoSuicidio","sourcePath":"index.html","mode":"form","formSelector":"#eirForm","submissionSupported":false,"identityProfile":"screening_canonical","identity":{"name":"#paciente","birth":"#dataNascimento","application":"#data"},"identityTransport":{"name":"native_field","birth":"native_field","application":"native_field"}},
+    "humor": {"repo":"Inicio-de-Jornada-Terapeutica","sourcePath":"assets/monitoramentos-v2.js","mode":"form","formSelector":"#clinical-form","submissionSupported":true,"identityProfile":"monitoring_longitudinal","identity":{"name":"input[name=\"entry.1449005772\"]","birth":null,"application":null},"identityTransport":{"name":"collector_field","birth":"not_collected","application":"collector_timestamp"}},
+    "ansiedade": {"repo":"Inicio-de-Jornada-Terapeutica","sourcePath":"assets/monitoramentos-v2.js","mode":"form","formSelector":"#clinical-form","submissionSupported":true,"identityProfile":"monitoring_longitudinal","identity":{"name":"input[name=\"entry.1449005772\"]","birth":null,"application":"input[name=\"entry.99768501\"]"},"identityTransport":{"name":"collector_field","birth":"not_collected","application":"collector_field"}},
+    "autoestima": {"repo":"Inicio-de-Jornada-Terapeutica","sourcePath":"assets/monitoramentos-v2.js","mode":"form","formSelector":"#clinical-form","submissionSupported":true,"identityProfile":"monitoring_longitudinal","identity":{"name":"input[name=\"entry.1449005772\"]","birth":null,"application":"input[name=\"entry.444633849\"]"},"identityTransport":{"name":"collector_field","birth":"not_collected","application":"collector_field"}}
   }
 }
