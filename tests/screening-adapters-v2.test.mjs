@@ -42,11 +42,50 @@ function evidence(text,selector){
   if(selector==='section.card')return /<section\b[^>]*class\s*=\s*["'][^"']*\bcard\b/i.test(text);
   return text.includes(selector.replace(/^#/,''));
 }
-async function raw(repo,path){
-  const url=`https://raw.githubusercontent.com/${OWNER}/${repo}/main/${path}`;
-  const response=await fetch(url,{headers:{'user-agent':'rm-screening-adapters-v2-test'}});
+
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+async function raw(repo,path,attempt=0){
+  const nonce=`${Date.now()}-${attempt}`;
+  const url=`https://raw.githubusercontent.com/${OWNER}/${repo}/main/${path}?rm_adapter_check=${nonce}`;
+  const response=await fetch(url,{
+    cache:'no-store',
+    headers:{
+      'user-agent':'rm-screening-adapters-v2-test',
+      'cache-control':'no-cache, no-store, max-age=0',
+      'pragma':'no-cache'
+    }
+  });
   if(!response.ok)throw new Error(`${repo}/${path}: HTTP ${response.status}`);
   return response.text();
+}
+
+function requiredSelectors(a){
+  return [
+    a.formSelector,
+    a.containerSelector,
+    a.identityAnchorSelector,
+    a.identityBlockSelector,
+    ...Object.values(a.identity||{})
+  ].filter(Boolean);
+}
+
+async function sourceAfterConvergence(a){
+  const selectors=requiredSelectors(a);
+  let source='';
+  let lastError=null;
+  for(let attempt=0;attempt<4;attempt++){
+    try{
+      source=await raw(a.repo,a.sourcePath,attempt);
+      lastError=null;
+      if(selectors.every(selector=>evidence(source,selector)))return source;
+    }catch(error){
+      lastError=error;
+    }
+    if(attempt<3)await sleep(1500*(attempt+1));
+  }
+  if(lastError)throw lastError;
+  return source;
 }
 
 for(const id of EXPECTED){
@@ -70,12 +109,12 @@ for(const id of EXPECTED){
     ok(a.submissionSupported===true,`${id}: fluxo com form deve declarar suporte estrutural`);
   }
   let source='';
-  try{source=await raw(a.repo,a.sourcePath)}catch(error){failures.push(`${id}: ${error.message}`);continue}
-  if(a.formSelector)ok(evidence(source,a.formSelector),`${id}: formSelector ${a.formSelector} não encontrado na fonte`);
-  if(a.containerSelector)ok(evidence(source,a.containerSelector),`${id}: containerSelector ${a.containerSelector} não encontrado na fonte`);
-  if(a.identityAnchorSelector)ok(evidence(source,a.identityAnchorSelector),`${id}: identityAnchorSelector ${a.identityAnchorSelector} não encontrado na fonte`);
-  if(a.identityBlockSelector)ok(evidence(source,a.identityBlockSelector),`${id}: identityBlockSelector ${a.identityBlockSelector} não encontrado na fonte`);
-  for(const [field,selector] of Object.entries(a.identity||{}))if(selector)ok(evidence(source,selector),`${id}: identity.${field} ${selector} não encontrado na fonte`);
+  try{source=await sourceAfterConvergence(a)}catch(error){failures.push(`${id}: ${error.message}`);continue}
+  if(a.formSelector)ok(evidence(source,a.formSelector),`${id}: formSelector ${a.formSelector} não encontrado na fonte após retentativas`);
+  if(a.containerSelector)ok(evidence(source,a.containerSelector),`${id}: containerSelector ${a.containerSelector} não encontrado na fonte após retentativas`);
+  if(a.identityAnchorSelector)ok(evidence(source,a.identityAnchorSelector),`${id}: identityAnchorSelector ${a.identityAnchorSelector} não encontrado na fonte após retentativas`);
+  if(a.identityBlockSelector)ok(evidence(source,a.identityBlockSelector),`${id}: identityBlockSelector ${a.identityBlockSelector} não encontrado na fonte após retentativas`);
+  for(const [field,selector] of Object.entries(a.identity||{}))if(selector)ok(evidence(source,selector),`${id}: identity.${field} ${selector} não encontrado na fonte após retentativas`);
 }
 
 ok(contract.instruments.icaps.identity.birth==='#birth-date','ICAPS deve manter nascimento nativo explícito');
@@ -87,5 +126,5 @@ if(failures.length){
   console.error(JSON.stringify({status:'FAIL',failures},null,2));
   process.exit(1);
 }
-console.log(JSON.stringify({status:'PASS',instruments:EXPECTED.length,legacyContainers:[...LEGACY],heuristicFormSelection:false},null,2));
+console.log(JSON.stringify({status:'PASS',instruments:EXPECTED.length,legacyContainers:[...LEGACY],heuristicFormSelection:false,liveSourceRetry:true},null,2));
 console.log('SCREENING_ADAPTERS_V2_PASS');
