@@ -17,7 +17,7 @@ function candidates(names=[]){
     return [...wanted].some(name=>own.has(name));
   });
 }
-function hasSession(patientId,date){return arr(data.appointments).some(a=>a?.patientId===patientId&&a?.date===date&&a?.status!=='Cancelada'&&a?.attendanceStatus!=='Desmarcou')}
+function hasSession(patientId,date,pending=[]){return arr(data.appointments).some(a=>a?.patientId===patientId&&a?.date===date&&a?.status!=='Cancelada'&&a?.attendanceStatus!=='Desmarcou')||arr(pending).some(a=>a?.patientId===patientId&&a?.date===date)}
 function statusFor(spec,patch){
   const wanted=new Set(arr(spec?.names).map(norm).filter(Boolean));
   return arr(patch?.statusUpdates).find(update=>arr(update?.names).map(norm).some(name=>wanted.has(name)))||null;
@@ -99,15 +99,11 @@ async function run(){
     const newPatients=[],newAppointments=[];
     for(const spec of arr(patch.patients)){
       let patient=candidates(spec?.names)[0]||null;
-      if(!patient&&spec?.createIfMissing===true){
-        patient=buildPatient(spec,patch);
-        if(patient){newPatients.push(patient);data.patients.push(patient)}
-      }
+      if(!patient&&spec?.createIfMissing===true){patient=buildPatient(spec,patch);if(patient)newPatients.push(patient)}
       if(!patient)continue;
       for(const session of arr(spec?.sessions)){
-        if(session?.createIfMissing!==true||!session?.date||hasSession(patient.id,session.date))continue;
-        const appointment=buildAppointment(patient,session);
-        newAppointments.push(appointment);data.appointments.push(appointment);
+        if(session?.createIfMissing!==true||!session?.date||hasSession(patient.id,session.date,newAppointments))continue;
+        newAppointments.push(buildAppointment(patient,session));
       }
     }
     const batches=[];
@@ -115,6 +111,9 @@ async function run(){
     if(newAppointments.length)batches.push({storeName:'appointments',values:newAppointments});
     if(batches.length){
       await bulkPutEncryptedAtomic(batches,runtime.key,{verify:true});
+      const patientList=data.patients||(data.patients=[]),appointmentList=data.appointments||(data.appointments=[]);
+      for(const patient of newPatients)if(!patientList.some(x=>x?.id===patient.id))patientList.push(patient);
+      for(const appointment of newAppointments)if(!appointmentList.some(x=>x?.id===appointment.id))appointmentList.push(appointment);
       document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{kind:'private-create-missing-v361',patients:newPatients.length,appointments:newAppointments.length,at:nowISO()}}));
       window.__rmRender?.();
     }
