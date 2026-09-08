@@ -12,6 +12,7 @@ const modules=[
   ['./patient-hygiene-v100.js','Higiene privada de pacientes e anamneses'],
   ['./clinical-private-create-missing-v351.js','Criação clínica privada de registros ausentes'],
   ['./clinical-private-reconciliation-v350.js','Conciliação clínica privada via Google Drive'],
+  ['./clinical-private-source-reassignment-v352.js','Reatribuição clínica privada por fonte canônica'],
   ['./clinical-intake-runtime-v310.js','Clinical Intake · Anamnese'],
   ['./clinical-intake-patient-ui-v312.js','Anamnese · área clínica do paciente'],
   ['./clinical-icaps-runtime-v400.js','ICAPS · conciliação clínica privada'],
