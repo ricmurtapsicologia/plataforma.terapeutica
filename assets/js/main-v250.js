@@ -10,6 +10,7 @@ const modules=[
   ['./google-workspace-oauth-v201.js','Google Workspace OAuth'],
   ['./google-workspace-auto-renew-v264.js','Renovação silenciosa do Google Workspace'],
   ['./patient-hygiene-v100.js','Higiene privada de pacientes e anamneses'],
+  ['./clinical-private-create-missing-v351.js','Criação clínica privada de registros ausentes'],
   ['./clinical-private-reconciliation-v350.js','Conciliação clínica privada via Google Drive'],
   ['./clinical-intake-runtime-v310.js','Clinical Intake · Anamnese'],
   ['./clinical-intake-patient-ui-v312.js','Anamnese · área clínica do paciente'],
