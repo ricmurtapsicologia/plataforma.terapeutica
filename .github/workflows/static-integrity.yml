@@ -9,22 +9,10 @@ on:
       - 'assets/css/**'
       - 'tests/**'
       - '.github/workflows/static-integrity.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'index.html'
-      - 'assets/js/**'
-      - 'assets/css/**'
-      - 'tests/**'
-      - '.github/workflows/static-integrity.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: static-integrity-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   validate:
@@ -34,50 +22,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Check JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
           while IFS= read -r -d '' file; do
+            echo "Checking $file"
             node --check "$file"
-          done < <(find assets/js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
-
-      - name: Run clinical regression tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          node tests/private-sync-v260.test.mjs
-          node tests/gemini-identity-v270.test.mjs
-          node tests/persistence-architecture-v270.test.mjs
-          node tests/platform-v300.test.mjs
-          node tests/agenda-v330.test.mjs
-          node tests/clinical-session-v370.test.mjs
-
-      - name: Run real browser persistence and agenda probes
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/rm-http.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          sleep 1
-          browser=''
-          for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
-            if command -v "$candidate" >/dev/null 2>&1; then browser="$candidate"; break; fi
-          done
-          if [ -z "$browser" ]; then echo 'Nenhum Chromium disponível no runner.'; exit 1; fi
-
-          profile="/tmp/rm-browser-$RANDOM"
-          html="$($browser --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=8000 --user-data-dir="$profile" --dump-dom http://127.0.0.1:8765/tests/browser-persistence-v271.html 2>/tmp/rm-browser.log || true)"
-          printf '%s\n' "$html"
-          grep -q 'P0_BROWSER_PERSISTENCE_PASS' <<<"$html" || { cat /tmp/rm-browser.log || true; exit 1; }
-
-          agenda_profile="/tmp/rm-agenda-browser-$RANDOM"
-          agenda_html="$($browser --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir="$agenda_profile" --dump-dom http://127.0.0.1:8765/tests/agenda-browser-v330.html 2>/tmp/rm-agenda-browser.log || true)"
-          printf '%s\n' "$agenda_html"
-          grep -q 'AGENDA_V330_BROWSER_PASS' <<<"$agenda_html" || { cat /tmp/rm-agenda-browser.log || true; exit 1; }
-
+          done < <(find assets/js -type f -name '*.js' -print0)
       - name: Check local import targets
         shell: bash
         run: |
@@ -85,7 +37,7 @@ jobs:
           const fs=require('fs');
           const path=require('path');
           const files=[];
-          function walk(dir){for(const name of fs.readdirSync(dir)){const p=path.join(dir,name),st=fs.statSync(p);if(st.isDirectory())walk(p);else if(/\.m?js$/.test(p))files.push(p)}}
+          function walk(dir){for(const name of fs.readdirSync(dir)){const p=path.join(dir,name),st=fs.statSync(p);if(st.isDirectory())walk(p);else if(p.endsWith('.js'))files.push(p)}}
           walk('assets/js');
           const missing=[];
           for(const file of files){
@@ -98,90 +50,5 @@ jobs:
             }
           }
           if(missing.length){console.error('Missing local imports:\n'+missing.join('\n'));process.exit(1)}
-          console.log(`Validated local imports in ${files.length} JavaScript modules.`);
-          NODE
-
-      - name: Check index local assets
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs=require('fs');
-          const index=fs.readFileSync('index.html','utf8');
-          const refs=[...index.matchAll(/(?:src|href)="(assets\/[^"?#]+|manifest\.webmanifest|sw\.js)/g)].map(m=>m[1]);
-          const missing=refs.filter(ref=>!fs.existsSync(ref));
-          if(missing.length){console.error('Missing assets referenced by index.html:\n'+missing.join('\n'));process.exit(1)}
-          console.log(`Validated ${refs.length} local index assets.`);
-          NODE
-
-      - name: Check architecture invariants
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs=require('fs');
-          const index=fs.readFileSync('index.html','utf8');
-          const main=fs.readFileSync('assets/js/main-v250.js','utf8');
-          const platform=fs.readFileSync('assets/js/platform-runtime-v300.js','utf8');
-          const calendar=fs.readFileSync('assets/js/calendar-adapter-v300.js','utf8');
-          const calendarService=fs.readFileSync('assets/js/google-calendar-service-v240.js','utf8');
-          const sessionRuntime=fs.readFileSync('assets/js/clinical-session-runtime-v370.js','utf8');
-          const migrations=fs.readFileSync('assets/js/migration-router-v300.js','utf8');
-          const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
-          const sync=fs.readFileSync('assets/js/secure-sync-v260.js','utf8');
-          const storage=fs.readFileSync('assets/js/drive-appdata-storage-v260.js','utf8');
-          const token=fs.readFileSync('assets/js/google-workspace-token-v260.js','utf8');
-          const database=fs.readFileSync('assets/js/database.js','utf8');
-          const gemini=fs.readFileSync('assets/js/clinical-reconcile-v270.js','utf8');
-          const cleanup=fs.readFileSync('assets/js/legacy-sync-cleanup-v262.js','utf8');
-          const agenda=fs.readFileSync('assets/js/agenda-controller-v330.js','utf8');
-          const appVersion=fs.readFileSync('assets/js/version.js','utf8').match(/APP_VERSION='([^']+)'/)?.[1];
-          if(!appVersion)throw new Error('APP_VERSION missing');
-          const scripts=[...index.matchAll(/<script\s+type="module"[^>]+src="([^"]+)"/g)].map(m=>m[1]);
-          const mainScripts=scripts.filter(src=>src.includes('main-v250.js'));
-          if(mainScripts.length!==1)throw new Error(`Expected one canonical main-v250.js entrypoint, found: ${mainScripts.join(', ')}`);
-          if(!index.includes(`${appVersion}-main-v250`))throw new Error(`Pages build marker ${appVersion} missing`);
-          if(!main.includes(`__rmEntrypointVersion='${appVersion}-main-v250'`))throw new Error(`Entrypoint marker ${appVersion} missing`);
-          if(!main.includes('platform-runtime-v300.js'))throw new Error('Platform v3 runtime missing');
-          if(!main.includes('calendar-adapter-v300.js'))throw new Error('CalendarAdapter v3 missing');
-          if(!main.includes('migration-router-v300.js'))throw new Error('MigrationRouter v3 missing');
-          if(!main.includes('agenda-controller-v330.js')||main.includes('agenda-actions-v240.js'))throw new Error('Agenda must have one canonical controller v330');
-          if(!main.includes('clinical-session-runtime-v370.js'))throw new Error('Clinical one-click session runtime v370 missing');
-          if(!agenda.includes("const OWNER='agenda-controller-v330'")||agenda.includes('stopImmediatePropagation'))throw new Error('Agenda controller ownership invariant missing');
-          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])if(main.includes(internal))throw new Error(`Calendar internal must be owned by adapter: ${internal}`);
-          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])if(!calendar.includes(internal))throw new Error(`CalendarAdapter missing internal: ${internal}`);
-          if(!calendarService.includes('ensureMeetForAppointment')||!calendarService.includes('conferenceDataVersion=1')||!calendarService.includes("conferenceSolutionKey:{type:'hangoutsMeet'}"))throw new Error('Calendar Meet idempotency contract missing');
-          if(!sessionRuntime.includes('getDecryptedById')||!sessionRuntime.includes('sessionStartedAt')||!sessionRuntime.includes('sessionEndedAt')||!sessionRuntime.includes('actualDurationMinutes'))throw new Error('Clinical session lifecycle/readback contract missing');
-          for(const retired of ['runtime-monitor-v240.js','legacy-sw-cleanup-v240.js','browser-fixes-v153.js','top-status-owner-v243.js','gemini-materialization-integrity-v273.js','workspace-status-v240.js','legacy-sync-cleanup-v262.js'])if(main.includes(retired))throw new Error(`Retired permanent boot module referenced: ${retired}`);
-          if(!migrations.includes("import('./legacy-sync-cleanup-v262.js')"))throw new Error('MigrationRouter must preserve conditional legacy sync cleanup');
-          if(!bootstrap.includes("from './secure-sync-v260.js'")||bootstrap.includes("from './secure-sync-v240.js'"))throw new Error('Bootstrap must use private SyncManager v260');
-          if(!sync.includes('HEARTBEAT_MS=90000')||!sync.includes('BroadcastChannel'))throw new Error('Private SyncManager invariants missing');
-          if(sync.includes('api.github.com'))throw new Error('Private SyncManager must not use GitHub for clinical vault');
-          if(!storage.includes("spaces:'appDataFolder'")||!storage.includes("parents:['appDataFolder']"))throw new Error('Drive appDataFolder adapter invariants missing');
-          if(!token.includes('https://www.googleapis.com/auth/drive.appdata'))throw new Error('drive.appdata scope missing');
-          if(!main.includes('google-workspace-auto-renew-v264.js'))throw new Error('Silent Workspace renewal missing');
-          if(!main.includes('clinical-reconcile-v270.js'))throw new Error('Single Gemini pipeline v270 missing');
-          for(const legacy of ['clinical-reconcile-v240.js','gemini-autodelivery-v264.js','gemini-alias-continuity-v263.js','gemini-name-token-repair-v245.js','gemini-migration-v240.js','gemini-attendance-repair-v249.js'])if(main.includes(legacy))throw new Error(`Competing/legacy Gemini runtime active: ${legacy}`);
-          if(main.includes('sync-conflict-recovery-v247.js')||!main.includes('sync-semantic-conflict-cleanup-v260.js'))throw new Error('Private sync conflict policy invalid');
-          if(!database.includes('bulkPutEncryptedAtomic')||!database.includes('prepareEncryptedRow')||!database.includes('getDecryptedById'))throw new Error('Transactional clinical persistence missing');
-          if(!gemini.includes('CONCURRENCY=2')||!gemini.includes('sourceModifiedAt'))throw new Error('Gemini incremental/source clock invariants missing');
-          if(!gemini.includes("IDENTITY_RULE_VERSION='3.0'")||!gemini.includes('learnAliasesFromDocuments'))throw new Error('Gemini identity invariants missing');
-          if(!gemini.includes('bulkPutEncryptedAtomic')||!gemini.includes('{verify:true}'))throw new Error('Gemini materialization must be atomic and verified');
-          if(gemini.includes("syncState!=='synced'"))throw new Error('Local Gemini materialization must not require remote sync state');
-          if(!gemini.includes('manualLinks')||!gemini.includes('gemini-review-hub-v270'))throw new Error('Identity review fallback missing');
-          if(!cleanup.includes("from './secure-sync-v260.js'")||cleanup.includes("from './secure-sync-v240.js'"))throw new Error('Legacy cleanup must use private SyncManager v260');
-          if(!platform.includes('clinicalSessionId')||!platform.includes("source:'existing-links-only'"))throw new Error('Canonical session identity invariant missing');
-          console.log('Architecture invariants validated.');
-          NODE
-
-      - name: Check application version consistency
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs=require('fs');
-          const version=fs.readFileSync('assets/js/version.js','utf8').match(/APP_VERSION='([^']+)'/)?.[1];
-          if(!version)throw new Error('APP_VERSION not found');
-          const index=fs.readFileSync('index.html','utf8');
-          const test=fs.readFileSync('tests/self-test.html','utf8');
-          if(!index.includes(`v=${version}`))throw new Error(`index.html does not reference v=${version}`);
-          if(!test.includes('APP_VERSION')||!test.includes('Autoteste não destrutivo'))throw new Error('self-test does not use dynamic APP_VERSION');
-          console.log(`Application version validated: ${version}`);
+          console.log(`Validated local imports in ${files.length} JavaScript files.`);
           NODE

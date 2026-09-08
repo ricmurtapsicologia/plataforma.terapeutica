@@ -4,40 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#4ba4c1">
-  <meta name="description" content="Plataforma clínica local-first com sincronização criptografada entre dispositivos autorizados.">
+  <meta name="description" content="Plataforma clínica local-first de Richelmy Murta, Psicólogo Clínico.">
   <meta name="color-scheme" content="light dark">
-  <meta name="rm-build" content="3.7.5-main-v250">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://gmail.googleapis.com https://secretaria-digital-core.vercel.app; frame-src https://accounts.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' mailto:; frame-ancestors 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' mailto:; frame-ancestors 'none'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/ux-v136.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/agenda-enhancements-v152.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/portable-v153.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/mobile-ux-v170.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/finance-v176.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/clinical-ui-v180.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/patient-sessions-v184.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/payment-status-v322.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/agenda-sync-fix-v182.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/agenda-mobile-v183.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/mobile-overflow-fix-v190.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/google-clinical-v220.css?v=3.7.5">
-  <link rel="stylesheet" href="assets/css/agenda-v330.css?v=3.7.5&rev=session-start-20260902">
-  <link rel="stylesheet" href="assets/css/hardening-v360.css?v=3.7.5&rev=session-start-20260902">
+  <link rel="stylesheet" href="assets/css/app.css?v=1.5.3">
+  <link rel="stylesheet" href="assets/css/ux-v136.css?v=1.5.3">
+  <link rel="stylesheet" href="assets/css/agenda-enhancements-v152.css?v=1.5.3">
+  <link rel="stylesheet" href="assets/css/portable-v153.css?v=1.5.3">
   <title>Richelmy Murta — Clínica</title>
 </head>
-<body class="rm-booting">
+<body>
   <a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
-  <div id="app"><main class="vault"><section class="vault-panel"><div class="vault-card" id="rm-boot-fallback"><div class="brand-mini"><img class="brand-symbol" src="assets/images/brand-symbol.svg" alt=""><div class="brand-copy"><strong>Plataforma Clínica</strong><span>Inicializando ambiente seguro…</span></div></div><p class="muted mt-24">Carregando cofre, interface e integrações. Se esta mensagem permanecer, recarregue a página.</p></div></section></main></div>
+  <div id="app" aria-live="polite"></div>
   <div id="modal-root"></div>
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <input id="file-input" type="file" hidden>
-  <script src="assets/js/google-oauth-public-client-v362.js?rev=session-start-20260902"></script>
-  <script type="module" src="assets/js/main-v250.js?v=3.7.5&rev=clinical-clean-20260907"></script>
-  <script type="module" src="assets/js/clinical-session-header-v371.js?v=3.7.5&rev=session-flex-runtime-20260903"></script>
-  <script type="module" src="assets/js/clinical-documentation-guard-v374.js?v=3.7.5&rev=no-content-test-cleanup-20260902"></script>
-  <script type="module" src="assets/js/clinical-test-artifact-cleanup-v375.js?v=3.7.5&rev=purge-test-artifacts-20260902"></script>
-  <script type="module" src="assets/js/gemini-review-context-v341.js?v=3.7.5&rev=session-start-20260902"></script>
+  <script type="module" src="assets/js/browser-fixes-v153.js?v=1.5.3"></script>
+  <script type="module" src="assets/js/agenda-enhancements-v152.js?v=1.5.3"></script>
+  <script type="module" src="assets/js/portable-tools-v153.js?v=1.5.3"></script>
+  <script type="module" src="assets/js/bootstrap-v151.js?v=1.5.3"></script>
 </body>
 </html>

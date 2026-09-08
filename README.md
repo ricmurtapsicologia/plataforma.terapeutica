@@ -1,144 +1,93 @@
-# Plataforma Clínica Richelmy Murta — v3.7.5
+# Plataforma Clínica Richelmy Murta — v1.5.3
 
-Aplicação clínica local-first publicada como código estático em GitHub Pages. O repositório público contém somente código e assets da aplicação; dados clínicos novos não são persistidos no GitHub.
+Aplicação clínica estática, local-first e de uso exclusivo do psicólogo, publicada por GitHub Pages.
 
-## Fonte canônica de versão
+## Estado atual
+A v1.5.3 preserva o núcleo estabilizado das versões anteriores e acrescenta somente ajustes cirúrgicos de agenda, aniversários, PDF, exportação e portabilidade.
 
-A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build vigente é `3.7.5-main-v250`.
+## Inicialização e estabilidade
+- senha local validada antes da abertura da interface;
+- interface abre sem depender da leitura integral do IndexedDB;
+- dados locais são carregados em segundo plano;
+- relógio pertence ao núcleo e atualiza a cada segundo;
+- não há `MutationObserver` global capaz de congelar a interface;
+- módulos opcionais são isolados para que uma falha localizada não derrube a plataforma;
+- arquivos versionados evitam exigir exclusão manual do IndexedDB.
 
-## Arquitetura vigente
+## Agenda
+- visão semanal;
+- semana anterior, atual e seguinte;
+- recorrência avulsa, semanal e quinzenal;
+- clique em horário vazio para abrir uma nova sessão com data/horário preenchidos;
+- edição e exclusão individual;
+- exclusão de série recorrente;
+- registro de sessão pela própria agenda;
+- menu de presença e pagamento diretamente em cada sessão;
+- estados: Presente, Desmarcou e Faltou;
+- registro de pagamento associado à sessão;
+- lembrete via WhatsApp;
+- aviso quando uma sessão entra na janela das próximas 6 horas.
 
-A plataforma usa cofre local cifrado e sincronização privada notebook ↔ celular por Google Drive `appDataFolder`.
+## Aniversários
+- aviso um dia antes do aniversário em amarelo claro;
+- aviso do dia em laranja;
+- popup de aniversário com foto do paciente quando cadastrada;
+- botão para preparar mensagem de feliz aniversário no WhatsApp;
+- popup exibido apenas uma vez por paciente no dia.
 
-Fluxo principal:
+## Pacientes
+- foto local;
+- CPF e RG;
+- endereço completo;
+- telefone, e-mail e canal preferido;
+- valor de referência;
+- frequência usual;
+- síntese clínica;
+- rascunho automático;
+- agendamento diretamente pelo paciente;
+- WhatsApp e e-mail.
 
-```text
-IndexedDB local cifrado
-        ↓
-SyncManager v2.6
-        ↓
-Google Workspace OAuth — scope drive.appdata
-        ↓
-Google Drive appDataFolder
-        ↓
-cofre remoto cifrado AES-256-GCM
-```
+## Recursos e PDF
+A biblioteca psicoeducativa possui materiais estruturados com exercício, reflexão, papelaria profissional, texto justificado, contato e QR Code para WhatsApp.
 
-O antigo backend GitHub `clinic-sync-data` é legado e está bloqueado para novas escritas pelo guardrail P0. O GitHub público não deve ser usado como banco de pacientes, prontuários, sessões, respostas clínicas ou transcrições.
+Na v1.5.3 foi corrigida a compatibilidade de abertura da janela de impressão/PDF em navegadores que retornavam `null` quando `window.open` era chamado com `noopener/noreferrer`.
 
-## Segurança e privacidade
+## Backup e exportação
+### Backup seguro `.rmvault`
+É o formato restaurável da plataforma. Mantém a estrutura criptografada necessária para recuperar o banco local.
 
-- dados locais protegidos por PBKDF2-HMAC-SHA256 + AES-GCM;
-- cofre remoto protegido por AES-256-GCM antes da gravação no `appDataFolder`;
-- código de sincronização separado da senha de acesso local;
-- Google Drive `appDataFolder` não aparece como arquivo comum no Meu Drive;
-- nenhum nome/codinome de paciente deve ser hardcoded no código público;
-- `public-clinical-storage-guard-v251.js` bloqueia novas escritas clínicas no backend GitHub legado;
-- conteúdo Gemini/Meet deve permanecer em ambiente clínico restrito;
-- divergências reais de dados bloqueiam a sincronização automática e exigem decisão explícita;
-- prontuário final não deve ser sobrescrito automaticamente por Gemini/IA.
+### Exportação Excel
+Em Configurações há também uma exportação legível `.xls`, organizada por áreas: pacientes, agenda, prontuários, notas, conceitualizações, objetivos, tarefas, materiais, documentos, financeiro, consentimentos e comunicações.
 
-## Sincronização privada
+O arquivo Excel é destinado a leitura e organização. Ele **não é criptografado** e não substitui o `.rmvault` para restauração integral. Fotografias não são incorporadas ao Excel para evitar arquivos excessivamente grandes.
 
-`assets/js/secure-sync-v260.js` é o runtime atual de sincronização. Ele implementa:
+## Sincronização entre notebook e celular
+O GitHub Pages distribui e atualiza o **código da aplicação**, mas o IndexedDB clínico continua local a cada navegador.
 
-- Google Drive privado como provider `google-drive-appdata`;
-- detecção de cofre remoto e revisão remota;
-- merge por clocks e baseline;
-- bloqueio de conflitos reais;
-- retries em alterações concorrentes;
-- eleição de aba líder com `BroadcastChannel`;
-- heartbeat e push event-driven;
-- adoção segura do cofre remoto por novo dispositivo;
-- identificação estável do dispositivo.
+A plataforma **não grava dados clínicos no repositório público**. CPF, fotos, prontuários, agenda e demais dados não devem ser sincronizados para o repositório público da página, mesmo criptografados com a senha local.
 
-O módulo `assets/js/drive-appdata-storage-v260.js` executa leitura/escrita exclusivamente no `appDataFolder`.
+Para sincronização automática entre notebook e celular é necessário um armazenamento privado autenticado, por exemplo:
+- repositório GitHub privado dedicado exclusivamente ao arquivo clínico criptografado; ou
+- Google Drive privado via OAuth.
 
-## Backup e restore
+Todos os repositórios atualmente disponíveis nesta conta estão públicos; portanto a sincronização clínica automática não foi ativada artificialmente nesta versão. Em Configurações há um painel que explica os requisitos para ativar a sincronização privada sem expor dados.
 
-A Central de Backup gera `.rmvault` local. A validação atual inclui teste de restore isolado: o arquivo é carregado em um IndexedDB temporário, todos os stores são relidos e comparados e o banco temporário é removido ao final. A base clínica ativa não é alterada durante esse teste.
+A instalação móvel/PWA continua sendo apenas uma instalação da interface enquanto não houver armazenamento privado configurado. Os dados não são copiados automaticamente do notebook para o celular apenas pela instalação.
 
-Arquivos relacionados:
+## Segurança dos dados
+- IndexedDB local criptografado;
+- nenhum dado clínico é publicado no GitHub;
+- nenhuma rotina automática apaga pacientes;
+- exclusão clínica permanece vinculada ao paciente específico;
+- backup periódico `.rmvault` recomendado;
+- Excel deve ser tratado como arquivo sensível porque é legível.
 
-- `assets/js/backup.js` — backup, teste isolado e restore;
-- `tests/self-test.html` — autoteste não destrutivo;
-- `CLINICAL_CUTOVER_CHECKLIST.md` — gate operacional para migração do dispositivo principal e segundo dispositivo.
+## Diagnóstico e qualidade
+- diagnóstico interno em Configurações;
+- `tests/self-test.html` não destrutivo;
+- workflow `.github/workflows/static-integrity.yml` para sintaxe e imports locais.
 
-## Google Calendar e início de sessão
+## Publicação
+Origem: branch `main`, pasta `/ (root)`, via GitHub Pages.
 
-O Calendar é camada operacional, não prontuário. O título permitido para sessões é:
-
-```text
-T – Nome
-```
-
-Não devem ser enviados para a descrição do evento diagnóstico, conteúdo de sessão, prontuário, respostas de instrumentos, transcrição Gemini ou outros dados clínicos.
-
-O runtime `assets/js/clinical-session-runtime-v370.js` implementa o ciclo operacional de sessão. Para uma sessão do dia, o comando `Iniciar sessão` localiza o evento por identidade estável, reutiliza um Google Meet existente ou solicita uma única conferência no próprio evento, grava `sessionStartedAt` no cofre cifrado com readback e abre o Meet. O cronômetro é derivado do timestamp persistido, e não de estado volátil do navegador.
-
-Ao encerrar, a plataforma registra `sessionEndedAt`, duração real, presença e estado realizado, com opção de desfazer um início acidental sem apagar o Meet já criado. Alterações no Google Calendar preservam a identidade da sessão para evitar duplicações.
-
-## Meet / Gemini
-
-Pipeline autorizado:
-
-```text
-Anotações Gemini RAW
-        ↓
-Drive clínico / 03_ARQUIVO_RESTRITO
-        ↓
-DRAFT_NEEDS_REVIEW em 02_PROCESSAMENTO
-        ↓
-revisão profissional obrigatória
-        ↓
-registro final no cofre clínico
-```
-
-A saída automática do Gemini é fonte RAW e pode conter erros. IA pode preparar draft, mas não finaliza prontuário sem revisão profissional. O runtime canônico de conciliação é `assets/js/clinical-reconcile-v270.js`.
-
-## WhatsApp / Secretary Core
-
-O envio automático de confirmação T−6h cruza a fronteira do navegador e utiliza o Secretary Core no Vercel. Essa integração é estritamente administrativa e deve obedecer aos seguintes invariantes:
-
-- autorização por prova vinculada ao evento privado do Google Calendar;
-- confirmação de `appointmentId`, nonce e hash do telefone antes do registro;
-- revalidação imediatamente antes do envio;
-- conteúdo e destinatário persistidos apenas de forma cifrada no Core;
-- nenhuma persistência clínica no GitHub público;
-- logs operacionais sem telefone, nome ou corpo da mensagem;
-- retenção do conteúdo somente pelo período necessário para o envio e auditoria governada.
-
-## UX operacional
-
-A navegação do workspace do paciente prioriza seis áreas recorrentes — Visão geral, Sessões, Atendimento, Prontuário, Plano e Financeiro — e preserva áreas menos frequentes em `Mais`. Nenhuma função clínica é removida; a mudança reduz carga cognitiva no desktop e no celular.
-
-## Entrypoints atuais
-
-- `index.html` — build `3.7.5-main-v250`;
-- `assets/js/main-v250.js` — entrypoint principal;
-- `assets/js/bootstrap-v240.js` — boot/login e carregamento do SyncManager atual;
-- `assets/js/secure-sync-v260.js` — sincronização privada;
-- `assets/js/drive-appdata-storage-v260.js` — storage remoto privado;
-- `assets/js/google-workspace-token-v260.js` — autorização Workspace/appData;
-- `assets/js/calendar-adapter-v300.js` — proprietário único dos serviços internos do Calendar;
-- `assets/js/clinical-session-runtime-v370.js` — iniciar/abrir/encerrar sessão e cronômetro persistente;
-- `assets/js/public-clinical-storage-guard-v251.js` — fail-closed para storage clínico público legado;
-- `assets/js/gemini-sharing-guard-v250.js` — guardrail de compartilhamento Gemini;
-- `assets/js/clinical-reconcile-v270.js` — conciliação incremental Gemini;
-- `assets/js/patient-workspace-v320.js` — navegação operacional do paciente;
-- `tests/self-test.html` — autoteste não destrutivo.
-
-## Estado de implantação
-
-Código/arquitetura privada: implementados.
-
-Continuam dependentes de validação no dispositivo do usuário:
-
-1. gerar e validar backup `.rmvault` no dispositivo principal;
-2. comprovar notebook ↔ celular nos dois sentidos;
-3. executar teste de restore isolado com um backup real;
-4. validar visualmente os fluxos críticos em viewport móvel real;
-5. comprovar o fluxo real `Iniciar sessão → Google Meet → cronômetro → Encerrar sessão → prontuário` com uma sessão controlada;
-6. comprovar o fluxo real Calendar → Gemini/Meet → rascunho → revisão → prontuário → auditoria.
-
-Esses gates não devem ser marcados como concluídos apenas com CI remoto.
+Versão de interface: `1.5.3`.
