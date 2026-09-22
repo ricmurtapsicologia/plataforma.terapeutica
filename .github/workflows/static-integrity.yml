@@ -6,6 +6,7 @@ on:
       - main
       - release/clinica-hardening-2026-09
     paths:
+      - 'README.md'
       - 'index.html'
       - 'assets/js/**'
       - 'assets/css/**'
@@ -15,6 +16,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'README.md'
       - 'index.html'
       - 'assets/js/**'
       - 'assets/css/**'
