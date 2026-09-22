@@ -3,7 +3,9 @@ name: Platform deep audit
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+      - release/clinica-hardening-2026-09
     paths:
       - 'index.html'
       - 'manifest.webmanifest'
@@ -51,9 +53,15 @@ jobs:
             echo "===== $file =====" | tee -a /tmp/node-test-matrix.log
             node "$file" >>/tmp/node-test-matrix.log 2>&1
             rc=$?
-            if [ $rc -eq 0 ]; then echo "PASS $file" | tee -a /tmp/node-test-matrix.log; else echo "FAIL($rc) $file" | tee -a /tmp/node-test-matrix.log; failures=$((failures+1)); fi
+            if [ $rc -eq 0 ]; then
+              echo "PASS $file" | tee -a /tmp/node-test-matrix.log
+            else
+              echo "FAIL($rc) $file" | tee -a /tmp/node-test-matrix.log
+              failures=$((failures+1))
+            fi
           done < <(find tests assets/js -type f -name '*.test.mjs' | sort)
           echo "NODE_TEST_FAILURES=$failures" | tee -a /tmp/node-test-matrix.log
+          printf '%s\n' "$failures" > /tmp/node-test-failures.txt
           exit 0
 
       - name: Layer 1 - Python clinical contract
@@ -61,10 +69,17 @@ jobs:
         run: |
           set +e
           python -m pip install -q -r services/python-clinical/requirements.txt pytest >/tmp/python-install.log 2>&1
-          (cd services/python-clinical && PYTHONPATH=. python -m compileall -q app tests && PYTHONPATH=. python -m pytest -q) > /tmp/python-clinical.log 2>&1
-          rc=$?
+          install_rc=$?
+          if [ $install_rc -eq 0 ]; then
+            (cd services/python-clinical && PYTHONPATH=. python -m compileall -q app tests && PYTHONPATH=. python -m pytest -q) > /tmp/python-clinical.log 2>&1
+            rc=$?
+          else
+            rc=$install_rc
+            echo "dependency installation failed" > /tmp/python-clinical.log
+          fi
           cat /tmp/python-clinical.log
           echo "PYTHON_TEST_EXIT=$rc" >> /tmp/python-clinical.log
+          printf '%s\n' "$rc" > /tmp/python-test-exit.txt
           exit 0
 
       - name: Start isolated local origin and browser tooling
@@ -89,6 +104,8 @@ jobs:
         run: |
           set +e
           AUDIT_BASE_URL=http://127.0.0.1:8765 node tests/platform-browser-e2e-v391.mjs | tee /tmp/deep-browser-e2e.log
+          rc=${PIPESTATUS[0]}
+          printf '%s\n' "$rc" > /tmp/browser-e2e-exit.txt
           exit 0
 
       - name: Layer 3 - Lighthouse mobile
@@ -99,6 +116,7 @@ jobs:
             --chrome-path="$CHROME_PATH" --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
             --only-categories=performance,accessibility,best-practices,seo \
             --output=json --output=html --output-path=/tmp/deep-lighthouse-mobile --quiet
+          printf '%s\n' "$?" > /tmp/lighthouse-mobile-exit.txt
           exit 0
 
       - name: Layer 3 - Lighthouse desktop
@@ -109,6 +127,7 @@ jobs:
             --preset=desktop --chrome-path="$CHROME_PATH" --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
             --only-categories=performance,accessibility,best-practices,seo \
             --output=json --output=html --output-path=/tmp/deep-lighthouse-desktop --quiet
+          printf '%s\n' "$?" > /tmp/lighthouse-desktop-exit.txt
           exit 0
 
       - name: Layer 3 - Lighthouse interpretation
@@ -118,19 +137,50 @@ jobs:
           const fs=require('fs');
           function load(prefix){
             const p=[`${prefix}.report.json`,`${prefix}.json`].find(fs.existsSync);if(!p)return null;
-            const r=JSON.parse(fs.readFileSync(p,'utf8'));const score=id=>Math.round(Number(r.categories?.[id]?.score||0)*100);
+            const r=JSON.parse(fs.readFileSync(p,'utf8'));
+            const score=id=>Math.round(Number(r.categories?.[id]?.score||0)*100);
             const audit=id=>{const a=r.audits?.[id]||{};return{score:a.score,displayValue:a.displayValue||'',numericValue:a.numericValue??null,title:a.title||id,items:(a.details?.items||[]).slice(0,12)}};
             return{scores:{performance:score('performance'),accessibility:score('accessibility'),bestPractices:score('best-practices'),seo:score('seo')},audits:{fcp:audit('first-contentful-paint'),lcp:audit('largest-contentful-paint'),cls:audit('cumulative-layout-shift'),tbt:audit('total-blocking-time'),console:audit('errors-in-console'),contrast:audit('color-contrast'),label:audit('label'),skip:audit('skip-link'),unusedJs:audit('unused-javascript'),unusedCss:audit('unused-css-rules'),renderBlocking:audit('render-blocking-resources'),unsizedImages:audit('unsized-images')}};
           }
           const report={mobile:load('/tmp/deep-lighthouse-mobile'),desktop:load('/tmp/deep-lighthouse-desktop')};
-          fs.writeFileSync('/tmp/deep-lighthouse-summary.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+          fs.writeFileSync('/tmp/deep-lighthouse-summary.json',JSON.stringify(report,null,2));
+          console.log(JSON.stringify(report,null,2));
+          NODE
+
+      - name: Enforce deep audit gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat /tmp/node-test-failures.txt)" = "0"
+          test "$(cat /tmp/python-test-exit.txt)" = "0"
+          test "$(cat /tmp/browser-e2e-exit.txt)" = "0"
+          test "$(cat /tmp/lighthouse-mobile-exit.txt)" = "0"
+          test "$(cat /tmp/lighthouse-desktop-exit.txt)" = "0"
+          node <<'NODE'
+          const fs=require('fs');
+          const e2e=JSON.parse(fs.readFileSync('/tmp/deep-browser-e2e.json','utf8'));
+          const failures=[];
+          if(!e2e?.smoke?.pass) failures.push('smoke');
+          for(const [name,result] of Object.entries(e2e?.e2e||{})) if(!result?.pass) failures.push(`e2e:${name}`);
+          if((e2e?.networkDuplicates||[]).length) failures.push(`duplicate-modules:${e2e.networkDuplicates.length}`);
+          const lh=JSON.parse(fs.readFileSync('/tmp/deep-lighthouse-summary.json','utf8'));
+          const threshold={mobile:{performance:90,accessibility:95,bestPractices:95,seo:100},desktop:{performance:90,accessibility:95,bestPractices:95,seo:100}};
+          for(const mode of ['mobile','desktop']){
+            if(!lh?.[mode]){failures.push(`lighthouse:${mode}:missing`);continue}
+            for(const [metric,min] of Object.entries(threshold[mode])){
+              const value=Number(lh[mode].scores?.[metric]||0);
+              if(value<min) failures.push(`lighthouse:${mode}:${metric}=${value}<${min}`);
+            }
+          }
+          if(failures.length){console.error('DEEP_AUDIT_GATE_FAIL',failures.join(', '));process.exit(1)}
+          console.log('DEEP_AUDIT_GATE_PASS');
           NODE
 
       - name: Upload complete audit evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: platform-deep-audit-v391
+          name: platform-deep-audit-v392
           path: |
             /tmp/platform-deep-static.json
             /tmp/platform-deep-static.log
