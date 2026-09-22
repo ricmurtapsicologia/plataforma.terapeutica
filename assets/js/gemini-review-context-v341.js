@@ -1,7 +1,7 @@
 import {data,runtime,patientById} from './state.js';
 import {decryptJson} from './crypto.js';
 
-const VERSION='3.4.1';
+const VERSION='3.4.2';
 const CATALOG_STORAGE='rm.google.clinical.reconcile.v230';
 const CATALOG_AAD='google-clinical-reconcile-v230';
 const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
@@ -78,9 +78,9 @@ function addStyles(){
   document.head.appendChild(style);
 }
 
-const observer=new MutationObserver(()=>queueMicrotask(decorate));
-observer.observe(document.documentElement,{childList:true,subtree:true});
-document.addEventListener('rm:rendered',()=>queueMicrotask(decorate));
-document.addEventListener('rm:data-ready',()=>queueMicrotask(decorate));
+const queue=()=>queueMicrotask(()=>void decorate());
+document.addEventListener('rm:modal-opened',queue);
+document.addEventListener('rm:rendered',queue);
+document.addEventListener('rm:data-ready',queue);
 addStyles();
 globalThis.__rmGeminiReviewContext={version:VERSION,decorate};
