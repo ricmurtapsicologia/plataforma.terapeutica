@@ -1,7 +1,7 @@
 import {runtime,selectedPatient} from './state.js';
 import {esc} from './ui.js';
 
-const VERSION='3.8.0-stability';
+const VERSION='3.8.1-stability';
 const PRIMARY_NAV=[
   ['summary','Visão geral'],
   ['timeline','Sessões'],
@@ -73,9 +73,12 @@ function addStyles(){
 
 function apply(){addStyles();document.body.classList.toggle('rm-patient-focused',focused());simplifyHeader();unifyNavigation()}
 function queue(delay=20){clearTimeout(timer);timer=setTimeout(apply,delay)}
-document.addEventListener('rm:rendered',()=>queue(20));
-document.addEventListener('rm:data-ready',()=>queue(50));
-document.addEventListener('rm:data-patched',()=>queue(60));
+// rm:rendered fires immediately after the canonical DOM replacement. Applying synchronously
+// keeps the navigation ownership change inside the same rendering task and prevents a visible
+// intermediate frame between the base tabs and the canonical patient navigation.
+document.addEventListener('rm:rendered',apply);
+document.addEventListener('rm:data-ready',()=>queue(40));
+document.addEventListener('rm:data-patched',()=>queue(50));
 addStyles();
 
 globalThis.__rmPatientWorkspace={version:VERSION,apply,primary:PRIMARY_NAV.map(([id])=>id),more:MORE_NAV.map(([id])=>id)};
