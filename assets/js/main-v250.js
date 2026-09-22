@@ -40,6 +40,7 @@ const modules=[
   ['./patient-ux-v240.js','Contexto individual do paciente'],
   ['./pdf-engine-v320.js','Gerador PDF nativo'],
   ['./record-persistence-v322.js','Persistência verificada de prontuários'],
+  ['./record-ui-v323.js','Prontuário · retomada e reassociação de sessão'],
   ['./treatment-plan-intelligence-v320.js','Plano terapêutico longitudinal'],
   ['./tcc-goal-editor-v360.js','Objetivos terapêuticos estruturados TCC'],
   ['./session-tcc-prep-v360.js','Preparação assistida de sessão TCC'],
