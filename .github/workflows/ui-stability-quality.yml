@@ -2,12 +2,16 @@ name: UI stability quality
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - release/clinica-hardening-2026-09
     paths:
       - 'index.html'
       - 'assets/js/**'
       - 'assets/css/**'
       - 'tests/ui-stability-v380*'
+      - 'tests/browser-persistence-v271.html'
+      - 'tests/agenda-browser-v330.html'
       - '.github/workflows/ui-stability-quality.yml'
   workflow_dispatch:
 
@@ -54,9 +58,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -q 'meta name="rm-build"' /tmp/rm-index.html
-          grep -q 'ui-stability-v380-20260922' /tmp/rm-index.html
           "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=9000 --user-data-dir=/tmp/rm-ui-smoke --dump-dom http://127.0.0.1:8765/index.html >/tmp/rm-ui-smoke.html 2>/tmp/rm-ui-smoke.log || true
-          grep -q 'id="app"' /tmp/rm-ui-smoke.html
+          grep -q 'id="access-password"' /tmp/rm-ui-smoke.html
           if grep -q 'Não foi possível iniciar a plataforma' /tmp/rm-ui-smoke.html; then cat /tmp/rm-ui-smoke.log; exit 1; fi
           echo 'SMOKE_UI_PASS'
 
@@ -65,7 +68,6 @@ jobs:
         run: |
           set -euo pipefail
           "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=7000 --user-data-dir=/tmp/rm-ui-e2e --dump-dom http://127.0.0.1:8765/tests/ui-stability-v380.html >/tmp/rm-ui-e2e.html 2>/tmp/rm-ui-e2e.log || true
-          cat /tmp/rm-ui-e2e.html
           grep -q 'data-e2e="ok"' /tmp/rm-ui-e2e.html || { cat /tmp/rm-ui-e2e.log; exit 1; }
           if grep -q 'data-e2e="fail"' /tmp/rm-ui-e2e.html; then exit 1; fi
           echo 'E2E_UI_STABILITY_PASS'
@@ -75,9 +77,9 @@ jobs:
         run: |
           set -euo pipefail
           "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=8000 --user-data-dir=/tmp/rm-ui-persistence --dump-dom http://127.0.0.1:8765/tests/browser-persistence-v271.html >/tmp/rm-ui-persistence.html 2>/tmp/rm-ui-persistence.log || true
-          grep -q 'P0_BROWSER_PERSISTENCE_PASS' /tmp/rm-ui-persistence.html || { cat /tmp/rm-ui-persistence.log; exit 1; }
+          grep -q '<pre id="result" data-e2e="ok">P0_BROWSER_PERSISTENCE_PASS</pre>' /tmp/rm-ui-persistence.html || { cat /tmp/rm-ui-persistence.log; exit 1; }
           "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir=/tmp/rm-ui-agenda --dump-dom http://127.0.0.1:8765/tests/agenda-browser-v330.html >/tmp/rm-ui-agenda.html 2>/tmp/rm-ui-agenda.log || true
-          grep -q 'AGENDA_V330_BROWSER_PASS' /tmp/rm-ui-agenda.html || { cat /tmp/rm-ui-agenda.log; exit 1; }
+          grep -q '<pre id="result" data-e2e="ok">AGENDA_V330_BROWSER_PASS</pre>' /tmp/rm-ui-agenda.html || { cat /tmp/rm-ui-agenda.log; exit 1; }
           echo 'E2E_CLINICAL_CROSSCHECK_PASS'
 
       - name: Lighthouse
@@ -98,7 +100,7 @@ jobs:
           const score=id=>Number(r.categories?.[id]?.score||0);
           const scores={performance:score('performance'),accessibility:score('accessibility'),bestPractices:score('best-practices'),seo:score('seo')};
           console.log('LIGHTHOUSE_SCORES',JSON.stringify(scores));
-          const floors={performance:.70,accessibility:.90,bestPractices:.85,seo:.80};
+          const floors={performance:.90,accessibility:.95,bestPractices:.95,seo:1};
           for(const [id,min] of Object.entries(floors))if(scores[id]<min)throw new Error(`${id} ${scores[id]} below ${min}`);
           NODE
 
