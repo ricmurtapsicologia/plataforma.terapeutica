@@ -3,12 +3,12 @@ import {bulkPutEncryptedAtomic} from './database.js';
 import {modal,closeModal} from './ui.js';
 import {APP_VERSION} from './version.js';
 
-const RUNTIME_VERSION='3.0.0';
+const RUNTIME_VERSION='3.0.1-stability';
 const SW_MIGRATION_KEY='rm.v3.migration.legacy-sw.done';
 const GEMINI_INTEGRITY_KEY='rm.gemini.materialization-integrity.v273';
 const CANONICAL_SESSION_MIGRATION='rm.v3.clinical-session-id.backfill.v1';
 
-const metrics={bootAt:Date.now(),renders:0,syncRuns:0,syncErrors:0,calendarRuns:0,calendarErrors:0,geminiRuns:0,geminiErrors:0,routeChanges:0,lastError:'',lastUnhandled:'',lastSyncStatus:'',lastGeminiStatus:'',lastCalendarStatus:''};
+const metrics={bootAt:Date.now(),renders:0,decorations:0,ignoredMutations:0,syncRuns:0,syncErrors:0,calendarRuns:0,calendarErrors:0,geminiRuns:0,geminiErrors:0,routeChanges:0,lastError:'',lastUnhandled:'',lastSyncStatus:'',lastGeminiStatus:'',lastCalendarStatus:''};
 let meetStatus='unknown';
 let meetDetail='Estado do Google Meet/Gemini ainda não confirmado.';
 let canonicalTimer=null;
@@ -108,33 +108,35 @@ function groupFor(tab){return GROUPS.find(group=>group.tabs.some(([id])=>id===ta
 function decoratePatientNavigation(){
   if(runtime.locked||runtime.route!=='patients')return;
   const workspace=document.getElementById('patient-workspace');
-  const tabs=workspace?.querySelector('.tabs');
+  const tabs=workspace?.querySelector(':scope > .tabs');
   const content=document.getElementById('patient-tab-content');
   if(!workspace||!tabs||!content)return;
   const current=runtime.patientTab||'summary';
   const activeGroup=groupFor(current);
-  tabs.innerHTML=GROUPS.map(group=>{
-    const active=group===activeGroup;
-    const target=active&&group.tabs.some(([id])=>id===current)?current:group.tabs[0][0];
-    return `<button class="tab ${active?'active':''}" data-action="patient-tab" data-tab="${target}" title="${group.tabs.map(([,label])=>label).join(' · ')}">${group.label}</button>`;
-  }).join('');
+  const canonical=workspace.querySelector(':scope > .rm-canonical-patient-nav-v380');
 
-  document.getElementById('rm-v3-context-nav')?.remove();
-  if(activeGroup.tabs.length>1){
-    const nav=document.createElement('div');
-    nav.id='rm-v3-context-nav';
-    nav.className='toolbar';
-    nav.style.marginBottom='12px';
-    nav.innerHTML=`<div class="small muted"><strong>${activeGroup.label}</strong></div><div class="flex gap-8 wrap">${activeGroup.tabs.map(([id,label])=>`<button class="btn ${id===current?'':'secondary'}" data-action="patient-tab" data-tab="${id}">${label}</button>`).join('')}</div>`;
-    content.insertAdjacentElement('beforebegin',nav);
-  }
+  if(!canonical){
+    const tabsMarkup=GROUPS.map(group=>{
+      const active=group===activeGroup;
+      const target=active&&group.tabs.some(([id])=>id===current)?current:group.tabs[0][0];
+      return `<button class="tab ${active?'active':''}" data-action="patient-tab" data-tab="${target}" title="${group.tabs.map(([,label])=>label).join(' · ')}">${group.label}</button>`;
+    }).join('');
+    if(tabs.innerHTML!==tabsMarkup)tabs.innerHTML=tabsMarkup;
+
+    let nav=document.getElementById('rm-v3-context-nav');
+    if(activeGroup.tabs.length>1){
+      if(!nav){nav=document.createElement('div');nav.id='rm-v3-context-nav';nav.className='toolbar';nav.style.marginBottom='12px';content.insertAdjacentElement('beforebegin',nav)}
+      const navMarkup=`<div class="small muted"><strong>${activeGroup.label}</strong></div><div class="flex gap-8 wrap">${activeGroup.tabs.map(([id,label])=>`<button class="btn ${id===current?'':'secondary'}" data-action="patient-tab" data-tab="${id}">${label}</button>`).join('')}</div>`;
+      if(nav.innerHTML!==navMarkup)nav.innerHTML=navMarkup;
+    }else nav?.remove();
+  }else document.getElementById('rm-v3-context-nav')?.remove();
 
   const scheduleButtons=[...workspace.querySelectorAll('[data-action="schedule-selected-patient"]')];
-  scheduleButtons.slice(1).forEach(button=>{button.hidden=true});
+  scheduleButtons.slice(1).forEach(button=>{if(!button.hidden)button.hidden=true});
   const duplicatePrivacy=workspace.querySelector('[data-action="privacy-mask"]');
-  if(duplicatePrivacy)duplicatePrivacy.hidden=true;
+  if(duplicatePrivacy&&!duplicatePrivacy.hidden)duplicatePrivacy.hidden=true;
 
-  const actionsHost=workspace.querySelector('.patient-context .flex.gap-8.wrap');
+  const actionsHost=workspace.querySelector('.patient-context .flex.gap-8.wrap,.patient-context .flex');
   if(actionsHost&&!actionsHost.querySelector('[data-v3-action-menu]')){
     const button=document.createElement('button');
     button.type='button';
@@ -158,8 +160,8 @@ function openActionMenu(){
 }
 
 function relabelAssistedDocumentation(){
-  document.querySelectorAll('[data-action="gemini-ai-hub-v270"]').forEach(button=>button.textContent='Preparar/revisar rascunho');
-  document.querySelectorAll('[data-action="gemini-ai-generate-v270"]').forEach(button=>{button.textContent=/regenerar/i.test(button.textContent||'')?'Refazer rascunho':'Preparar rascunho'});
+  document.querySelectorAll('[data-action="gemini-ai-hub-v270"]').forEach(button=>{if(button.textContent!=='Preparar/revisar rascunho')button.textContent='Preparar/revisar rascunho'});
+  document.querySelectorAll('[data-action="gemini-ai-generate-v270"]').forEach(button=>{const text=/regenerar/i.test(button.textContent||'')?'Refazer rascunho':'Preparar rascunho';if(button.textContent!==text)button.textContent=text});
   document.querySelectorAll('.badge,.tiny,.small').forEach(node=>{if(String(node.textContent||'').trim()==='Rascunho IA')node.textContent='Rascunho assistido'});
 }
 
@@ -175,10 +177,11 @@ function sanitizeTopStatuses(){
   }
   let chip=document.getElementById('rm-meet-status-v240');
   if(!chip){chip=document.createElement('button');chip.type='button';chip.id='rm-meet-status-v240';chip.dataset.route='settings';top.insertBefore(chip,document.getElementById('clock-chip')||top.firstChild)}
-  chip.className=`rm-status-chip ${meetTone()}`;
-  chip.textContent=meetLabel();
-  chip.title=meetDetail;
-  chip.setAttribute('aria-label',meetDetail);
+  const className=`rm-status-chip ${meetTone()}`,label=meetLabel();
+  if(chip.className!==className)chip.className=className;
+  if(chip.textContent!==label)chip.textContent=label;
+  if(chip.title!==meetDetail)chip.title=meetDetail;
+  if(chip.getAttribute('aria-label')!==meetDetail)chip.setAttribute('aria-label',meetDetail);
 }
 
 function healthState(status){return ['connected','synced','ok','ready'].includes(status)?'OK':status==='error'||status==='disconnected'||status==='conflict'?'Atenção':'Observando'}
@@ -188,7 +191,7 @@ function decorateSettingsHealth(){
   let card=document.getElementById('rm-v3-platform-health');
   if(!card){card=document.createElement('section');card.id='rm-v3-platform-health';card.className='card mt-16';main.appendChild(card)}
   const lastError=metrics.lastUnhandled||metrics.lastError||'Nenhum erro não tratado registrado nesta sessão.';
-  card.innerHTML=`<div class="card-title"><div><div class="eyebrow">Plataforma ${APP_VERSION}</div><h3 class="mb-0">Saúde da plataforma</h3></div><span class="badge">Runtime v${RUNTIME_VERSION}</span></div>
+  const markup=`<div class="card-title"><div><div class="eyebrow">Plataforma ${APP_VERSION}</div><h3 class="mb-0">Saúde da plataforma</h3></div><span class="badge">Runtime v${RUNTIME_VERSION}</span></div>
   <div class="grid grid-3 mt-12">
     <div><div class="tiny muted">Sincronização</div><strong>${healthState(metrics.lastSyncStatus)}</strong></div>
     <div><div class="tiny muted">Google Agenda</div><strong>${healthState(metrics.lastCalendarStatus)}</strong></div>
@@ -197,6 +200,7 @@ function decorateSettingsHealth(){
   <div class="small muted mt-12">Erros nesta sessão — sync: ${metrics.syncErrors}; agenda: ${metrics.calendarErrors}; Gemini: ${metrics.geminiErrors}.</div>
   <div class="small muted mt-8">${String(lastError).replace(/[<>]/g,'')}</div>
   <div class="flex gap-8 wrap mt-16"><button class="btn secondary" data-action="run-diagnostics">Executar diagnóstico</button></div>`;
+  if(card.innerHTML!==markup)card.innerHTML=markup;
 }
 
 function decorateAll(){
@@ -204,17 +208,31 @@ function decorateAll(){
   const app=document.getElementById('app');
   observer?.disconnect();
   try{
+    metrics.decorations++;
     decoratePatientNavigation();
     relabelAssistedDocumentation();
     sanitizeTopStatuses();
     decorateSettingsHealth();
+    exposeMetrics();
   }finally{
     if(app&&observer)observer.observe(app,{childList:true,subtree:true});
   }
 }
 function scheduleDecorate(){if(decorateQueued)return;decorateQueued=true;queueMicrotask(decorateAll)}
 
-observer=new MutationObserver(scheduleDecorate);
+const MUTATION_IGNORE_SELECTOR='#clock-chip,[data-rm-session-header-timer-v371],#rm-orchestrator-v320,#rm-meet-status-v240,#rm-calendar-status-v240,.toast-region,.rm-unified-patient-nav-v320,.rm-canonical-patient-nav-v380';
+function mutationElement(mutation){const target=mutation?.target;return target?.nodeType===1?target:target?.parentElement||null}
+function shouldDecorate(mutations=[]){
+  if(!mutations.length)return true;
+  const relevant=mutations.some(mutation=>{
+    const el=mutationElement(mutation);
+    return !el?.closest?.(MUTATION_IGNORE_SELECTOR);
+  });
+  if(!relevant){metrics.ignoredMutations+=mutations.length;exposeMetrics()}
+  return relevant;
+}
+
+observer=new MutationObserver(mutations=>{if(shouldDecorate(mutations))scheduleDecorate()});
 const app=document.getElementById('app');if(app)observer.observe(app,{childList:true,subtree:true});
 
 document.addEventListener('click',event=>{
