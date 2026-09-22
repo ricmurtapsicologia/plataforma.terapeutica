@@ -12,6 +12,7 @@ on:
       - 'tests/ui-stability-v380*'
       - 'tests/browser-persistence-v271.html'
       - 'tests/agenda-browser-v330.html'
+      - 'tests/record-session-isolation-v400.html'
       - '.github/workflows/ui-stability-quality.yml'
   workflow_dispatch:
 
@@ -72,14 +73,18 @@ jobs:
           if grep -q 'data-e2e="fail"' /tmp/rm-ui-e2e.html; then exit 1; fi
           echo 'E2E_UI_STABILITY_PASS'
 
-      - name: Cross-check persistence and agenda E2E
+      - name: Cross-check clinical E2E
         shell: bash
         run: |
           set -euo pipefail
           "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=8000 --user-data-dir=/tmp/rm-ui-persistence --dump-dom http://127.0.0.1:8765/tests/browser-persistence-v271.html >/tmp/rm-ui-persistence.html 2>/tmp/rm-ui-persistence.log || true
           grep -q '<pre id="result" data-e2e="ok">P0_BROWSER_PERSISTENCE_PASS</pre>' /tmp/rm-ui-persistence.html || { cat /tmp/rm-ui-persistence.log; exit 1; }
+
           "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir=/tmp/rm-ui-agenda --dump-dom http://127.0.0.1:8765/tests/agenda-browser-v330.html >/tmp/rm-ui-agenda.html 2>/tmp/rm-ui-agenda.log || true
-          grep -q '<pre id="result" data-e2e="ok">AGENDA_V330_BROWSER_PASS</pre>' /tmp/rm-ui-agenda.html || { cat /tmp/rm-ui-agenda.log; exit 1; }
+          grep -q '<pre id="result" data-e2e="ok">AGENDA_V330_BROWSER_PASS</pre>' /tmp/rm-ui-agenda.html || { cat /tmp/rm-ui-agenda-browser.log 2>/dev/null || cat /tmp/rm-ui-agenda.log || true; exit 1; }
+
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir=/tmp/rm-ui-record-isolation --dump-dom http://127.0.0.1:8765/tests/record-session-isolation-v400.html >/tmp/rm-ui-record-isolation.html 2>/tmp/rm-ui-record-isolation.log || true
+          grep -q '<pre id="result" data-e2e="ok">RECORD_SESSION_ISOLATION_PASS</pre>' /tmp/rm-ui-record-isolation.html || { cat /tmp/rm-ui-record-isolation.log || true; exit 1; }
           echo 'E2E_CLINICAL_CROSSCHECK_PASS'
 
       - name: Lighthouse
@@ -116,6 +121,8 @@ jobs:
             /tmp/rm-ui-e2e.log
             /tmp/rm-ui-persistence.html
             /tmp/rm-ui-agenda.html
+            /tmp/rm-ui-record-isolation.html
+            /tmp/rm-ui-record-isolation.log
             /tmp/rm-lighthouse.report.json
             /tmp/rm-lighthouse.report.html
           if-no-files-found: ignore
