@@ -9,10 +9,7 @@ on:
       - 'index.html'
       - 'assets/js/**'
       - 'assets/css/**'
-      - 'tests/ui-stability-v380*'
-      - 'tests/browser-persistence-v271.html'
-      - 'tests/agenda-browser-v330.html'
-      - 'tests/record-session-isolation-v400.html'
+      - 'tests/**'
       - '.github/workflows/ui-stability-quality.yml'
   workflow_dispatch:
 
@@ -35,59 +32,30 @@ jobs:
       - name: Static UI stability contract
         run: node tests/ui-stability-v380.test.mjs
 
-      - name: Start local server
+      - name: Start local server and resolve Chromium
         shell: bash
         run: |
+          set -euo pipefail
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/rm-ui-http.log 2>&1 &
           echo $! >/tmp/rm-ui-http.pid
           sleep 1
           curl -fsS http://127.0.0.1:8765/index.html >/tmp/rm-index.html
-
-      - name: Resolve Chromium
-        shell: bash
-        run: |
           browser=''
           for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
             if command -v "$candidate" >/dev/null 2>&1; then browser="$(command -v "$candidate")"; break; fi
           done
-          if [ -z "$browser" ]; then echo 'Nenhum Chromium disponível no runner.'; exit 1; fi
+          test -n "$browser" || { echo 'Nenhum Chromium disponível no runner.'; exit 1; }
           echo "CHROME_PATH=$browser" >> "$GITHUB_ENV"
           echo "BROWSER=$browser" >> "$GITHUB_ENV"
+          npm install --no-save --no-package-lock puppeteer-core@24 >/tmp/puppeteer-ui-install.log 2>&1
 
-      - name: Smoke test platform boot
+      - name: Canonical smoke and clinical E2E
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'meta name="rm-build"' /tmp/rm-index.html
-          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=9000 --user-data-dir=/tmp/rm-ui-smoke --dump-dom http://127.0.0.1:8765/index.html >/tmp/rm-ui-smoke.html 2>/tmp/rm-ui-smoke.log || true
-          grep -q 'id="access-password"' /tmp/rm-ui-smoke.html
-          if grep -q 'Não foi possível iniciar a plataforma' /tmp/rm-ui-smoke.html; then cat /tmp/rm-ui-smoke.log; exit 1; fi
-          echo 'SMOKE_UI_PASS'
+          AUDIT_BASE_URL=http://127.0.0.1:8765 node tests/platform-browser-e2e-v391.mjs | tee /tmp/rm-ui-browser-e2e.log
 
-      - name: Browser E2E stability probe
-        shell: bash
-        run: |
-          set -euo pipefail
-          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=7000 --user-data-dir=/tmp/rm-ui-e2e --dump-dom http://127.0.0.1:8765/tests/ui-stability-v380.html >/tmp/rm-ui-e2e.html 2>/tmp/rm-ui-e2e.log || true
-          grep -q 'data-e2e="ok"' /tmp/rm-ui-e2e.html || { cat /tmp/rm-ui-e2e.log; exit 1; }
-          if grep -q 'data-e2e="fail"' /tmp/rm-ui-e2e.html; then exit 1; fi
-          echo 'E2E_UI_STABILITY_PASS'
-
-      - name: Cross-check clinical E2E
-        shell: bash
-        run: |
-          set -euo pipefail
-          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=8000 --user-data-dir=/tmp/rm-ui-persistence --dump-dom http://127.0.0.1:8765/tests/browser-persistence-v271.html >/tmp/rm-ui-persistence.html 2>/tmp/rm-ui-persistence.log || true
-          grep -q '<pre id="result" data-e2e="ok">P0_BROWSER_PERSISTENCE_PASS</pre>' /tmp/rm-ui-persistence.html || { cat /tmp/rm-ui-persistence.log; exit 1; }
-
-          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir=/tmp/rm-ui-agenda --dump-dom http://127.0.0.1:8765/tests/agenda-browser-v330.html >/tmp/rm-ui-agenda.html 2>/tmp/rm-ui-agenda.log || true
-          grep -q '<pre id="result" data-e2e="ok">AGENDA_V330_BROWSER_PASS</pre>' /tmp/rm-ui-agenda.html || { cat /tmp/rm-ui-agenda-browser.log 2>/dev/null || cat /tmp/rm-ui-agenda.log || true; exit 1; }
-
-          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir=/tmp/rm-ui-record-isolation --dump-dom http://127.0.0.1:8765/tests/record-session-isolation-v400.html >/tmp/rm-ui-record-isolation.html 2>/tmp/rm-ui-record-isolation.log || true
-          grep -q '<pre id="result" data-e2e="ok">RECORD_SESSION_ISOLATION_PASS</pre>' /tmp/rm-ui-record-isolation.html || { cat /tmp/rm-ui-record-isolation.log || true; exit 1; }
-          echo 'E2E_CLINICAL_CROSSCHECK_PASS'
-
-      - name: Lighthouse
+      - name: Lighthouse mobile
         shell: bash
         run: |
           set -euo pipefail
@@ -95,18 +63,51 @@ jobs:
             --chrome-path="$CHROME_PATH" \
             --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
             --only-categories=performance,accessibility,best-practices,seo \
-            --output=json --output=html --output-path=/tmp/rm-lighthouse --quiet
+            --output=json --output=html --output-path=/tmp/rm-lighthouse-mobile --quiet
+
+      - name: Lighthouse desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:8765/index.html \
+            --preset=desktop \
+            --chrome-path="$CHROME_PATH" \
+            --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --output=json --output=html --output-path=/tmp/rm-lighthouse-desktop --quiet
+
+      - name: Enforce Lighthouse floors and Web Vitals
+        shell: bash
+        run: |
           node <<'NODE'
           const fs=require('fs');
-          const candidates=['/tmp/rm-lighthouse.report.json','/tmp/rm-lighthouse.json'];
-          const path=candidates.find(fs.existsSync);
-          if(!path)throw new Error('Lighthouse JSON report not found');
-          const r=JSON.parse(fs.readFileSync(path,'utf8'));
-          const score=id=>Number(r.categories?.[id]?.score||0);
-          const scores={performance:score('performance'),accessibility:score('accessibility'),bestPractices:score('best-practices'),seo:score('seo')};
-          console.log('LIGHTHOUSE_SCORES',JSON.stringify(scores));
-          const floors={performance:.90,accessibility:.95,bestPractices:.95,seo:1};
-          for(const [id,min] of Object.entries(floors))if(scores[id]<min)throw new Error(`${id} ${scores[id]} below ${min}`);
+          function load(prefix){
+            const path=[`${prefix}.report.json`,`${prefix}.json`].find(fs.existsSync);
+            if(!path)throw new Error(`Lighthouse report missing: ${prefix}`);
+            const r=JSON.parse(fs.readFileSync(path,'utf8'));
+            const score=id=>Math.round(Number(r.categories?.[id]?.score||0)*100);
+            return {
+              scores:{performance:score('performance'),accessibility:score('accessibility'),bestPractices:score('best-practices'),seo:score('seo')},
+              lcp:Number(r.audits?.['largest-contentful-paint']?.numericValue||Infinity),
+              cls:Number(r.audits?.['cumulative-layout-shift']?.numericValue||Infinity),
+              tbt:Number(r.audits?.['total-blocking-time']?.numericValue||Infinity)
+            };
+          }
+          const report={mobile:load('/tmp/rm-lighthouse-mobile'),desktop:load('/tmp/rm-lighthouse-desktop')};
+          console.log('LIGHTHOUSE_QUALITY',JSON.stringify(report));
+          const failures=[];
+          for(const mode of ['mobile','desktop']){
+            const s=report[mode].scores;
+            if(s.performance<90)failures.push(`${mode}:performance=${s.performance}`);
+            if(s.accessibility<95)failures.push(`${mode}:accessibility=${s.accessibility}`);
+            if(s.bestPractices<95)failures.push(`${mode}:bestPractices=${s.bestPractices}`);
+            if(s.seo<100)failures.push(`${mode}:seo=${s.seo}`);
+            if(report[mode].cls>0.05)failures.push(`${mode}:cls=${report[mode].cls}`);
+            if(report[mode].tbt>100)failures.push(`${mode}:tbt=${report[mode].tbt}`);
+          }
+          if(report.mobile.lcp>3000)failures.push(`mobile:lcp=${report.mobile.lcp}`);
+          if(failures.length){console.error('UI_QUALITY_GATE_FAIL',failures.join(', '));process.exit(1)}
+          console.log('UI_QUALITY_GATE_PASS');
           NODE
 
       - name: Upload quality evidence
@@ -115,14 +116,11 @@ jobs:
         with:
           name: ui-stability-quality
           path: |
-            /tmp/rm-ui-smoke.html
-            /tmp/rm-ui-smoke.log
-            /tmp/rm-ui-e2e.html
-            /tmp/rm-ui-e2e.log
-            /tmp/rm-ui-persistence.html
-            /tmp/rm-ui-agenda.html
-            /tmp/rm-ui-record-isolation.html
-            /tmp/rm-ui-record-isolation.log
-            /tmp/rm-lighthouse.report.json
-            /tmp/rm-lighthouse.report.html
+            /tmp/rm-ui-browser-e2e.log
+            /tmp/deep-browser-e2e.json
+            /tmp/rm-lighthouse-mobile.report.json
+            /tmp/rm-lighthouse-mobile.report.html
+            /tmp/rm-lighthouse-desktop.report.json
+            /tmp/rm-lighthouse-desktop.report.html
+            /tmp/rm-ui-http.log
           if-no-files-found: ignore
