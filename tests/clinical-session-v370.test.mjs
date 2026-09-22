@@ -30,7 +30,7 @@ const version=fs.readFileSync('assets/js/version.js','utf8');
 const versionMatch=version.match(/APP_VERSION='([^']+)'/);
 assert.ok(versionMatch,'APP_VERSION must be declared');
 const APP_VERSION=versionMatch[1];
-const MAIN_CACHE_REV='record-persistence-v322-20260922';
+const MAIN_CACHE_REV='record-persistence-v323-20260922';
 
 for(const needle of ['conferenceDataVersion=1',"conferenceSolutionKey:{type:'hangoutsMeet'}",'ensureMeetForAppointment','meetUrlFromEvent'])assert.ok(calendar.includes(needle),`Calendar missing ${needle}`);
 assert.ok(calendar.includes("method:'PATCH'"),'Calendar updates must use PATCH so existing Meet data is preserved');
@@ -43,7 +43,8 @@ assert.ok(index.includes(`clinical-session-header-v371.js?v=${APP_VERSION}&rev=s
 assert.ok(index.includes(`main-v250.js?v=${APP_VERSION}&rev=${MAIN_CACHE_REV}`),'Index must cache-bust canonical runtime loader with current cache key');
 assert.ok(main.includes(MAIN_CACHE_REV),'Canonical runtime imports must use current cache key');
 assert.ok(main.includes('clinical-session-runtime-v370.js'),'Canonical main must boot clinical session runtime');
-assert.ok(main.includes('record-persistence-v322.js'),'Canonical main must boot record persistence v322');
+assert.ok(main.includes('record-persistence-v322.js'),'Canonical main must boot record persistence runtime');
+assert.ok(main.includes('record-ui-v323.js'),'Canonical main must boot record follow-up and relink UI runtime');
 assert.ok(!main.includes('record-persistence-v321.js'),'Canonical main must not boot stale record persistence v321');
 assert.ok(!main.includes('calendar-reverse-reconcile-v276.js'),'Reverse reconciliation must not be double-booted by main');
 assert.ok(adapter.includes('calendar-reverse-reconcile-v276.js'),'Calendar adapter must own v276 reconciliation');
