@@ -22,6 +22,24 @@ for(const [path,label] of preAuthModules){
   }
 }
 
+const featureStyles=[
+  'assets/css/ux-v136.css?v=3.8.0',
+  'assets/css/agenda-enhancements-v152.css?v=3.8.0',
+  'assets/css/portable-v153.css?v=3.8.0',
+  'assets/css/mobile-ux-v170.css?v=3.8.0',
+  'assets/css/finance-v176.css?v=3.8.0',
+  'assets/css/clinical-ui-v180.css?v=3.8.0',
+  'assets/css/patient-sessions-v184.css?v=3.8.0',
+  'assets/css/payment-status-v322.css?v=3.8.0',
+  'assets/css/agenda-sync-fix-v182.css?v=3.8.0',
+  'assets/css/agenda-mobile-v183.css?v=3.8.0',
+  'assets/css/mobile-overflow-fix-v190.css?v=3.8.0',
+  'assets/css/google-clinical-v220.css?v=3.8.0',
+  'assets/css/agenda-v330.css?v=3.8.0&rev=hardening-20260922'
+];
+function loadStyle(href){return new Promise((resolve,reject)=>{if([...document.styleSheets].some(sheet=>sheet.href===new URL(href,location.href).href)){resolve();return}const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.dataset.rmFeatureStyle='1';link.onload=()=>resolve();link.onerror=()=>reject(new Error(`Falha ao carregar estilo ${href}`));document.head.appendChild(link)})}
+async function loadFeatureStyles(){await Promise.all(featureStyles.map(loadStyle));window.__rmFeatureStylesReady=true}
+
 const featureModules=[
   ['./record-link-integrity-v325.js','Integridade de vínculo dos prontuários',true],
   ['./clinical-session-header-v371.js','Cabeçalho da sessão clínica',true],
@@ -80,6 +98,7 @@ let featureStarted=false;
 async function loadFeatureModules(){
   if(featureStarted)return globalThis.__rmFeatureGatePromise;
   featureStarted=true;
+  await loadFeatureStyles();
   const critical=[];
   for(const [path,label,isCritical=false] of featureModules){
     try{await import(path)}catch(err){
