@@ -1,0 +1,117 @@
+name: UI stability quality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'assets/js/**'
+      - 'assets/css/**'
+      - 'tests/ui-stability-v380*'
+      - '.github/workflows/ui-stability-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-stability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Static UI stability contract
+        run: node tests/ui-stability-v380.test.mjs
+
+      - name: Start local server
+        shell: bash
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/rm-ui-http.log 2>&1 &
+          echo $! >/tmp/rm-ui-http.pid
+          sleep 1
+          curl -fsS http://127.0.0.1:8765/index.html >/tmp/rm-index.html
+
+      - name: Resolve Chromium
+        shell: bash
+        run: |
+          browser=''
+          for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$candidate" >/dev/null 2>&1; then browser="$(command -v "$candidate")"; break; fi
+          done
+          if [ -z "$browser" ]; then echo 'Nenhum Chromium disponível no runner.'; exit 1; fi
+          echo "CHROME_PATH=$browser" >> "$GITHUB_ENV"
+          echo "BROWSER=$browser" >> "$GITHUB_ENV"
+
+      - name: Smoke test platform boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'meta name="rm-build"' /tmp/rm-index.html
+          grep -q 'ui-stability-v380-20260922' /tmp/rm-index.html
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=9000 --user-data-dir=/tmp/rm-ui-smoke --dump-dom http://127.0.0.1:8765/index.html >/tmp/rm-ui-smoke.html 2>/tmp/rm-ui-smoke.log || true
+          grep -q 'id="app"' /tmp/rm-ui-smoke.html
+          if grep -q 'Não foi possível iniciar a plataforma' /tmp/rm-ui-smoke.html; then cat /tmp/rm-ui-smoke.log; exit 1; fi
+          echo 'SMOKE_UI_PASS'
+
+      - name: Browser E2E stability probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=7000 --user-data-dir=/tmp/rm-ui-e2e --dump-dom http://127.0.0.1:8765/tests/ui-stability-v380.html >/tmp/rm-ui-e2e.html 2>/tmp/rm-ui-e2e.log || true
+          cat /tmp/rm-ui-e2e.html
+          grep -q 'UI_STABILITY_V380_PASS' /tmp/rm-ui-e2e.html || { cat /tmp/rm-ui-e2e.log; exit 1; }
+
+      - name: Cross-check persistence and agenda E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=8000 --user-data-dir=/tmp/rm-ui-persistence --dump-dom http://127.0.0.1:8765/tests/browser-persistence-v271.html >/tmp/rm-ui-persistence.html 2>/tmp/rm-ui-persistence.log || true
+          grep -q 'P0_BROWSER_PERSISTENCE_PASS' /tmp/rm-ui-persistence.html || { cat /tmp/rm-ui-persistence.log; exit 1; }
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir=/tmp/rm-ui-agenda --dump-dom http://127.0.0.1:8765/tests/agenda-browser-v330.html >/tmp/rm-ui-agenda.html 2>/tmp/rm-ui-agenda.log || true
+          grep -q 'AGENDA_V330_BROWSER_PASS' /tmp/rm-ui-agenda.html || { cat /tmp/rm-ui-agenda.log; exit 1; }
+          echo 'E2E_CLINICAL_CROSSCHECK_PASS'
+
+      - name: Lighthouse
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:8765/index.html \
+            --chrome-path="$CHROME_PATH" \
+            --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --output=json --output=html --output-path=/tmp/rm-lighthouse --quiet
+          node <<'NODE'
+          const fs=require('fs');
+          const candidates=['/tmp/rm-lighthouse.report.json','/tmp/rm-lighthouse.json'];
+          const path=candidates.find(fs.existsSync);
+          if(!path)throw new Error('Lighthouse JSON report not found');
+          const r=JSON.parse(fs.readFileSync(path,'utf8'));
+          const score=id=>Number(r.categories?.[id]?.score||0);
+          const scores={performance:score('performance'),accessibility:score('accessibility'),bestPractices:score('best-practices'),seo:score('seo')};
+          console.log('LIGHTHOUSE_SCORES',JSON.stringify(scores));
+          const floors={performance:.70,accessibility:.90,bestPractices:.85,seo:.80};
+          for(const [id,min] of Object.entries(floors))if(scores[id]<min)throw new Error(`${id} ${scores[id]} below ${min}`);
+          NODE
+
+      - name: Upload quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-stability-quality
+          path: |
+            /tmp/rm-ui-smoke.html
+            /tmp/rm-ui-smoke.log
+            /tmp/rm-ui-e2e.html
+            /tmp/rm-ui-e2e.log
+            /tmp/rm-ui-persistence.html
+            /tmp/rm-ui-agenda.html
+            /tmp/rm-lighthouse.report.json
+            /tmp/rm-lighthouse.report.html
+          if-no-files-found: ignore
