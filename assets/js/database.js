@@ -4,6 +4,7 @@ import {encryptJson,decryptJson,bytesToB64,b64ToBytes,randomBytes,deriveKey,make
 const DB_NAME='richelmy-plataforma-db-v2';
 const DB_VERSION=4;
 const NEW_VAULT_ITERATIONS=600000;
+const TOMBSTONE_KEY='syncTombstones';
 let dbPromise=null;
 
 function notifyChange(storeName,id='',kind='put'){
@@ -49,26 +50,29 @@ export async function getMeta(key){const db=await openDatabase(),tx=db.transacti
 export async function setMeta(key,value){const db=await openDatabase(),tx=db.transaction('meta','readwrite'),done=txDone(tx);tx.objectStore('meta').put({key,value});await done}
 export async function getAllMeta(){const db=await openDatabase(),tx=db.transaction('meta','readonly'),done=txDone(tx),all=await requestAsPromise(tx.objectStore('meta').getAll());await done;return Object.fromEntries(all.map(x=>[x.key,x.value]))}
 
-async function clearTombstone(storeName,id){
-  if(!id)return;
-  const current=await getMeta('syncTombstones');
-  if(!Array.isArray(current)||!current.some(t=>t?.storeName===storeName&&t?.id===id))return;
-  await setMeta('syncTombstones',current.filter(t=>!(t?.storeName===storeName&&t?.id===id)));
+async function tombstonesFromMetaStore(metaStore){
+  const row=await requestAsPromise(metaStore.get(TOMBSTONE_KEY));
+  return Array.isArray(row?.value)?[...row.value]:[];
 }
-async function clearTombstones(entries){
+function writeTombstones(metaStore,value){metaStore.put({key:TOMBSTONE_KEY,value:value.slice(-10000)})}
+async function clearTombstonesInTransaction(metaStore,entries){
   const pairs=entries.filter(x=>x?.storeName&&x?.id);
   if(!pairs.length)return;
-  const current=await getMeta('syncTombstones');
-  if(!Array.isArray(current)||!current.length)return;
+  const current=await tombstonesFromMetaStore(metaStore);
+  if(!current.length)return;
   const keys=new Set(pairs.map(x=>`${x.storeName}:${x.id}`));
   const next=current.filter(t=>!keys.has(`${t?.storeName||''}:${t?.id||''}`));
-  if(next.length!==current.length)await setMeta('syncTombstones',next);
+  if(next.length!==current.length)writeTombstones(metaStore,next);
 }
-async function recordTombstone(storeName,id){
-  if(!id)return;
-  const saved=await getMeta('syncTombstones'),current=Array.isArray(saved)?[...saved]:[];
-  const deletedAt=new Date().toISOString(),filtered=current.filter(t=>!(t?.storeName===storeName&&t?.id===id));
-  filtered.push({storeName,id,deletedAt});await setMeta('syncTombstones',filtered.slice(-10000));
+async function recordTombstonesInTransaction(metaStore,entries){
+  const valid=entries.filter(x=>x?.storeName&&x?.id);
+  if(!valid.length)return;
+  const current=await tombstonesFromMetaStore(metaStore);
+  const keys=new Set(valid.map(x=>`${x.storeName}:${x.id}`));
+  const next=current.filter(t=>!keys.has(`${t?.storeName||''}:${t?.id||''}`));
+  const deletedAt=new Date().toISOString();
+  for(const entry of valid)next.push({storeName:entry.storeName,id:entry.id,deletedAt});
+  writeTombstones(metaStore,next);
 }
 
 function validateWrite(storeName,value){
@@ -110,20 +114,20 @@ export async function unlockVault(password){
 
 export async function putEncrypted(storeName,value,key){
   const prepared=await prepareEncryptedRow(storeName,value,key);
-  const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx);
+  const db=await openDatabase(),tx=db.transaction([storeName,'meta'],'readwrite'),done=txDone(tx);
   tx.objectStore(storeName).put(prepared.row);
+  await clearTombstonesInTransaction(tx.objectStore('meta'),[prepared]);
   await done;
-  await clearTombstone(storeName,value.id);
   notifyChange(storeName,value.id,'put');
   return value;
 }
 export async function bulkPutEncrypted(storeName,values,key){
   const prepared=await prepareBatch(storeName,values,key);
   if(!prepared.length)return;
-  const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx),store=tx.objectStore(storeName);
+  const db=await openDatabase(),tx=db.transaction([storeName,'meta'],'readwrite'),done=txDone(tx),store=tx.objectStore(storeName);
   for(const item of prepared)store.put(item.row);
+  await clearTombstonesInTransaction(tx.objectStore('meta'),prepared);
   await done;
-  await clearTombstones(prepared);
   notifyChange(storeName,'','bulk');
 }
 export async function getDecryptedById(storeName,id,key){
@@ -132,7 +136,10 @@ export async function getDecryptedById(storeName,id,key){
   const db=await openDatabase(),tx=db.transaction(storeName,'readonly'),done=txDone(tx),row=await requestAsPromise(tx.objectStore(storeName).get(id));
   await done;
   if(!row)return null;
-  return decryptJson(key,row.encrypted,`${storeName}:${id}`);
+  try{return await decryptJson(key,row.encrypted,`${storeName}:${id}`)}catch(cause){
+    const error=new Error(`O registro ${storeName}:${id} existe, mas não pôde ser descriptografado.`);
+    error.code='RM_DECRYPTION_READ_FAILURE';error.storeName=storeName;error.recordId=id;error.cause=cause;throw error;
+  }
 }
 export async function bulkPutEncryptedAtomic(batches,key,{verify=false}={}){
   const source=Array.isArray(batches)?batches:[];
@@ -145,10 +152,10 @@ export async function bulkPutEncryptedAtomic(batches,key,{verify=false}={}){
     normalized.push(...items);stores.add(storeName);
   }
   if(!normalized.length)return{counts:{},verified:true};
-  const db=await openDatabase(),names=[...stores],tx=db.transaction(names,'readwrite'),done=txDone(tx);
+  const db=await openDatabase(),names=['meta',...stores],tx=db.transaction(names,'readwrite'),done=txDone(tx);
   for(const item of normalized)tx.objectStore(item.storeName).put(item.row);
+  await clearTombstonesInTransaction(tx.objectStore('meta'),normalized);
   await done;
-  await clearTombstones(normalized);
   const counts={};for(const item of normalized)counts[item.storeName]=(counts[item.storeName]||0)+1;
   if(verify){
     for(const item of normalized){
@@ -160,14 +167,37 @@ export async function bulkPutEncryptedAtomic(batches,key,{verify=false}={}){
   return{counts,verified:true};
 }
 export async function getAllDecrypted(storeName,key){
+  if(!STORE_NAMES.includes(storeName))throw new Error('Área de dados inválida.');
   const db=await openDatabase();if(!db.objectStoreNames.contains(storeName))return[];
   const tx=db.transaction(storeName,'readonly'),done=txDone(tx),rows=await requestAsPromise(tx.objectStore(storeName).getAll());await done;
-  const decoded=await Promise.all(rows.map(async row=>{try{return await decryptJson(key,row.encrypted,`${storeName}:${row.id}`)}catch(err){console.error('Registro não pôde ser lido',storeName,row.id,err);return null}}));return decoded.filter(Boolean);
+  const failures=[];
+  const decoded=await Promise.all(rows.map(async row=>{
+    try{return await decryptJson(key,row.encrypted,`${storeName}:${row.id}`)}catch(cause){failures.push({storeName,id:row.id,cause});return null}
+  }));
+  if(failures.length){
+    console.error('Falha de descriptografia em store clínica',{storeName,count:failures.length,ids:failures.map(x=>x.id)});
+    const error=new Error(`${failures.length} registro(s) de ${storeName} existem no cofre, mas não puderam ser descriptografados. A store não será tratada como vazia.`);
+    error.code='RM_STORE_DECRYPTION_FAILURE';error.storeName=storeName;error.recordIds=failures.map(x=>x.id);throw error;
+  }
+  return decoded;
 }
-export async function deleteRecord(storeName,id){const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx);tx.objectStore(storeName).delete(id);await done;await recordTombstone(storeName,id);notifyChange(storeName,id,'delete')}
+export async function deleteRecord(storeName,id){
+  if(!STORE_NAMES.includes(storeName))throw new Error('Área de dados inválida.');
+  if(!id)return;
+  const db=await openDatabase(),tx=db.transaction([storeName,'meta'],'readwrite'),done=txDone(tx);
+  tx.objectStore(storeName).delete(id);
+  await recordTombstonesInTransaction(tx.objectStore('meta'),[{storeName,id}]);
+  await done;
+  notifyChange(storeName,id,'delete');
+}
 export async function clearStore(storeName){
-  const db=await openDatabase(),readTx=db.transaction(storeName,'readonly'),readDone=txDone(readTx),rows=await requestAsPromise(readTx.objectStore(storeName).getAll());await readDone;
-  const tx=db.transaction(storeName,'readwrite'),done=txDone(tx);tx.objectStore(storeName).clear();await done;for(const row of rows)await recordTombstone(storeName,row.id);notifyChange(storeName,'','clear');
+  if(!STORE_NAMES.includes(storeName))throw new Error('Área de dados inválida.');
+  const db=await openDatabase(),tx=db.transaction([storeName,'meta'],'readwrite'),done=txDone(tx),store=tx.objectStore(storeName),meta=tx.objectStore('meta');
+  const rows=await requestAsPromise(store.getAll());
+  store.clear();
+  await recordTombstonesInTransaction(meta,rows.map(row=>({storeName,id:row.id})));
+  await done;
+  notifyChange(storeName,'','clear');
 }
 export async function clearAll(){const db=await openDatabase(),tx=db.transaction(['meta',...STORE_NAMES],'readwrite'),done=txDone(tx);tx.objectStore('meta').clear();for(const s of STORE_NAMES)tx.objectStore(s).clear();await done;if(!globalThis.__rmSyncApplying)document.dispatchEvent(new CustomEvent('rm:local-data-cleared'))}
 
