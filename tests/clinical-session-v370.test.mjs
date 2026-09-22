@@ -30,6 +30,7 @@ const version=fs.readFileSync('assets/js/version.js','utf8');
 const versionMatch=version.match(/APP_VERSION='([^']+)'/);
 assert.ok(versionMatch,'APP_VERSION must be declared');
 const APP_VERSION=versionMatch[1];
+const MAIN_CACHE_REV='record-persistence-v321-20260922';
 
 for(const needle of ['conferenceDataVersion=1',"conferenceSolutionKey:{type:'hangoutsMeet'}",'ensureMeetForAppointment','meetUrlFromEvent'])assert.ok(calendar.includes(needle),`Calendar missing ${needle}`);
 assert.ok(calendar.includes("method:'PATCH'"),'Calendar updates must use PATCH so existing Meet data is preserved');
@@ -39,8 +40,8 @@ for(const needle of ['clinical-session-start-flex-v372','Sem sessão aberta hoje
 assert.ok(!header.includes('data-v3-action-menu'),'Patient header must not expose generic action-menu marker that can intercept session clicks');
 assert.ok(!header.includes('disabled title="Sem sessão agendada para hoje"'),'No-schedule state must not disable session start');
 assert.ok(index.includes(`clinical-session-header-v371.js?v=${APP_VERSION}&rev=session-flex-runtime-20260903`),'Index must cache-bust flexible session header with canonical version');
-assert.ok(index.includes(`main-v250.js?v=${APP_VERSION}&rev=icaps-v400-20260902`),'Index must cache-bust canonical runtime loader with canonical version');
-assert.ok(main.includes('icaps-v400-20260902'),'Canonical runtime imports must use current cache key');
+assert.ok(index.includes(`main-v250.js?v=${APP_VERSION}&rev=${MAIN_CACHE_REV}`),'Index must cache-bust canonical runtime loader with current cache key');
+assert.ok(main.includes(MAIN_CACHE_REV),'Canonical runtime imports must use current cache key');
 assert.ok(main.includes('clinical-session-runtime-v370.js'),'Canonical main must boot clinical session runtime');
 assert.ok(!main.includes('calendar-reverse-reconcile-v276.js'),'Reverse reconciliation must not be double-booted by main');
 assert.ok(adapter.includes('calendar-reverse-reconcile-v276.js'),'Calendar adapter must own v276 reconciliation');
