@@ -1,0 +1,197 @@
+name: Platform deep audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'manifest.webmanifest'
+      - 'assets/js/**'
+      - 'assets/css/**'
+      - 'services/python-clinical/**'
+      - 'security/**'
+      - 'tests/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-deep-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Layer 1 - syntax and deep static pinpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do node --check "$file"; done < <(find assets/js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+          node tests/platform-deep-audit-v390.mjs | tee /tmp/platform-deep-static.log
+          python security/public_repo_guard.py . | tee /tmp/public-repo-guard.log
+
+      - name: Layer 1 - run every JavaScript regression test
+        shell: bash
+        run: |
+          set +e
+          : > /tmp/node-test-matrix.log
+          failures=0
+          while IFS= read -r file; do
+            echo "===== $file =====" | tee -a /tmp/node-test-matrix.log
+            node "$file" >>/tmp/node-test-matrix.log 2>&1
+            rc=$?
+            if [ $rc -eq 0 ]; then echo "PASS $file" | tee -a /tmp/node-test-matrix.log; else echo "FAIL($rc) $file" | tee -a /tmp/node-test-matrix.log; failures=$((failures+1)); fi
+          done < <(find tests assets/js -type f -name '*.test.mjs' | sort)
+          echo "NODE_TEST_FAILURES=$failures" | tee -a /tmp/node-test-matrix.log
+          exit 0
+
+      - name: Layer 1 - Python clinical contract
+        shell: bash
+        run: |
+          set +e
+          python -m pip install -q -r services/python-clinical/requirements.txt pytest >/tmp/python-install.log 2>&1
+          python -m pytest -q services/python-clinical/tests > /tmp/python-clinical.log 2>&1
+          rc=$?
+          cat /tmp/python-clinical.log
+          echo "PYTHON_TEST_EXIT=$rc" >> /tmp/python-clinical.log
+          exit 0
+
+      - name: Start isolated local origin
+        shell: bash
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/rm-deep-http.log 2>&1 &
+          echo $! >/tmp/rm-deep-http.pid
+          sleep 1
+          curl -fsS http://127.0.0.1:8765/index.html >/tmp/rm-deep-index-source.html
+          browser=''
+          for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$candidate" >/dev/null 2>&1; then browser="$(command -v "$candidate")"; break; fi
+          done
+          test -n "$browser" || { echo 'Chromium unavailable'; exit 1; }
+          echo "BROWSER=$browser" >> "$GITHUB_ENV"
+          echo "CHROME_PATH=$browser" >> "$GITHUB_ENV"
+
+      - name: Layer 2 - smoke boot
+        shell: bash
+        run: |
+          set +e
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=5000 --user-data-dir=/tmp/rm-deep-smoke --dump-dom http://127.0.0.1:8765/index.html >/tmp/rm-deep-smoke.html 2>/tmp/rm-deep-smoke-console.log
+          python - <<'PY'
+          from pathlib import Path
+          h=Path('/tmp/rm-deep-smoke.html').read_text(errors='replace')
+          checks={
+            'app_present':'id="app"' in h,
+            'login_present':'id="access-password"' in h and 'data-access-action="login"' in h,
+            'no_critical_boot_failure':'Não foi possível iniciar a plataforma' not in h,
+            'boot_fallback_gone':'Inicializando ambiente seguro' not in h,
+          }
+          Path('/tmp/rm-deep-smoke-result.txt').write_text('\n'.join(f'{k}={v}' for k,v in checks.items()))
+          print(checks)
+          PY
+          cat /tmp/rm-deep-smoke-result.txt
+          exit 0
+
+      - name: Layer 2 - robust browser E2E matrix
+        shell: bash
+        run: |
+          set +e
+          : >/tmp/browser-e2e-matrix.log
+          run_dom(){
+            name="$1"; url="$2"; budget="$3";
+            "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget="$budget" --user-data-dir="/tmp/$name-$RANDOM" --dump-dom "$url" >"/tmp/$name.html" 2>"/tmp/$name.console.log" || true
+          }
+          run_dom deep-persistence http://127.0.0.1:8765/tests/browser-persistence-v271.html 9000
+          run_dom deep-agenda http://127.0.0.1:8765/tests/agenda-browser-v330.html 13000
+          run_dom deep-ui http://127.0.0.1:8765/tests/ui-stability-v380.html 8000
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          out=[]
+          def pre(name):
+            h=Path('/tmp/'+name+'.html').read_text(errors='replace')
+            m=re.search(r'<pre[^>]*id="result"[^>]*>(.*?)</pre>',h,re.S|re.I)
+            return re.sub('<[^>]+>','',m.group(1)).strip() if m else 'NO_RESULT_ELEMENT'
+          p=pre('deep-persistence'); a=pre('deep-agenda'); u=pre('deep-ui')
+          out.append(('persistence',p,p=='P0_BROWSER_PERSISTENCE_PASS'))
+          out.append(('agenda',a,a=='AGENDA_V330_BROWSER_PASS'))
+          out.append(('ui_stability',u,u.startswith('OK_V380')))
+          text='\n'.join(f'{n}: {"PASS" if ok else "FAIL"} | {v}' for n,v,ok in out)
+          Path('/tmp/browser-e2e-matrix.log').write_text(text+'\n')
+          print(text)
+          PY
+          exit 0
+
+      - name: Layer 3 - Lighthouse mobile
+        shell: bash
+        run: |
+          set +e
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:8765/index.html \
+            --chrome-path="$CHROME_PATH" --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --output=json --output=html --output-path=/tmp/deep-lighthouse-mobile --quiet
+          exit 0
+
+      - name: Layer 3 - Lighthouse desktop
+        shell: bash
+        run: |
+          set +e
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:8765/index.html \
+            --preset=desktop --chrome-path="$CHROME_PATH" --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --output=json --output=html --output-path=/tmp/deep-lighthouse-desktop --quiet
+          exit 0
+
+      - name: Layer 3 - Lighthouse interpretation and QEP evidence extract
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          function load(prefix){
+            const p=[`${prefix}.report.json`,`${prefix}.json`].find(fs.existsSync);if(!p)return null;
+            const r=JSON.parse(fs.readFileSync(p,'utf8'));const score=id=>Math.round(Number(r.categories?.[id]?.score||0)*100);
+            const audit=id=>{const a=r.audits?.[id]||{};return{score:a.score,displayValue:a.displayValue||'',numericValue:a.numericValue??null,title:a.title||id,items:(a.details?.items||[]).slice(0,8)}};
+            return{scores:{performance:score('performance'),accessibility:score('accessibility'),bestPractices:score('best-practices'),seo:score('seo')},audits:{fcp:audit('first-contentful-paint'),lcp:audit('largest-contentful-paint'),cls:audit('cumulative-layout-shift'),tbt:audit('total-blocking-time'),console:audit('errors-in-console'),contrast:audit('color-contrast'),label:audit('label'),skip:audit('skip-link'),unusedJs:audit('unused-javascript'),unusedCss:audit('unused-css-rules'),renderBlocking:audit('render-blocking-resources'),unsizedImages:audit('unsized-images')}};
+          }
+          const report={mobile:load('/tmp/deep-lighthouse-mobile'),desktop:load('/tmp/deep-lighthouse-desktop')};
+          fs.writeFileSync('/tmp/deep-lighthouse-summary.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+          NODE
+
+      - name: Upload complete audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-deep-audit-v390
+          path: |
+            /tmp/platform-deep-static.json
+            /tmp/platform-deep-static.log
+            /tmp/public-repo-guard.log
+            /tmp/node-test-matrix.log
+            /tmp/python-clinical.log
+            /tmp/python-install.log
+            /tmp/rm-deep-smoke.html
+            /tmp/rm-deep-smoke-console.log
+            /tmp/rm-deep-smoke-result.txt
+            /tmp/browser-e2e-matrix.log
+            /tmp/deep-persistence.html
+            /tmp/deep-persistence.console.log
+            /tmp/deep-agenda.html
+            /tmp/deep-agenda.console.log
+            /tmp/deep-ui.html
+            /tmp/deep-ui.console.log
+            /tmp/deep-lighthouse-mobile.report.json
+            /tmp/deep-lighthouse-mobile.report.html
+            /tmp/deep-lighthouse-desktop.report.json
+            /tmp/deep-lighthouse-desktop.report.html
+            /tmp/deep-lighthouse-summary.json
+          if-no-files-found: ignore
