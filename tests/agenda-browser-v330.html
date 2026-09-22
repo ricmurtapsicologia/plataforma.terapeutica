@@ -22,9 +22,8 @@ try{
   state.data.patients=[patient];state.data.appointments=[appointment];state.data.payments=[];
   await db.putEncrypted('patients',patient,vault.key);await db.putEncrypted('appointments',appointment,vault.key);
 
-  let prepared='',newPaymentClicks=0;
+  let prepared='';
   globalThis.__rmSessionPayments={prepareAppointment:id=>{prepared=id}};
-  document.addEventListener('click',event=>{if(event.target.closest?.('[data-action="new-payment"]'))newPaymentClicks++});
   await import('../assets/js/agenda-controller-v330.js');
 
   assert(globalThis.__rmAgendaController?.owner==='agenda-controller-v330','single controller owner missing');
@@ -54,7 +53,11 @@ try{
 
   document.querySelector('[data-action="agenda-payment-v330"]').click();
   assert(prepared==='a1','payment was not prepared with canonical appointment id');
-  assert(newPaymentClicks===1,'new payment action was not invoked exactly once');
+  assert(document.querySelectorAll('#modal-root .modal').length===1,'payment action must keep exactly one modal');
+  assert(document.querySelector('#modal-title')?.textContent.includes('Registrar pagamento'),'linked payment modal did not open');
+  assert(document.querySelector('#pay-patient')?.value==='p1','linked payment modal lost patient identity');
+  assert(document.querySelector('[data-rm-payment-link-note="1"]'),'linked payment notice missing');
+  assert(document.querySelectorAll('[data-action="save-payment"]').length===1,'linked payment modal must expose exactly one save action');
 
   state.runtime.route='settings';
   for(let i=0;i<100;i++)document.dispatchEvent(new CustomEvent('rm:rendered',{detail:{route:'settings'}}));
