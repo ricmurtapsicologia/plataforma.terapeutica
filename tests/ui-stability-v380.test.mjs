@@ -9,6 +9,7 @@ const hardening=read('assets/css/hardening-v360.css');
 const main=read('assets/js/main-v250.js');
 const index=read('index.html');
 const patientUx=read('assets/js/patient-ux-v240.js');
+const version=read('assets/js/version.js').match(/APP_VERSION='([^']+)'/)?.[1];
 
 assert.match(platform,/3\.0\.1-stability/,'platform runtime must expose stability patch version');
 assert.ok(platform.includes('MUTATION_IGNORE_SELECTOR'),'global decorator must filter high-frequency mutations');
@@ -25,9 +26,12 @@ assert.ok(workspace.includes("document.body.classList.toggle('rm-patient-focused
 
 assert.ok(hardening.includes('scrollbar-gutter:stable'),'vertical scrollbar geometry must remain stable');
 assert.ok(hardening.includes('font-variant-numeric:tabular-nums'),'clock and timers must use tabular numerals');
+assert.ok(hardening.includes('.vault-card .btn:not(.secondary):not(.ghost)'),'login contrast hardening must remain active');
 assert.ok(stability.includes("PerformanceObserver.supportedEntryTypes?.includes('layout-shift')"),'CLS telemetry must be active when supported');
 assert.ok(stability.includes('rm-ui-settling'),'render settle guard must be active');
 assert.ok(main.includes('ui-stability-v380.js'),'stability runtime must boot canonically');
-assert.ok(index.includes('ui-stability-v380-20260922'),'index must cache-bust the stability release');
+assert.ok(version,'APP_VERSION must be readable');
+assert.ok(index.includes(`main-v250.js?v=${version}`),'index must cache-bust the current entrypoint release');
+assert.ok(index.includes('rev=hardening-20260922'),'index must expose the hardening revision marker');
 
 console.log('UI_STABILITY_V380_STATIC_PASS');
