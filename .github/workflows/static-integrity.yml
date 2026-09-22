@@ -70,31 +70,27 @@ jobs:
           node tests/platform-deep-audit-v390.mjs
           python security/public_repo_guard.py .
 
-      - name: Run real browser clinical probes
+      - name: Prepare real-browser clinical probes
         shell: bash
         run: |
           set -euo pipefail
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/rm-http.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          echo $! >/tmp/rm-http.pid
           sleep 1
           browser=''
           for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
-            if command -v "$candidate" >/dev/null 2>&1; then browser="$candidate"; break; fi
+            if command -v "$candidate" >/dev/null 2>&1; then browser="$(command -v "$candidate")"; break; fi
           done
-          if [ -z "$browser" ]; then echo 'Nenhum Chromium disponível no runner.'; exit 1; fi
+          test -n "$browser" || { echo 'Nenhum Chromium disponível no runner.'; exit 1; }
+          echo "BROWSER=$browser" >> "$GITHUB_ENV"
+          echo "CHROME_PATH=$browser" >> "$GITHUB_ENV"
+          npm install --no-save --no-package-lock puppeteer-core@24 >/tmp/puppeteer-install.log 2>&1
 
-          profile="/tmp/rm-browser-$RANDOM"
-          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=8000 --user-data-dir="$profile" --dump-dom http://127.0.0.1:8765/tests/browser-persistence-v271.html >/tmp/rm-persistence.html 2>/tmp/rm-browser.log || true
-          grep -q '<pre id="result" data-e2e="ok">P0_BROWSER_PERSISTENCE_PASS</pre>' /tmp/rm-persistence.html || { cat /tmp/rm-browser.log || true; exit 1; }
-
-          agenda_profile="/tmp/rm-agenda-browser-$RANDOM"
-          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir="$agenda_profile" --dump-dom http://127.0.0.1:8765/tests/agenda-browser-v330.html >/tmp/rm-agenda.html 2>/tmp/rm-agenda-browser.log || true
-          grep -q '<pre id="result" data-e2e="ok">AGENDA_V330_BROWSER_PASS</pre>' /tmp/rm-agenda.html || { cat /tmp/rm-agenda-browser.log || true; exit 1; }
-
-          record_profile="/tmp/rm-record-browser-$RANDOM"
-          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir="$record_profile" --dump-dom http://127.0.0.1:8765/tests/record-session-isolation-v400.html >/tmp/rm-record-isolation.html 2>/tmp/rm-record-isolation.log || true
-          grep -q '<pre id="result" data-e2e="ok">RECORD_SESSION_ISOLATION_PASS</pre>' /tmp/rm-record-isolation.html || { cat /tmp/rm-record-isolation.log || true; exit 1; }
+      - name: Run real browser clinical probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUDIT_BASE_URL=http://127.0.0.1:8765 node tests/platform-browser-e2e-v391.mjs | tee /tmp/static-browser-e2e.log
 
       - name: Check local import targets
         shell: bash
@@ -133,3 +129,15 @@ jobs:
           if(!main.includes(`__rmEntrypointVersion='${version}-main-v250'`))throw new Error(`entrypoint marker does not match ${version}`);
           console.log(`Application version validated: ${version}`);
           NODE
+
+      - name: Upload static-integrity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-integrity-evidence
+          path: |
+            /tmp/static-browser-e2e.log
+            /tmp/deep-browser-e2e.json
+            /tmp/puppeteer-install.log
+            /tmp/rm-http.log
+          if-no-files-found: ignore
