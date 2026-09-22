@@ -30,6 +30,9 @@ async function prepareLocalData(v){
     const rest=STORE_NAMES.filter(n=>!priority.includes(n));
     await Promise.all(rest.map(name=>loadStore(name,v.key)));
     window.__rmRender?.();
+    if(!globalThis.__rmFeatureGatePromise)throw new Error('Gate dos módulos clínicos não foi iniciado.');
+    dataBanner('Validando módulos clínicos essenciais…');
+    await withTimeout(globalThis.__rmFeatureGatePromise,60000,'Módulos clínicos essenciais');
     try{await withTimeout(runMigrations(v.key),20000,'Atualização da estrutura local')}catch(err){console.warn('Migração não concluída',err);window.__rmBootErrors.push(`migração: ${err.message||err}`)}
     window.__rmDataReady=true;runtime.dataReady=true;window.__rmRender?.();window.__rmUpdateClock?.();document.dispatchEvent(new CustomEvent('rm:data-ready'));
     dataBanner(window.__rmBootErrors.length?'Plataforma aberta. Alguns módulos apresentaram avisos no diagnóstico.':'Dados carregados. Plataforma pronta.',window.__rmBootErrors.length?'info':'success');removeDataBanner(2200)
