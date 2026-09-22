@@ -4,16 +4,16 @@
 <body>
 <div id="main-content"></div><div id="modal-root"></div><div id="toast-region"></div>
 <button id="session" type="button" data-action="appointment-open" data-id="a1">Abrir sessão</button>
-<pre id="result">RUNNING</pre>
+<pre id="result" data-e2e="running">RUNNING</pre>
 <script type="module">
 const result=document.getElementById('result');
-const fail=message=>{result.textContent=`AGENDA_V330_FAIL: ${message}`;throw new Error(message)};
+const fail=message=>{result.dataset.e2e='fail';result.textContent=`AGENDA_V330_FAIL: ${message}`;throw new Error(message)};
 const assert=(condition,message)=>{if(!condition)fail(message)};
 const wait=async(check,timeout=3500)=>{const start=Date.now();while(Date.now()-start<timeout){if(await check())return true;await new Promise(r=>setTimeout(r,25))}return false};
 
 try{
-  const state=await import('../assets/js/state.js?v=3.3.0');
-  const db=await import('../assets/js/database.js?v=3.3.0');
+  const state=await import('../assets/js/state.js');
+  const db=await import('../assets/js/database.js');
   try{await db.deleteDatabase()}catch{}
   const vault=await db.createVault('agenda-v330-probe');
   state.runtime.key=vault.key;state.runtime.locked=false;state.runtime.dataReady=true;state.runtime.route='agenda';
@@ -25,7 +25,7 @@ try{
   let prepared='',newPaymentClicks=0;
   globalThis.__rmSessionPayments={prepareAppointment:id=>{prepared=id}};
   document.addEventListener('click',event=>{if(event.target.closest?.('[data-action="new-payment"]'))newPaymentClicks++});
-  await import('../assets/js/agenda-controller-v330.js?v=3.3.0');
+  await import('../assets/js/agenda-controller-v330.js');
 
   assert(globalThis.__rmAgendaController?.owner==='agenda-controller-v330','single controller owner missing');
   assert(globalThis.__rmAgendaController?.listenerCount===1,'controller listener count is not one');
@@ -69,7 +69,7 @@ try{
   assert(document.querySelector('[data-action="agenda-delete-confirm-v330"]'),'delete action does not require explicit confirmation');
   const beforeDelete=await db.getDecryptedById('appointments','a1',vault.key);assert(beforeDelete?.id==='a1','delete request removed appointment before confirmation');
 
-  result.textContent='AGENDA_V330_BROWSER_PASS';
-}catch(error){if(!String(result.textContent).includes('FAIL'))result.textContent=`AGENDA_V330_FAIL: ${error?.message||error}`;throw error}
+  result.dataset.e2e='ok';result.textContent='AGENDA_V330_BROWSER_PASS';
+}catch(error){if(!String(result.textContent).includes('FAIL')){result.dataset.e2e='fail';result.textContent=`AGENDA_V330_FAIL: ${error?.message||error}`};throw error}
 </script>
 </body></html>
