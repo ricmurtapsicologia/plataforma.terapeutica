@@ -16,15 +16,13 @@ const bootstrap=read('assets/js/bootstrap-v240.js');
 const database=read('assets/js/database.js');
 const version=read('assets/js/version.js');
 
-// Build a source-level dependency graph. Query strings are intentionally stripped only
-// for graph reachability; separate query/no-query identities are detected below.
 const importRe=/(?:from\s*|import\s*\()\s*['"](\.\.?\/[^'"]+)['"]/g;
 const imports=new Map();
 for(const file of js){
   const src=read(file),deps=[];
   for(const m of src.matchAll(importRe)){
     const spec=m[1].split('?')[0].split('#')[0];
-    let target=path.posix.normalize(path.posix.join(path.posix.dirname(file),spec));
+    const target=path.posix.normalize(path.posix.join(path.posix.dirname(file),spec));
     if(fs.existsSync(path.join(ROOT,target)))deps.push(target);
   }
   imports.set(file,deps);
@@ -37,16 +35,15 @@ const visit=f=>{if(reachable.has(f)||!imports.has(f))return;reachable.add(f);for
 roots.forEach(visit);
 const orphanJs=js.filter(p=>!reachable.has(p)&&!p.endsWith('.test.mjs'));
 
-// Same ES module pathname loaded with and without cache-busting query => distinct module instances.
+// Main loads each listed module with ?v=...&rev=..., while static imports elsewhere use
+// the queryless URL. In browsers those are different ES-module identities.
 for(const target of mainDynamic){
-  const basename=path.posix.basename(target);
-  const owners=[];
-  for(const file of reachable){if(file===target)continue;const src=read(file);if(src.includes(`'./${basename}'`)||src.includes(`\"./${basename}\"`))owners.push(file)}
-  if(owners.length)add('MAIOR','MOD-QUERY-DUP','Arquitetura/runtime',`${target} é carregado pelo entrypoint com query string e também importado sem query por módulo(s) alcançável(is), o que cria identidades ES-module distintas e pode duplicar listeners/timers/estado.`,{owners});
+  const owners=[...reachable].filter(file=>file!=='assets/js/main-v250.js'&&file!==target&&(imports.get(file)||[]).includes(target));
+  if(owners.length)add('MAIOR','MOD-QUERY-DUP','Arquitetura/runtime',`${target} é carregado pelo entrypoint com query string e também importado sem query por módulo(s) alcançável(is), criando instâncias ES-module distintas.`,{target,owners});
 }
 
 const active=[...reachable];
-const patternCounts=(re)=>active.flatMap(file=>{const src=read(file);const n=[...src.matchAll(re)].length;return n?[{file,count:n}]:[]});
+const patternCounts=re=>active.flatMap(file=>{const src=read(file);const n=[...src.matchAll(re)].length;return n?[{file,count:n}]:[]});
 const observers=patternCounts(/new\s+MutationObserver\s*\(/g);
 const intervals=patternCounts(/setInterval\s*\(/g);
 const rendered=patternCounts(/addEventListener\(\s*['"]rm:rendered['"]/g);
@@ -56,7 +53,6 @@ if(intervals.length>3)add('MENOR','TIMER-DENSITY','Runtime/performance',`Há ${i
 if(rendered.length>5)add('MAIOR','RENDER-FANOUT','Runtime/performance',`O evento rm:rendered possui ${rendered.reduce((a,x)=>a+x.count,0)} listeners em módulos alcançáveis, aumentando trabalho após cada renderização.`,{rendered});
 if(immediate.length)add('MENOR','EVENT-STOP-IMMEDIATE','Runtime/eventos','Há stopImmediatePropagation em módulos alcançáveis; isso pode mascarar handlers concorrentes e tornar a ordem de importação relevante.',{immediate});
 
-// Browser test gates that can pass by finding a PASS literal embedded in source code.
 for(const wf of workflows){
   const src=read(wf);
   for(const html of walk('tests').filter(p=>p.endsWith('.html'))){
@@ -67,33 +63,28 @@ for(const wf of workflows){
   }
 }
 
-// Test inventory coverage.
 const workflowText=workflows.map(read).join('\n');
 const uncovered=tests.filter(t=>!workflowText.includes(t));
-if(uncovered.length)add('MAIOR','TEST-COVERAGE','QA','Existem testes versionados que não são executados explicitamente por nenhum workflow.',{uncovered});
+if(uncovered.length)add('MAIOR','TEST-COVERAGE','QA','Existem testes versionados que não são executados explicitamente por nenhum workflow canônico de regressão.',{uncovered});
 
-// Security/header constraints visible in a static GitHub Pages document.
-if(/http-equiv="Content-Security-Policy"/i.test(index)&&/frame-ancestors/i.test(index))add('MAIOR','CSP-FRAME-ANCESTORS','Segurança','frame-ancestors é declarado em CSP via <meta>; navegadores ignoram essa diretiva quando entregue por meta, então a proteção anti-framing não está efetiva por esse mecanismo.');
+if(/http-equiv="Content-Security-Policy"/i.test(index)&&/frame-ancestors/i.test(index))add('MAIOR','CSP-FRAME-ANCESTORS','Segurança','frame-ancestors é declarado em CSP via <meta>; navegadores ignoram essa diretiva quando entregue por meta.');
 if(/style-src[^;]*'unsafe-inline'/i.test(index))add('MENOR','CSP-STYLE-INLINE','Segurança','CSP permite estilos inline (unsafe-inline), ampliando a superfície de injeção de estilo.');
-if(/connect-src[^;]*api\.github\.com[^;]*raw\.githubusercontent\.com/i.test(index))add('MENOR','CSP-GITHUB-CONNECT','Segurança/privacidade','A CSP permite conexões do front-end clínico com GitHub API/raw, embora o cofre clínico tenha política de sincronização privada fora do GitHub; revisar necessidade e reduzir allowlist.');
+if(/connect-src[^;]*api\.github\.com[^;]*raw\.githubusercontent\.com/i.test(index))add('MENOR','CSP-GITHUB-CONNECT','Segurança/privacidade','A CSP permite conexões do front-end clínico com GitHub API/raw; revisar necessidade e reduzir allowlist.');
 
-// Fail-open / silent data loss patterns.
-if(/catch\(err\)\{console\.error\('Registro não pôde ser lido'[\s\S]*?return null\}/.test(database)&&/decoded\.filter\(Boolean\)/.test(database))add('MAIOR','DATA-SILENT-DROP','Persistência','getAllDecrypted omite registros que falham na descriptografia e retorna os demais como se o conjunto estivesse completo; isso pode apresentar ausência clínica falsa sem bloquear o carregamento.');
-if(/setStore\(name,\[\]\)/.test(bootstrap))add('MAIOR','STORE-FAIL-EMPTY','Persistência/boot','Falha de leitura de uma store é convertida em store vazia durante o boot, permitindo abrir a interface com dados parcialmente ausentes.');
+if(/catch\(err\)\{console\.error\('Registro não pôde ser lido'[\s\S]*?return null\}/.test(database)&&/decoded\.filter\(Boolean\)/.test(database))add('MAIOR','DATA-SILENT-DROP','Persistência','getAllDecrypted omite registros que falham na descriptografia e retorna os demais como se o conjunto estivesse completo.');
+if(/setStore\(name,\[\]\)/.test(bootstrap))add('MAIOR','STORE-FAIL-EMPTY','Persistência/boot','Falha de leitura de uma store é convertida em store vazia durante o boot.');
 if(/for\(const \[path,label\] of modules\)[\s\S]*?catch\(err\)[\s\S]*?__rmPreBootErrors/.test(main))add('MAIOR','BOOT-PARTIAL-MODULES','Boot/runtime','Falhas de módulos do entrypoint são registradas e o boot continua; módulos essenciais podem falhar sem impedir a abertura da plataforma.');
-if(/delete\(id\);await done;await recordTombstone/.test(database))add('MAIOR','DELETE-TOMBSTONE-NONATOMIC','Persistência/sync','Exclusão local e gravação do tombstone ocorrem em transações separadas; falha entre elas pode permitir ressurreição do registro em sincronização posterior.');
-if(/await done;\s*await clearTombstone/.test(database)||/await done;\s*await clearTombstones/.test(database))add('MAIOR','WRITE-TOMBSTONE-NONATOMIC','Persistência/sync','Gravação/ressurreição e remoção do tombstone ocorrem em transações separadas; tombstone obsoleto pode sobreviver após escrita confirmada.');
-if(/\.clear\(\);await done;for\(const row of rows\)await recordTombstone/.test(database))add('MAIOR','CLEAR-TOMBSTONE-NONATOMIC','Persistência/sync','clearStore limpa a store antes de registrar tombstones individualmente; uma interrupção pode tornar deleções não sincronizáveis.');
+if(/delete\(id\);await done;await recordTombstone/.test(database))add('MAIOR','DELETE-TOMBSTONE-NONATOMIC','Persistência/sync','Exclusão local e gravação do tombstone ocorrem em transações separadas.');
+if(/await done;\s*await clearTombstone/.test(database)||/await done;\s*await clearTombstones/.test(database))add('MAIOR','WRITE-TOMBSTONE-NONATOMIC','Persistência/sync','Gravação/ressurreição e remoção do tombstone ocorrem em transações separadas.');
+if(/\.clear\(\);await done;for\(const row of rows\)await recordTombstone/.test(database))add('MAIOR','CLEAR-TOMBSTONE-NONATOMIC','Persistência/sync','clearStore limpa a store antes de registrar tombstones individualmente.');
 
-// Release metadata and boot/performance structure.
 const buildDate=version.match(/BUILD_DATE='([^']+)'/)?.[1]||'';
 if(buildDate&&buildDate<'2026-09-22')add('MENOR','BUILD-DATE-STALE','Release/governança',`BUILD_DATE=${buildDate} não acompanha os hotfixes atuais de 2026-09-22.`);
 const cssRefs=[...index.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map(m=>m[1]);
 if(cssRefs.length>8)add('MENOR','CSS-CHAIN','Performance',`index.html bloqueia renderização com ${cssRefs.length} folhas CSS separadas.`,{count:cssRefs.length});
-if(mainDynamic.length>30)add('MAIOR','BOOT-MODULE-CHAIN','Performance/arquitetura',`O entrypoint importa sequencialmente ${mainDynamic.length} módulos antes do bootstrap, elevando latência e ampliando a superfície de falha parcial.`,{count:mainDynamic.length});
-if(/document\.addEventListener\('rm:rendered',\(\)=>queueAuditNormalize\(0\)\)/.test(main))add('MAIOR','DB-SCAN-ON-RENDER','Performance/persistência','Cada rm:rendered agenda normalizeAuditedDrafts(), que percorre prontuários e pode gravar no IndexedDB; renderização visual fica acoplada a varredura de persistência.');
-
-if(orphanJs.length>25)add('MENOR','LEGACY-SURFACE','Manutenibilidade',`Há ${orphanJs.length} módulos JavaScript não alcançáveis pelo entrypoint atual; versões históricas elevam risco de reativação acidental e dificultam auditoria.`,{sample:orphanJs.slice(0,40),count:orphanJs.length});
+if(mainDynamic.length>30)add('MAIOR','BOOT-MODULE-CHAIN','Performance/arquitetura',`O entrypoint importa sequencialmente ${mainDynamic.length} módulos antes do bootstrap.`,{count:mainDynamic.length});
+if(/document\.addEventListener\('rm:rendered',\(\)=>queueAuditNormalize\(0\)\)/.test(main))add('MAIOR','DB-SCAN-ON-RENDER','Performance/persistência','Cada rm:rendered agenda normalizeAuditedDrafts(), acoplando renderização a varredura/gravação potencial no IndexedDB.');
+if(orphanJs.length>25)add('MENOR','LEGACY-SURFACE','Manutenibilidade',`Há ${orphanJs.length} módulos JavaScript não alcançáveis pelo entrypoint atual.`,{sample:orphanJs.slice(0,40),count:orphanJs.length});
 
 const severityOrder={CRITICO:0,MAIOR:1,MENOR:2,OPORTUNIDADE:3};
 findings.sort((a,b)=>(severityOrder[a.severity]??9)-(severityOrder[b.severity]??9)||a.id.localeCompare(b.id));
