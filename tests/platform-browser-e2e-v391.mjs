@@ -66,4 +66,6 @@ console.log(JSON.stringify(report,null,2));
 const failures=[];
 if(!report.smoke?.pass)failures.push('smoke');
 for(const [name,x] of Object.entries(report.e2e))if(!x.pass)failures.push(name);
+if(report.networkDuplicates.length)failures.push(`duplicate-modules:${report.networkDuplicates.length}`);
 console.log(`DEEP_BROWSER_E2E_COMPLETE failures=${failures.length?failures.join(','):'none'}`);
+if(failures.length)process.exitCode=1;
