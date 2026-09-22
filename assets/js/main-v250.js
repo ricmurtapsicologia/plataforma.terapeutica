@@ -1,14 +1,33 @@
 document.body.classList.add('rm-booting');
 window.__rmEntrypointVersion='3.8.0-main-v250';
 window.__rmPreBootErrors=[];
+window.__rmFeatureGatePromise=null;
 let bootReady=false;
 document.addEventListener('rm:boot-ready',()=>{bootReady=true},{once:true});
 setTimeout(()=>{if(bootReady)return;const box=document.getElementById('rm-boot-fallback');if(box){box.innerHTML='<strong>O carregamento está demorando mais que o esperado.</strong><div class="small">Verifique a conexão e recarregue a página. Se persistir, abra o diagnóstico da plataforma após o acesso.</div>'}},12000);
 
-const modules=[
-  ['./platform-runtime-v300.js','Runtime consolidado v3',true],
-  ['./ui-stability-v380.js','Estabilidade visual e telemetria CLS',true],
-  ['./migration-router-v300.js','Roteador de migrações condicionais',true],
+const preAuthModules=[
+  ['./platform-runtime-v300.js','Runtime consolidado v3'],
+  ['./ui-stability-v380.js','Estabilidade visual e telemetria CLS'],
+  ['./migration-router-v300.js','Roteador de migrações condicionais'],
+  ['./public-clinical-storage-guard-v251.js','Gate de storage clínico público']
+];
+for(const [path,label] of preAuthModules){
+  try{await import(path)}catch(err){
+    const message=`${label}: ${err?.message||err}`;
+    console.error(`Falha em ${label}`,err);window.__rmPreBootErrors.push(message);
+    const error=new Error(`Módulo essencial indisponível: ${message}`);
+    document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:error.message}}));
+    throw error;
+  }
+}
+
+const featureModules=[
+  ['./record-link-integrity-v325.js','Integridade de vínculo dos prontuários',true],
+  ['./clinical-session-header-v371.js','Cabeçalho da sessão clínica',true],
+  ['./clinical-documentation-guard-v374.js','Política de documentação clínica',true],
+  ['./clinical-test-artifact-cleanup-v375.js','Limpeza de artefatos sintéticos'],
+  ['./gemini-review-context-v341.js','Contexto de revisão Gemini'],
   ['./google-workspace-oauth-v201.js','Google Workspace OAuth'],
   ['./google-workspace-auto-renew-v264.js','Renovação silenciosa do Google Workspace'],
   ['./patient-hygiene-v100.js','Higiene privada de pacientes e anamneses'],
@@ -24,7 +43,6 @@ const modules=[
   ['./calendar-adapter-v300.js','CalendarAdapter v3'],
   ['./clinical-whatsapp-bridge-v300.js','WhatsApp · confirmações clínicas T−6h'],
   ['./gemini-sharing-guard-v250.js','Gate de privacidade do Gemini'],
-  ['./public-clinical-storage-guard-v251.js','Gate de storage clínico público',true],
   ['./clinical-reconcile-v270.js','Google Meet/Gemini · pipeline único'],
   ['./gemini-auto-associate-v342.js','Associação automática Gemini por agenda'],
   ['./gemini-historical-identity-repair-v272.js','Reparo cifrado de identidades históricas Gemini'],
@@ -58,22 +76,33 @@ const modules=[
   ['./clinical-orchestrator-v320.js','Orquestração automática do ecossistema clínico'],
   ['./clinical-health-engine-v360.js','Clinical Health Engine v3.6']
 ];
-const criticalModuleErrors=[];
-for(const [path,label,critical=false] of modules){
-  try{await import(path)}
-  catch(err){
-    console.error(`Falha em ${label}`,err);
-    window.__rmPreBootErrors.push(`${label}: ${err?.message||err}`);
-    if(critical)criticalModuleErrors.push(`${label}: ${err?.message||err}`);
+let featureStarted=false;
+async function loadFeatureModules(){
+  if(featureStarted)return globalThis.__rmFeatureGatePromise;
+  featureStarted=true;
+  const critical=[];
+  for(const [path,label,isCritical=false] of featureModules){
+    try{await import(path)}catch(err){
+      const message=`${label}: ${err?.message||err}`;
+      console.error(`Falha em ${label}`,err);
+      window.__rmPreBootErrors.push(message);
+      if(Array.isArray(window.__rmBootErrors))window.__rmBootErrors.push(message);
+      if(isCritical)critical.push(message);
+    }
   }
+  if(critical.length){
+    const error=new Error(`Módulos clínicos essenciais indisponíveis: ${critical.join(' | ')}`);
+    document.dispatchEvent(new CustomEvent('rm:feature-boot-failed',{detail:{message:error.message}}));
+    throw error;
+  }
+  window.__rmFeaturesReady=true;
+  document.dispatchEvent(new CustomEvent('rm:features-ready'));
+  window.__rmRender?.();
+  return true;
 }
-if(criticalModuleErrors.length){
-  const error=new Error(`Módulos essenciais indisponíveis: ${criticalModuleErrors.join(' | ')}`);
-  window.__rmPreBootErrors.push(error.message);
-  const box=document.getElementById('rm-boot-fallback');if(box)box.innerHTML=`<strong>Não foi possível iniciar todos os módulos essenciais.</strong><div class="small">${error.message.replace(/[<>]/g,'')}</div>`;
-  document.dispatchEvent(new CustomEvent('rm:boot-failed',{detail:{message:error.message}}));
-  throw error;
-}
+document.addEventListener('rm:app-ready',()=>{
+  if(!globalThis.__rmFeatureGatePromise)globalThis.__rmFeatureGatePromise=loadFeatureModules();
+},{once:true});
 
 let auditNormalizeTimer=null;
 async function normalizeAuditedDrafts(){
