@@ -1,10 +1,10 @@
-# Plataforma Clínica Richelmy Murta — v3.7.5
+# Plataforma Clínica Richelmy Murta — v3.8.0
 
 Aplicação clínica local-first publicada como código estático em GitHub Pages. O repositório público contém somente código e assets da aplicação; dados clínicos novos não são persistidos no GitHub.
 
 ## Fonte canônica de versão
 
-A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build vigente é `3.7.5-main-v250`.
+A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build vigente é `3.8.0-main-v250`.
 
 ## Arquitetura vigente
 
@@ -26,6 +26,8 @@ cofre remoto cifrado AES-256-GCM
 
 O antigo backend GitHub `clinic-sync-data` é legado e está bloqueado para novas escritas pelo guardrail P0. O GitHub público não deve ser usado como banco de pacientes, prontuários, sessões, respostas clínicas ou transcrições.
 
+A linha 3.8 introduz hardening de integridade: leitura clínica fail-closed, tombstones transacionais, vínculo paciente–sessão–prontuário verificado, módulos ES com identidade canônica, carregamento de funcionalidades após autenticação e gates de CI que falham quando smoke/E2E/Lighthouse falham.
+
 ## Segurança e privacidade
 
 - dados locais protegidos por PBKDF2-HMAC-SHA256 + AES-GCM;
@@ -36,7 +38,9 @@ O antigo backend GitHub `clinic-sync-data` é legado e está bloqueado para nova
 - `public-clinical-storage-guard-v251.js` bloqueia novas escritas clínicas no backend GitHub legado;
 - conteúdo Gemini/Meet deve permanecer em ambiente clínico restrito;
 - divergências reais de dados bloqueiam a sincronização automática e exigem decisão explícita;
-- prontuário final não deve ser sobrescrito automaticamente por Gemini/IA.
+- prontuário final não deve ser sobrescrito automaticamente por Gemini/IA;
+- falha de descriptografia não é interpretada como store vazia;
+- gravação/exclusão e seus tombstones usam a mesma transação local quando pertencem à mesma operação lógica.
 
 ## Sincronização privada
 
@@ -53,6 +57,10 @@ O antigo backend GitHub `clinic-sync-data` é legado e está bloqueado para nova
 - identificação estável do dispositivo.
 
 O módulo `assets/js/drive-appdata-storage-v260.js` executa leitura/escrita exclusivamente no `appDataFolder`.
+
+## Gemini e conciliação clínica
+
+`assets/js/clinical-reconcile-v270.js` é o runtime canônico de conciliação Gemini/Meet. A identidade de módulos deve permanecer única no navegador: o mesmo arquivo não deve ser carregado simultaneamente com e sem query string. Conteúdo clínico conciliado continua restrito ao cofre e aos fluxos privados autorizados.
 
 ## Backup e restore
 
@@ -78,67 +86,6 @@ O runtime `assets/js/clinical-session-runtime-v370.js` implementa o ciclo operac
 
 Ao encerrar, a plataforma registra `sessionEndedAt`, duração real, presença e estado realizado, com opção de desfazer um início acidental sem apagar o Meet já criado. Alterações no Google Calendar preservam a identidade da sessão para evitar duplicações.
 
-## Meet / Gemini
+## Gate de release
 
-Pipeline autorizado:
-
-```text
-Anotações Gemini RAW
-        ↓
-Drive clínico / 03_ARQUIVO_RESTRITO
-        ↓
-DRAFT_NEEDS_REVIEW em 02_PROCESSAMENTO
-        ↓
-revisão profissional obrigatória
-        ↓
-registro final no cofre clínico
-```
-
-A saída automática do Gemini é fonte RAW e pode conter erros. IA pode preparar draft, mas não finaliza prontuário sem revisão profissional. O runtime canônico de conciliação é `assets/js/clinical-reconcile-v270.js`.
-
-## WhatsApp / Secretary Core
-
-O envio automático de confirmação T−6h cruza a fronteira do navegador e utiliza o Secretary Core no Vercel. Essa integração é estritamente administrativa e deve obedecer aos seguintes invariantes:
-
-- autorização por prova vinculada ao evento privado do Google Calendar;
-- confirmação de `appointmentId`, nonce e hash do telefone antes do registro;
-- revalidação imediatamente antes do envio;
-- conteúdo e destinatário persistidos apenas de forma cifrada no Core;
-- nenhuma persistência clínica no GitHub público;
-- logs operacionais sem telefone, nome ou corpo da mensagem;
-- retenção do conteúdo somente pelo período necessário para o envio e auditoria governada.
-
-## UX operacional
-
-A navegação do workspace do paciente prioriza seis áreas recorrentes — Visão geral, Sessões, Atendimento, Prontuário, Plano e Financeiro — e preserva áreas menos frequentes em `Mais`. Nenhuma função clínica é removida; a mudança reduz carga cognitiva no desktop e no celular.
-
-## Entrypoints atuais
-
-- `index.html` — build `3.7.5-main-v250`;
-- `assets/js/main-v250.js` — entrypoint principal;
-- `assets/js/bootstrap-v240.js` — boot/login e carregamento do SyncManager atual;
-- `assets/js/secure-sync-v260.js` — sincronização privada;
-- `assets/js/drive-appdata-storage-v260.js` — storage remoto privado;
-- `assets/js/google-workspace-token-v260.js` — autorização Workspace/appData;
-- `assets/js/calendar-adapter-v300.js` — proprietário único dos serviços internos do Calendar;
-- `assets/js/clinical-session-runtime-v370.js` — iniciar/abrir/encerrar sessão e cronômetro persistente;
-- `assets/js/public-clinical-storage-guard-v251.js` — fail-closed para storage clínico público legado;
-- `assets/js/gemini-sharing-guard-v250.js` — guardrail de compartilhamento Gemini;
-- `assets/js/clinical-reconcile-v270.js` — conciliação incremental Gemini;
-- `assets/js/patient-workspace-v320.js` — navegação operacional do paciente;
-- `tests/self-test.html` — autoteste não destrutivo.
-
-## Estado de implantação
-
-Código/arquitetura privada: implementados.
-
-Continuam dependentes de validação no dispositivo do usuário:
-
-1. gerar e validar backup `.rmvault` no dispositivo principal;
-2. comprovar notebook ↔ celular nos dois sentidos;
-3. executar teste de restore isolado com um backup real;
-4. validar visualmente os fluxos críticos em viewport móvel real;
-5. comprovar o fluxo real `Iniciar sessão → Google Meet → cronômetro → Encerrar sessão → prontuário` com uma sessão controlada;
-6. comprovar o fluxo real Calendar → Gemini/Meet → rascunho → revisão → prontuário → auditoria.
-
-Esses gates não devem ser marcados como concluídos apenas com CI remoto.
+A branch de hardening não deve ser promovida para produção enquanto houver falha em teste de regressão, smoke, persistência, Agenda, isolamento de prontuário, estabilidade visual, Public Repo Guard ou nos limiares definidos de Lighthouse. O CI é deliberadamente fail-closed.
