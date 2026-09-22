@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../assets/css/app.css">
+<link rel="stylesheet" href="../assets/css/hardening-v360.css">
+<title>UI stability v380</title>
+</head>
+<body>
+<div id="app">
+  <div class="app-shell">
+    <div class="main-shell">
+      <header class="topbar"><div></div><div class="top-actions"><div id="clock-chip" class="clock-chip"><div><small>Data</small><strong id="probe-date">22/09/2026</strong></div><div><small>Hora</small><strong id="probe-clock">12:00:00</strong></div></div></div></header>
+      <main id="main-content" class="content">
+        <section id="patient-workspace">
+          <div class="patient-context"><div class="person"><div class="avatar">R</div><div><strong>Paciente teste</strong></div></div><div class="flex gap-8 wrap"><button class="btn secondary" data-action="schedule-selected-patient">Agendar</button><button class="btn secondary" data-action="choose-patient">Trocar</button></div></div>
+          <nav class="rm-unified-patient-nav-v320"><button class="tab">LEGACY</button></nav>
+          <div class="tabs"><button class="tab active">Base</button></div>
+          <div id="patient-tab-content"><div class="card"><h3>Prontuário</h3><p>Conteúdo estável.</p></div></div>
+        </section>
+      </main>
+    </div>
+  </div>
+</div>
+<div id="modal-root"></div><div id="toast-region" class="toast-region"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+const result=document.getElementById('result');
+const fail=message=>{result.textContent=`UI_STABILITY_V380_FAIL: ${message}`;result.dataset.status='fail';throw new Error(message)};
+try{
+  localStorage.setItem('rm.gemini.materialization-integrity.v273',JSON.stringify({status:'done'}));
+  const state=await import('../assets/js/state.js');
+  state.runtime.locked=false;
+  state.runtime.dataReady=true;
+  state.runtime.route='patients';
+  state.runtime.patientTab='records';
+  state.runtime.selectedPatientId='p1';
+  state.data.patients=[{id:'p1',name:'Paciente teste',status:'Ativo'}];
+  state.data.appointments=[];
+  state.data.records=[];
+  await import('../assets/js/platform-runtime-v300.js?test=v380');
+  await import('../assets/js/ui-stability-v380.js?test=v380');
+  await import('../assets/js/patient-workspace-v320.js?test=v380');
+  document.dispatchEvent(new CustomEvent('rm:rendered',{detail:{route:'patients'}}));
+  await new Promise(r=>setTimeout(r,180));
+  const canonical=document.querySelectorAll('.rm-canonical-patient-nav-v380');
+  if(canonical.length!==1)fail(`canonical nav count=${canonical.length}`);
+  const legacy=document.querySelector('.rm-unified-patient-nav-v320');
+  if(getComputedStyle(legacy).display!=='none')fail('legacy competing nav is visible');
+  const nav=canonical[0];
+  const beforeRect=nav.getBoundingClientRect();
+  const beforeDecorations=globalThis.__rmRuntimeMetrics?.decorations||0;
+  const clock=document.getElementById('probe-clock');
+  for(let i=0;i<20;i++){
+    clock.textContent=`12:00:${String(i).padStart(2,'0')}`;
+    legacy.innerHTML=`<button class="tab">LEGACY ${i}</button>`;
+    await new Promise(r=>setTimeout(r,8));
+  }
+  await new Promise(r=>setTimeout(r,140));
+  const afterRect=nav.getBoundingClientRect();
+  const afterDecorations=globalThis.__rmRuntimeMetrics?.decorations||0;
+  const extraDecorations=afterDecorations-beforeDecorations;
+  if(extraDecorations>1)fail(`high-frequency mutations triggered ${extraDecorations} decorator runs`);
+  if(Math.abs(afterRect.top-beforeRect.top)>.5||Math.abs(afterRect.height-beforeRect.height)>.5)fail(`nav geometry shifted: ${beforeRect.top}/${beforeRect.height} -> ${afterRect.top}/${afterRect.height}`);
+  const stability=globalThis.__rmUiStability?.metrics||{};
+  if(Number(stability.cls||0)>.05)fail(`CLS too high: ${stability.cls}`);
+  result.textContent=`UI_STABILITY_V380_PASS decorations=${afterDecorations} ignored=${globalThis.__rmRuntimeMetrics?.ignoredMutations||0} cls=${Number(stability.cls||0).toFixed(4)}`;
+  result.dataset.status='pass';
+}catch(err){if(result.dataset.status!=='fail')result.textContent=`UI_STABILITY_V380_FAIL: ${err?.message||err}`}
+</script>
+</body>
+</html>
