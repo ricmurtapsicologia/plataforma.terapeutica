@@ -107,20 +107,20 @@ function decorate(){
   if(runtime.locked)return;
   ensureMobileStatus();observeSyncChip();decorateGoogleSettings();decoratePatientCards();decorateDashboard();paintMobileStatus();decorateTopbar();
 }
+function ingestToast(message=''){
+  const tx=String(message||'').toLowerCase();
+  if(tx.includes('google agenda conectado')||tx.includes('google agenda atualizado')||tx.includes('compromisso(s) conferido(s) no google agenda'))googleStatus='connected';
+  if(tx.includes('google agenda precisa ser reconectado')||tx.includes('autorização do google agenda expirou')||tx.includes('reconecte em configurações'))googleStatus='disconnected';
+  paintMobileStatus();decorateTopbar();
+}
 
 document.addEventListener('rm:rendered',()=>setTimeout(decorate,0));
 document.addEventListener('rm:data-ready',()=>{setTimeout(decorate,60);setTimeout(()=>{inferGoogleStatus();paintMobileStatus()},500)});
 document.addEventListener('rm:sync-status',e=>{
   const s=e.detail?.status||'';dataStatus=s||dataStatus;if(s==='synced')dataSyncedAt=fmtTime();paintMobileStatus();decorateTopbar();
 });
-const toastObserver=new MutationObserver(()=>{
-  document.querySelectorAll('#toast-region .toast').forEach(t=>{
-    const tx=(t.textContent||'').toLowerCase();
-    if(tx.includes('google agenda conectado')||tx.includes('google agenda atualizado')||tx.includes('compromisso(s) conferido(s) no google agenda'))googleStatus='connected';
-    if(tx.includes('google agenda precisa ser reconectado')||tx.includes('autorização do google agenda expirou')||tx.includes('reconecte em configurações'))googleStatus='disconnected';
-  });paintMobileStatus();decorateTopbar();
-});
-const toastRoot=document.getElementById('toast-region');if(toastRoot)toastObserver.observe(toastRoot,{childList:true,subtree:true});
+document.addEventListener('rm:toast',e=>ingestToast(e.detail?.message||''));
 window.addEventListener('storage',e=>{if([GOOGLE_TOKEN_STORAGE,GOOGLE_CLIENT_STORAGE].includes(e.key)){inferGoogleStatus();paintMobileStatus()}});
+window.addEventListener('focus',()=>{if(!runtime.locked){inferGoogleStatus();paintMobileStatus()}});
 setInterval(()=>{if(!runtime.locked){inferGoogleStatus();paintMobileStatus()}},30000);
 setTimeout(decorate,250);
