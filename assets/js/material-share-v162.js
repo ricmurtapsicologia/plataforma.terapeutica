@@ -16,8 +16,8 @@ function enhanceModal(){
   if(!email){email=document.createElement('button');email.type='button';email.className='btn secondary';email.dataset.rmEmailMaterial=id;email.textContent='E-mail + PDF';footer.insertBefore(email,wa)}
   associated.textContent='Baixar PDF';
 }
-const observer=new MutationObserver(()=>enhanceModal());
-const start=()=>{const root=document.getElementById('modal-root');if(root)observer.observe(root,{childList:true,subtree:true});enhanceModal()};
-document.addEventListener('rm:app-ready',start,{once:true});
+const queue=()=>queueMicrotask(enhanceModal);
+document.addEventListener('rm:modal-opened',queue);
 document.addEventListener('rm:rendered',()=>setTimeout(enhanceModal,0));
-setTimeout(start,400);
+document.addEventListener('rm:app-ready',queue,{once:true});
+setTimeout(queue,400);
