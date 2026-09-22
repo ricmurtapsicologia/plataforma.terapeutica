@@ -235,6 +235,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{if(e.target.id==='patient-end-date')updateClosureCount();if(e.target.id==='patient-status-filter')setTimeout(refreshListVisibility,0)},true);
 document.addEventListener('input',e=>{if(e.target.id==='patient-search')setTimeout(refreshListVisibility,0)},true);
 document.addEventListener('rm:rendered',applyPatientClosureUi);
+document.addEventListener('rm:modal-opened',()=>queueMicrotask(enhanceTransientModals));
 document.addEventListener('rm:data-ready',()=>queueInvariant(0));
 document.addEventListener('rm:app-ready',()=>setTimeout(applyPatientClosureUi,0));
 document.addEventListener('rm:sync-status',e=>{if(e.detail?.status==='synced')queueInvariant(80)});
@@ -243,6 +244,4 @@ document.addEventListener('rm:local-data-changed',e=>{
   const store=e.detail?.storeName;
   if(store==='patients'||store==='appointments')queueInvariant(40);
 });
-const modalRoot=document.getElementById('modal-root');
-if(modalRoot)new MutationObserver(()=>setTimeout(enhanceTransientModals,0)).observe(modalRoot,{childList:true,subtree:true});
 setTimeout(applyPatientClosureUi,100);
