@@ -68,7 +68,7 @@ jobs:
           node tests/platform-deep-audit-v390.mjs
           python security/public_repo_guard.py .
 
-      - name: Run real browser persistence and agenda probes
+      - name: Run real browser clinical probes
         shell: bash
         run: |
           set -euo pipefail
@@ -89,6 +89,10 @@ jobs:
           agenda_profile="/tmp/rm-agenda-browser-$RANDOM"
           "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir="$agenda_profile" --dump-dom http://127.0.0.1:8765/tests/agenda-browser-v330.html >/tmp/rm-agenda.html 2>/tmp/rm-agenda-browser.log || true
           grep -q '<pre id="result" data-e2e="ok">AGENDA_V330_BROWSER_PASS</pre>' /tmp/rm-agenda.html || { cat /tmp/rm-agenda-browser.log || true; exit 1; }
+
+          record_profile="/tmp/rm-record-browser-$RANDOM"
+          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir="$record_profile" --dump-dom http://127.0.0.1:8765/tests/record-session-isolation-v400.html >/tmp/rm-record-isolation.html 2>/tmp/rm-record-isolation.log || true
+          grep -q '<pre id="result" data-e2e="ok">RECORD_SESSION_ISOLATION_PASS</pre>' /tmp/rm-record-isolation.html || { cat /tmp/rm-record-isolation.log || true; exit 1; }
 
       - name: Check local import targets
         shell: bash
