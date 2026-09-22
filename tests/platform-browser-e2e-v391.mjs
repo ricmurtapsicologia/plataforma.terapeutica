@@ -56,6 +56,7 @@ try{
   await smoke();
   await runResult('persistence','/tests/browser-persistence-v271.html',{pass:v=>v==='P0_BROWSER_PERSISTENCE_PASS'});
   await runResult('agenda','/tests/agenda-browser-v330.html',{pass:v=>v==='AGENDA_V330_BROWSER_PASS'});
+  await runResult('recordIsolation','/tests/record-session-isolation-v400.html',{pass:v=>v==='RECORD_SESSION_ISOLATION_PASS'});
   await runResult('uiStability','/tests/ui-stability-v380.html',{pass:v=>v.startsWith('OK_V380')});
 }finally{
   await browser.close();
