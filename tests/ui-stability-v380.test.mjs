@@ -5,6 +5,7 @@ const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const platform=read('assets/js/platform-runtime-v300.js');
 const workspace=read('assets/js/patient-workspace-v320.js');
 const stability=read('assets/js/ui-stability-v380.js');
+const closure=read('assets/js/patient-closure-v172.js');
 const hardening=read('assets/css/hardening-v360.css');
 const main=read('assets/js/main-v250.js');
 const index=read('index.html');
@@ -23,11 +24,18 @@ assert.ok(workspace.includes('rm-unified-patient-nav-v320{display:none!important
 assert.ok(workspace.includes('if(nav.innerHTML!==markup)'),'canonical navigation updates must be idempotent');
 assert.ok(workspace.includes("document.body.classList.toggle('rm-patient-focused',focused())"),'workspace must own focused-state visibility');
 
+assert.ok(!closure.includes('organizePatientLists'),'patient closure must not own patient-list rendering');
+assert.ok(!closure.includes('grid.replaceWith'),'patient closure must not replace the canonical patient grid');
+assert.ok(!closure.includes("document.querySelectorAll('[data-patient-list]')"),'patient closure must not post-process patient-list visibility');
+assert.ok(!stability.includes('__rmPatientWorkspace'),'stability timer must not reapply patient workspace after render');
+assert.ok(stability.includes('3.8.1-intermittency-hotfix'),'intermittency hotfix version must be active');
+
 assert.ok(hardening.includes('scrollbar-gutter:stable'),'vertical scrollbar geometry must remain stable');
 assert.ok(hardening.includes('font-variant-numeric:tabular-nums'),'clock and timers must use tabular numerals');
 assert.ok(stability.includes("PerformanceObserver.supportedEntryTypes?.includes('layout-shift')"),'CLS telemetry must be active when supported');
 assert.ok(stability.includes('rm-ui-settling'),'render settle guard must be active');
 assert.ok(main.includes('ui-stability-v380.js'),'stability runtime must boot canonically');
-assert.ok(index.includes('ui-stability-v380-20260922'),'index must cache-bust the stability release');
+assert.ok(main.includes('intermittency-v381-20260922'),'runtime imports must use the intermittency cache revision');
+assert.ok(index.includes('intermittency-v381-20260922'),'index must cache-bust the intermittency hotfix');
 
 console.log('UI_STABILITY_V380_STATIC_PASS');

@@ -1,4 +1,4 @@
-const VERSION='3.8.0';
+const VERSION='3.8.1-intermittency-hotfix';
 const metrics={cls:0,layoutShifts:0,settles:0,lastSettleAt:'',supported:typeof PerformanceObserver!=='undefined'};
 let settleTimer=null;
 
@@ -10,7 +10,6 @@ function settle(delay=90){
     document.body.classList.remove('rm-ui-settling');
     metrics.settles++;
     metrics.lastSettleAt=new Date().toISOString();
-    globalThis.__rmPatientWorkspace?.apply?.();
     expose();
   },delay);
 }

@@ -30,7 +30,7 @@ const version=fs.readFileSync('assets/js/version.js','utf8');
 const versionMatch=version.match(/APP_VERSION='([^']+)'/);
 assert.ok(versionMatch,'APP_VERSION must be declared');
 const APP_VERSION=versionMatch[1];
-const MAIN_CACHE_REV='ui-stability-v380-20260922';
+const MAIN_CACHE_REV='intermittency-v381-20260922';
 
 for(const needle of ['conferenceDataVersion=1',"conferenceSolutionKey:{type:'hangoutsMeet'}",'ensureMeetForAppointment','meetUrlFromEvent'])assert.ok(calendar.includes(needle),`Calendar missing ${needle}`);
 assert.ok(calendar.includes("method:'PATCH'"),'Calendar updates must use PATCH so existing Meet data is preserved');
