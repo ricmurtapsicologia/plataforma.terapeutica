@@ -1,5 +1,5 @@
 document.body.classList.add('rm-booting');
-window.__rmEntrypointVersion='3.7.5-main-v250-intermittency-v381';
+window.__rmEntrypointVersion='3.7.5-main-v250';
 window.__rmPreBootErrors=[];
 let bootReady=false;
 document.addEventListener('rm:boot-ready',()=>{bootReady=true},{once:true});
