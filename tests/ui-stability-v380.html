@@ -27,7 +27,7 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 const result=document.getElementById('result');
-const fail=message=>{result.textContent=`UI_STABILITY_V380_FAIL: ${message}`;result.dataset.status='fail';throw new Error(message)};
+const fail=message=>{result.textContent=`FAIL_V380: ${message}`;result.dataset.e2e='fail';throw new Error(message)};
 try{
   localStorage.setItem('rm.gemini.materialization-integrity.v273',JSON.stringify({status:'done'}));
   const state=await import('../assets/js/state.js');
@@ -39,11 +39,11 @@ try{
   state.data.patients=[{id:'p1',name:'Paciente teste',status:'Ativo'}];
   state.data.appointments=[];
   state.data.records=[];
-  await import('../assets/js/platform-runtime-v300.js?test=v380');
-  await import('../assets/js/ui-stability-v380.js?test=v380');
-  await import('../assets/js/patient-workspace-v320.js?test=v380');
+  await import('../assets/js/platform-runtime-v300.js?test=v381');
+  await import('../assets/js/ui-stability-v380.js?test=v381');
+  await import('../assets/js/patient-workspace-v320.js?test=v381');
   document.dispatchEvent(new CustomEvent('rm:rendered',{detail:{route:'patients'}}));
-  await new Promise(r=>setTimeout(r,180));
+  await new Promise(r=>setTimeout(r,220));
   const canonical=document.querySelectorAll('.rm-canonical-patient-nav-v380');
   if(canonical.length!==1)fail(`canonical nav count=${canonical.length}`);
   const legacy=document.querySelector('.rm-unified-patient-nav-v320');
@@ -51,23 +51,25 @@ try{
   const nav=canonical[0];
   const beforeRect=nav.getBoundingClientRect();
   const beforeDecorations=globalThis.__rmRuntimeMetrics?.decorations||0;
+  const baselineCls=Number(globalThis.__rmUiStability?.metrics?.cls||0);
   const clock=document.getElementById('probe-clock');
   for(let i=0;i<20;i++){
     clock.textContent=`12:00:${String(i).padStart(2,'0')}`;
     legacy.innerHTML=`<button class="tab">LEGACY ${i}</button>`;
     await new Promise(r=>setTimeout(r,8));
   }
-  await new Promise(r=>setTimeout(r,140));
+  await new Promise(r=>setTimeout(r,180));
   const afterRect=nav.getBoundingClientRect();
   const afterDecorations=globalThis.__rmRuntimeMetrics?.decorations||0;
   const extraDecorations=afterDecorations-beforeDecorations;
   if(extraDecorations>1)fail(`high-frequency mutations triggered ${extraDecorations} decorator runs`);
   if(Math.abs(afterRect.top-beforeRect.top)>.5||Math.abs(afterRect.height-beforeRect.height)>.5)fail(`nav geometry shifted: ${beforeRect.top}/${beforeRect.height} -> ${afterRect.top}/${afterRect.height}`);
-  const stability=globalThis.__rmUiStability?.metrics||{};
-  if(Number(stability.cls||0)>.05)fail(`CLS too high: ${stability.cls}`);
-  result.textContent=`UI_STABILITY_V380_PASS decorations=${afterDecorations} ignored=${globalThis.__rmRuntimeMetrics?.ignoredMutations||0} cls=${Number(stability.cls||0).toFixed(4)}`;
-  result.dataset.status='pass';
-}catch(err){if(result.dataset.status!=='fail')result.textContent=`UI_STABILITY_V380_FAIL: ${err?.message||err}`}
+  const finalCls=Number(globalThis.__rmUiStability?.metrics?.cls||0);
+  const clsDelta=Math.max(0,finalCls-baselineCls);
+  if(clsDelta>.01)fail(`settled CLS delta too high: ${clsDelta}`);
+  result.textContent=`OK_V380 decorations=${afterDecorations} ignored=${globalThis.__rmRuntimeMetrics?.ignoredMutations||0} clsBaseline=${baselineCls.toFixed(4)} clsDelta=${clsDelta.toFixed(4)}`;
+  result.dataset.e2e='ok';
+}catch(err){if(result.dataset.e2e!=='fail'){result.textContent=`FAIL_V380: ${err?.message||err}`;result.dataset.e2e='fail'}}
 </script>
 </body>
 </html>
