@@ -3,9 +3,9 @@ import {bulkPutEncryptedAtomic} from './database.js';
 import {loadWorkspaceAuthorization,DRIVE_READONLY_SCOPE} from './google-workspace-token-v260.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
 
-const VERSION='3.5.3';
+const VERSION='3.5.4';
 const PATCH_PREFIX='RM Clinical Reconciliation Patch';
-const APPLIED_KEY='rm.private.records.patch.applied.v353';
+const APPLIED_KEY='rm.private.records.patch.applied.v354';
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
 let running=false;
 
@@ -90,8 +90,9 @@ async function run(){
     const marker=`${file.id}:${file.modifiedTime||''}`;
     if(localStorage.getItem(APPLIED_KEY)===marker)return{alreadyApplied:true};
     const patch=await readPatch(file,auth.token),result=await applyPatch(patch,file);
-    localStorage.setItem(APPLIED_KEY,marker);
-    globalThis.__rmPrivateRecordImportStatus={version:VERSION,fileId:file.id,fileName:file.name,...result,at:nowISO()};
+    const unresolved=Number(result.missingPatient||0)+Number(result.missingSession||0);
+    if(unresolved===0)localStorage.setItem(APPLIED_KEY,marker);else localStorage.removeItem(APPLIED_KEY);
+    globalThis.__rmPrivateRecordImportStatus={version:VERSION,fileId:file.id,fileName:file.name,...result,unresolved,at:nowISO()};
     return globalThis.__rmPrivateRecordImportStatus;
   }catch(error){
     console.warn('Importação privada de prontuário:',error);
@@ -102,4 +103,5 @@ async function run(){
 
 document.addEventListener('rm:data-ready',()=>setTimeout(()=>void run(),900));
 document.addEventListener('rm:google-workspace-authorized',()=>setTimeout(()=>void run(),600));
+document.addEventListener('rm:local-data-changed',event=>{if(String(event?.detail?.kind||'')==='private-record-import-v353')return;setTimeout(()=>void run(),500)});
 globalThis.__rmPrivateRecordImport={version:VERSION,run,status:()=>globalThis.__rmPrivateRecordImportStatus||null};
