@@ -3,9 +3,9 @@ import {bulkPutEncryptedAtomic} from './database.js';
 import {loadWorkspaceAuthorization,DRIVE_READONLY_SCOPE} from './google-workspace-token-v260.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
 
-const VERSION='3.5.4';
+const VERSION='3.5.5';
 const PATCH_PREFIX='RM Clinical Reconciliation Patch';
-const APPLIED_KEY='rm.private.records.patch.applied.v354';
+const APPLIED_KEY='rm.private.records.patch.applied.v355';
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
 let running=false;
 
@@ -13,7 +13,14 @@ function norm(value=''){return normalizeIdentity(String(value||''))}
 function safeId(value=''){return String(value||'').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,180)}
 function namesOf(patient){return new Set([norm(patient?.name),norm(patient?.preferredName)].filter(Boolean))}
 function candidates(names=[]){const wanted=new Set(arr(names).map(norm).filter(Boolean));return arr(data.patients).filter(patient=>{const own=namesOf(patient);return [...wanted].some(name=>own.has(name))})}
-function choosePatient(names=[]){return candidates(names).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))[0]||null}
+function choosePatient(names=[],code=''){
+  const wantedCode=String(code||'').trim();
+  if(wantedCode){
+    const byCode=arr(data.patients).filter(patient=>String(patient?.code||'').trim()===wantedCode);
+    if(byCode.length===1)return byCode[0];
+  }
+  return candidates(names).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))[0]||null
+}
 function sessionKey(appointment){return appointment?.clinicalSessionId||appointment?.id||''}
 function selectAppointment(patientId,spec={}){
   const all=arr(data.appointments).filter(a=>a?.patientId===patientId&&a?.date===spec.date&&a.status!=='Cancelada'&&a.attendanceStatus!=='Desmarcou');
@@ -38,7 +45,7 @@ async function applyPatch(patch,file){
   const writes=new Map();let imported=0,repairs=0,skippedFinal=0,missingPatient=0,missingSession=0;
   for(const patientSpec of arr(patch?.patients)){
     if(!arr(patientSpec?.records).length)continue;
-    const patient=choosePatient(patientSpec.names);
+    const patient=choosePatient(patientSpec.names,patientSpec.code);
     if(!patient){missingPatient+=arr(patientSpec.records).length;continue}
     for(const spec of arr(patientSpec.records)){
       if(!spec?.date||!String(spec?.text||'').trim())continue;
@@ -46,7 +53,7 @@ async function applyPatch(patch,file){
       if(!appointment){missingSession++;continue}
       const key=sessionKey(appointment),at=nowISO();
       for(const stale of arr(data.records).filter(r=>r?.patientId===patient.id&&linkedTo(r,appointment)&&r?.date&&r.date!==spec.date)){
-        const repaired={...stale,appointmentId:'',clinicalSessionId:'',updatedAt:at,source:{...(stale.source||{}),linkRepair:{kind:'private-record-import-v353',detachedFrom:appointment.id,at}}};
+        const repaired={...stale,appointmentId:'',clinicalSessionId:'',updatedAt:at,source:{...(stale.source||{}),linkRepair:{kind:'private-record-import-v355',detachedFrom:appointment.id,at}}};
         writes.set(repaired.id,repaired);repairs++;
       }
       const existing=existingFor(patient.id,spec,appointment);
@@ -67,7 +74,7 @@ async function applyPatch(patch,file){
         requiresReview:status!=='Finalizado',
         createdAt:existing?.createdAt||spec.createdAt||at,
         updatedAt:at,
-        source:{...(existing?.source||{}),kind:'private-drive-record-import-v353',patchFileId:file.id,importedAt:at}
+        source:{...(existing?.source||{}),kind:'private-drive-record-import-v355',patchFileId:file.id,importedAt:at}
       };
       writes.set(row.id,row);imported++;
     }
@@ -75,10 +82,10 @@ async function applyPatch(patch,file){
   if(writes.size){
     await bulkPutEncryptedAtomic([{storeName:'records',values:[...writes.values()]}],runtime.key,{verify:true});
     for(const row of writes.values()){const i=arr(data.records).findIndex(r=>r?.id===row.id);if(i>=0)data.records[i]=row;else data.records.push(row)}
-    document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{kind:'private-record-import-v353',records:imported,linkRepairs:repairs,at:nowISO()}}));
+    document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{kind:'private-record-import-v355',records:imported,linkRepairs:repairs,at:nowISO()}}));
     window.__rmRender?.();
   }
-  return{imported,repairs,skippedFinal,missingPatient,missingSession};
+  return{imported,repairs,skippedFinal,missingPatient,missingSession,patientCode:String(arr(patch?.patients)[0]?.code||'')};
 }
 
 async function run(){
@@ -103,5 +110,5 @@ async function run(){
 
 document.addEventListener('rm:data-ready',()=>setTimeout(()=>void run(),900));
 document.addEventListener('rm:google-workspace-authorized',()=>setTimeout(()=>void run(),600));
-document.addEventListener('rm:local-data-changed',event=>{if(String(event?.detail?.kind||'')==='private-record-import-v353')return;setTimeout(()=>void run(),500)});
+document.addEventListener('rm:local-data-changed',event=>{if(String(event?.detail?.kind||'')==='private-record-import-v355')return;setTimeout(()=>void run(),500)});
 globalThis.__rmPrivateRecordImport={version:VERSION,run,status:()=>globalThis.__rmPrivateRecordImportStatus||null};
