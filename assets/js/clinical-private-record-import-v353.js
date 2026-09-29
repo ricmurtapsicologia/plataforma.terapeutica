@@ -3,9 +3,9 @@ import {bulkPutEncryptedAtomic} from './database.js';
 import {loadWorkspaceAuthorization,DRIVE_READONLY_SCOPE} from './google-workspace-token-v260.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
 
-const VERSION='3.5.5';
+const VERSION='3.5.6';
 const PATCH_PREFIX='RM Clinical Reconciliation Patch';
-const APPLIED_KEY='rm.private.records.patch.applied.v355';
+const APPLIED_KEY='rm.private.records.patch.applied.v356';
 const arr=value=>Array.isArray(value)?value.filter(Boolean):[];
 let running=false;
 
@@ -30,6 +30,20 @@ function selectAppointment(patientId,spec={}){
   if(done.length===1)return done[0];
   return null;
 }
+function resolvePatientAndAppointment(patientSpec,spec={}){
+  const wantedCode=String(patientSpec?.code||'').trim();
+  let pool=wantedCode?arr(data.patients).filter(patient=>String(patient?.code||'').trim()===wantedCode):candidates(patientSpec?.names);
+  if(!pool.length)pool=candidates(patientSpec?.names);
+  const matches=pool.map(patient=>({patient,appointment:selectAppointment(patient.id,spec)})).filter(item=>item.appointment);
+  if(matches.length===1)return matches[0];
+  if(matches.length>1){
+    const withSubstantiveRecord=matches.find(item=>arr(data.records).some(r=>r?.patientId===item.patient.id&&r?.date===spec.date&&String(r?.text||'').trim()&&String(r?.text||'').trim()!=='Não há prontuário.'));
+    if(withSubstantiveRecord)return withSubstantiveRecord;
+    return matches.sort((a,b)=>String(a.patient?.createdAt||'').localeCompare(String(b.patient?.createdAt||'')))[0];
+  }
+  const patient=choosePatient(patientSpec?.names,patientSpec?.code);
+  return{patient,appointment:patient?selectAppointment(patient.id,spec):null};
+}
 function linkedTo(record,appointment){const key=sessionKey(appointment);return Boolean(record&&(record.appointmentId===appointment?.id||record.clinicalSessionId===key))}
 function existingFor(patientId,spec,appointment){
   const exact=arr(data.records).filter(r=>r?.patientId===patientId&&r?.date===spec.date&&(!spec.time||!r.time||String(r.time).slice(0,5)===String(spec.time).slice(0,5))&&linkedTo(r,appointment)).sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))[0];
@@ -45,15 +59,14 @@ async function applyPatch(patch,file){
   const writes=new Map();let imported=0,repairs=0,skippedFinal=0,missingPatient=0,missingSession=0;
   for(const patientSpec of arr(patch?.patients)){
     if(!arr(patientSpec?.records).length)continue;
-    const patient=choosePatient(patientSpec.names,patientSpec.code);
-    if(!patient){missingPatient+=arr(patientSpec.records).length;continue}
     for(const spec of arr(patientSpec.records)){
       if(!spec?.date||!String(spec?.text||'').trim())continue;
-      const appointment=selectAppointment(patient.id,spec);
+      const resolved=resolvePatientAndAppointment(patientSpec,spec),patient=resolved.patient,appointment=resolved.appointment;
+      if(!patient){missingPatient++;continue}
       if(!appointment){missingSession++;continue}
       const key=sessionKey(appointment),at=nowISO();
       for(const stale of arr(data.records).filter(r=>r?.patientId===patient.id&&linkedTo(r,appointment)&&r?.date&&r.date!==spec.date)){
-        const repaired={...stale,appointmentId:'',clinicalSessionId:'',updatedAt:at,source:{...(stale.source||{}),linkRepair:{kind:'private-record-import-v355',detachedFrom:appointment.id,at}}};
+        const repaired={...stale,appointmentId:'',clinicalSessionId:'',updatedAt:at,source:{...(stale.source||{}),linkRepair:{kind:'private-record-import-v356',detachedFrom:appointment.id,at}}};
         writes.set(repaired.id,repaired);repairs++;
       }
       const existing=existingFor(patient.id,spec,appointment);
@@ -74,7 +87,7 @@ async function applyPatch(patch,file){
         requiresReview:status!=='Finalizado',
         createdAt:existing?.createdAt||spec.createdAt||at,
         updatedAt:at,
-        source:{...(existing?.source||{}),kind:'private-drive-record-import-v355',patchFileId:file.id,importedAt:at}
+        source:{...(existing?.source||{}),kind:'private-drive-record-import-v356',patchFileId:file.id,importedAt:at}
       };
       writes.set(row.id,row);imported++;
     }
@@ -82,10 +95,10 @@ async function applyPatch(patch,file){
   if(writes.size){
     await bulkPutEncryptedAtomic([{storeName:'records',values:[...writes.values()]}],runtime.key,{verify:true});
     for(const row of writes.values()){const i=arr(data.records).findIndex(r=>r?.id===row.id);if(i>=0)data.records[i]=row;else data.records.push(row)}
-    document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{kind:'private-record-import-v355',records:imported,linkRepairs:repairs,at:nowISO()}}));
+    document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{kind:'private-record-import-v356',records:imported,linkRepairs:repairs,at:nowISO()}}));
     window.__rmRender?.();
   }
-  return{imported,repairs,skippedFinal,missingPatient,missingSession,patientCode:String(arr(patch?.patients)[0]?.code||'')};
+  return{imported,repairs,skippedFinal,missingPatient,missingSession};
 }
 
 async function run(){
@@ -110,5 +123,5 @@ async function run(){
 
 document.addEventListener('rm:data-ready',()=>setTimeout(()=>void run(),900));
 document.addEventListener('rm:google-workspace-authorized',()=>setTimeout(()=>void run(),600));
-document.addEventListener('rm:local-data-changed',event=>{if(String(event?.detail?.kind||'')==='private-record-import-v355')return;setTimeout(()=>void run(),500)});
+document.addEventListener('rm:local-data-changed',event=>{if(String(event?.detail?.kind||'')==='private-record-import-v356')return;setTimeout(()=>void run(),500)});
 globalThis.__rmPrivateRecordImport={version:VERSION,run,status:()=>globalThis.__rmPrivateRecordImportStatus||null};
