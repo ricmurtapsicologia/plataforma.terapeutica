@@ -28,6 +28,7 @@ SECRET_PATTERNS = [
     ("Google API key", re.compile(r"\bAIza[0-9A-Za-z_-]{30,}\b")),
     ("private key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
     ("OAuth client secret", re.compile(r"(?i)client_secret\s*[:=]\s*['\"][^'\"]{12,}['\"]")),
+    ("password-like numeric value", re.compile(r"(?i)\b(?:senha|password|pin)\s*(?:padr[aã]o\s*)?[:=]\s*\d{4,12}\b")),
     ("embedded bearer token", re.compile(r"(?i)authorization\s*[:=]\s*['\"]Bearer\s+[A-Za-z0-9._~+/-]{20,}['\"]")),
 ]
 
