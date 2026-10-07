@@ -8,6 +8,7 @@ on:
       - 'assets/js/**'
       - 'assets/css/**'
       - 'tests/**'
+      - 'scripts/**'
       - '.github/workflows/static-integrity.yml'
   pull_request:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - 'assets/js/**'
       - 'assets/css/**'
       - 'tests/**'
+      - 'scripts/**'
       - '.github/workflows/static-integrity.yml'
   workflow_dispatch:
 
@@ -41,7 +43,7 @@ jobs:
           set -euo pipefail
           while IFS= read -r -d '' file; do
             node --check "$file"
-          done < <(find assets/js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+          done < <(find assets/js tests scripts -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
 
       - name: Run clinical regression tests
         shell: bash
@@ -102,6 +104,10 @@ jobs:
           console.log(`Validated local imports in ${files.length} JavaScript modules.`);
           NODE
 
+      - name: Inventory runtime reachability
+        shell: bash
+        run: node scripts/runtime-reachability.mjs
+
       - name: Check index local assets
         shell: bash
         run: |
@@ -121,6 +127,7 @@ jobs:
           const fs=require('fs');
           const index=fs.readFileSync('index.html','utf8');
           const main=fs.readFileSync('assets/js/main-v250.js','utf8');
+          const manifest=fs.readFileSync('assets/js/core/clinical-runtime-manifest-v376.mjs','utf8');
           const platform=fs.readFileSync('assets/js/platform-runtime-v300.js','utf8');
           const calendar=fs.readFileSync('assets/js/calendar-adapter-v300.js','utf8');
           const calendarService=fs.readFileSync('assets/js/google-calendar-service-v240.js','utf8');
@@ -139,29 +146,32 @@ jobs:
           const scripts=[...index.matchAll(/<script\s+type="module"[^>]+src="([^"]+)"/g)].map(m=>m[1]);
           const mainScripts=scripts.filter(src=>src.includes('main-v250.js'));
           if(mainScripts.length!==1)throw new Error(`Expected one canonical main-v250.js entrypoint, found: ${mainScripts.join(', ')}`);
+          if(scripts.length!==1)throw new Error(`All module roots must be composed behind main-v250.js; found ${scripts.length}.`);
           if(!index.includes(`${appVersion}-main-v250`))throw new Error(`Pages build marker ${appVersion} missing`);
           if(!main.includes(`__rmEntrypointVersion='${appVersion}-main-v250'`))throw new Error(`Entrypoint marker ${appVersion} missing`);
-          if(!main.includes('platform-runtime-v300.js'))throw new Error('Platform v3 runtime missing');
-          if(!main.includes('calendar-adapter-v300.js'))throw new Error('CalendarAdapter v3 missing');
-          if(!main.includes('migration-router-v300.js'))throw new Error('MigrationRouter v3 missing');
-          if(!main.includes('agenda-controller-v330.js')||main.includes('agenda-actions-v240.js'))throw new Error('Agenda must have one canonical controller v330');
-          if(!main.includes('clinical-session-runtime-v370.js'))throw new Error('Clinical one-click session runtime v370 missing');
+          if(!main.includes('clinical-runtime-manifest-v376.mjs')||main.includes('const modules=['))throw new Error('Canonical composition root invariant missing');
+          for(const movedRoot of ['clinical-private-record-import-v353.js','clinical-session-header-v371.js','clinical-documentation-guard-v374.js','clinical-test-artifact-cleanup-v375.js','gemini-review-context-v341.js'])if(!manifest.includes(movedRoot)||index.includes(`<script type="module" src="assets/js/${movedRoot}`))throw new Error(`Module root not consolidated: ${movedRoot}`);
+          if(!manifest.includes('platform-runtime-v300.js'))throw new Error('Platform v3 runtime missing');
+          if(!manifest.includes('calendar-adapter-v300.js'))throw new Error('CalendarAdapter v3 missing');
+          if(!manifest.includes('migration-router-v300.js'))throw new Error('MigrationRouter v3 missing');
+          if(!manifest.includes('agenda-controller-v330.js')||manifest.includes('agenda-actions-v240.js'))throw new Error('Agenda must have one canonical controller v330');
+          if(!manifest.includes('clinical-session-runtime-v370.js'))throw new Error('Clinical one-click session runtime v370 missing');
           if(!agenda.includes("const OWNER='agenda-controller-v330'")||agenda.includes('stopImmediatePropagation'))throw new Error('Agenda controller ownership invariant missing');
-          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])if(main.includes(internal))throw new Error(`Calendar internal must be owned by adapter: ${internal}`);
+          for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])if(manifest.includes(internal))throw new Error(`Calendar internal must be owned by adapter: ${internal}`);
           for(const internal of ['google-calendar-service-v240.js','calendar-integrity-v274.js','calendar-reverse-reconcile-v276.js'])if(!calendar.includes(internal))throw new Error(`CalendarAdapter missing internal: ${internal}`);
           if(!calendarService.includes('ensureMeetForAppointment')||!calendarService.includes('conferenceDataVersion=1')||!calendarService.includes("conferenceSolutionKey:{type:'hangoutsMeet'}"))throw new Error('Calendar Meet idempotency contract missing');
           if(!sessionRuntime.includes('getDecryptedById')||!sessionRuntime.includes('sessionStartedAt')||!sessionRuntime.includes('sessionEndedAt')||!sessionRuntime.includes('actualDurationMinutes'))throw new Error('Clinical session lifecycle/readback contract missing');
-          for(const retired of ['runtime-monitor-v240.js','legacy-sw-cleanup-v240.js','browser-fixes-v153.js','top-status-owner-v243.js','gemini-materialization-integrity-v273.js','workspace-status-v240.js','legacy-sync-cleanup-v262.js'])if(main.includes(retired))throw new Error(`Retired permanent boot module referenced: ${retired}`);
+          for(const retired of ['runtime-monitor-v240.js','legacy-sw-cleanup-v240.js','browser-fixes-v153.js','top-status-owner-v243.js','gemini-materialization-integrity-v273.js','workspace-status-v240.js','legacy-sync-cleanup-v262.js'])if(manifest.includes(retired))throw new Error(`Retired permanent boot module referenced: ${retired}`);
           if(!migrations.includes("import('./legacy-sync-cleanup-v262.js')"))throw new Error('MigrationRouter must preserve conditional legacy sync cleanup');
           if(!bootstrap.includes("from './secure-sync-v260.js'")||bootstrap.includes("from './secure-sync-v240.js'"))throw new Error('Bootstrap must use private SyncManager v260');
           if(!sync.includes('HEARTBEAT_MS=90000')||!sync.includes('BroadcastChannel'))throw new Error('Private SyncManager invariants missing');
           if(sync.includes('api.github.com'))throw new Error('Private SyncManager must not use GitHub for clinical vault');
           if(!storage.includes("spaces:'appDataFolder'")||!storage.includes("parents:['appDataFolder']"))throw new Error('Drive appDataFolder adapter invariants missing');
           if(!token.includes('https://www.googleapis.com/auth/drive.appdata'))throw new Error('drive.appdata scope missing');
-          if(!main.includes('google-workspace-auto-renew-v264.js'))throw new Error('Silent Workspace renewal missing');
-          if(!main.includes('clinical-reconcile-v270.js'))throw new Error('Single Gemini pipeline v270 missing');
-          for(const legacy of ['clinical-reconcile-v240.js','gemini-autodelivery-v264.js','gemini-alias-continuity-v263.js','gemini-name-token-repair-v245.js','gemini-migration-v240.js','gemini-attendance-repair-v249.js'])if(main.includes(legacy))throw new Error(`Competing/legacy Gemini runtime active: ${legacy}`);
-          if(main.includes('sync-conflict-recovery-v247.js')||!main.includes('sync-semantic-conflict-cleanup-v260.js'))throw new Error('Private sync conflict policy invalid');
+          if(!manifest.includes('google-workspace-auto-renew-v264.js'))throw new Error('Silent Workspace renewal missing');
+          if(!manifest.includes('clinical-reconcile-v270.js'))throw new Error('Single Gemini pipeline v270 missing');
+          for(const legacy of ['clinical-reconcile-v240.js','gemini-autodelivery-v264.js','gemini-alias-continuity-v263.js','gemini-name-token-repair-v245.js','gemini-migration-v240.js','gemini-attendance-repair-v249.js'])if(manifest.includes(legacy))throw new Error(`Competing/legacy Gemini runtime active: ${legacy}`);
+          if(manifest.includes('sync-conflict-recovery-v247.js')||!manifest.includes('sync-semantic-conflict-cleanup-v260.js'))throw new Error('Private sync conflict policy invalid');
           if(!database.includes('bulkPutEncryptedAtomic')||!database.includes('prepareEncryptedRow')||!database.includes('getDecryptedById'))throw new Error('Transactional clinical persistence missing');
           if(!gemini.includes('CONCURRENCY=2')||!gemini.includes('sourceModifiedAt'))throw new Error('Gemini incremental/source clock invariants missing');
           if(!gemini.includes("IDENTITY_RULE_VERSION='3.0'")||!gemini.includes('learnAliasesFromDocuments'))throw new Error('Gemini identity invariants missing');
