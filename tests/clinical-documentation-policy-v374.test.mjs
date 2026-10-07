@@ -26,11 +26,11 @@ const scheduled={
 const adHoc={...scheduled,id:'a2',sessionOrigin:'manual-flex-start'};
 const syntheticScheduled={...scheduled,id:'a1-test',synthetic:true};
 const syntheticAdHoc={...adHoc,id:'a2-test',source:{synthetic:true}};
-const syntheticRunning={...runningLong,id:'a3-test',environment:'diagnostic'};
 const runningLong={
   ...scheduled,id:'a3',status:'Confirmada',attendanceStatus:'',actualDurationMinutes:null,
   sessionStartedAt:'2026-09-02T22:00:00.000Z',sessionEndedAt:'',clinicalSessionState:'Em atendimento'
 };
+const syntheticRunning={...runningLong,id:'a3-test',environment:'diagnostic'};
 const realRecord={id:'r1',patientId:'p1',appointmentId:'a1',text:'Paciente relatou eventos relevantes da semana, pensamentos automáticos, emoções associadas e foram discutidas estratégias de enfrentamento e tarefa terapêutica para o período seguinte.',status:'Rascunho'};
 const placeholder={id:'missing_record_a1',patientId:'p1',appointmentId:'a1',text:'Não há prontuário.',source:{type:'missing-record-placeholder'}};
 
