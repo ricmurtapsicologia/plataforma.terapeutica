@@ -151,7 +151,7 @@ jobs:
           if(scripts.length!==1)throw new Error(`All module roots must be composed behind main-v250.js; found ${scripts.length}.`);
           if(!index.includes(`${appVersion}-main-v250`))throw new Error(`Pages build marker ${appVersion} missing`);
           if(!main.includes(`__rmEntrypointVersion='${appVersion}-main-v250'`))throw new Error(`Entrypoint marker ${appVersion} missing`);
-          if(!main.includes('clinical-runtime-manifest-v376.mjs')||main.includes('const modules=['))throw new Error('Canonical composition root invariant missing');
+          if(!main.includes('bootstrap-v240.js')||!bootstrap.includes('clinical-runtime-manifest-v376.mjs')||main.includes('const modules=['))throw new Error('Canonical deferred composition root invariant missing');
           for(const movedRoot of ['clinical-private-record-import-v353.js','clinical-session-header-v371.js','clinical-documentation-guard-v374.js','clinical-test-artifact-cleanup-v375.js','gemini-review-context-v341.js'])if(!manifest.includes(movedRoot)||index.includes(`<script type="module" src="assets/js/${movedRoot}`))throw new Error(`Module root not consolidated: ${movedRoot}`);
           if(!manifest.includes('platform-runtime-v300.js'))throw new Error('Platform v3 runtime missing');
           if(!manifest.includes('calendar-adapter-v300.js'))throw new Error('CalendarAdapter v3 missing');
