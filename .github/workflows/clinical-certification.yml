@@ -1,0 +1,97 @@
+name: Clinical certification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'assets/js/**'
+      - 'assets/css/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/clinical-certification.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'assets/js/**'
+      - 'assets/css/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/clinical-certification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clinical-certification-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start static server
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/rm-http.log 2>&1 &
+          echo $! > /tmp/rm-http.pid
+          sleep 1
+      - name: Locate Chromium
+        id: chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$candidate" >/dev/null 2>&1; then
+              echo "bin=$(command -v "$candidate")" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "Chromium not available" >&2
+          exit 1
+      - name: Clinical smoke and E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          profile="/tmp/rm-e2e-$RANDOM"
+          html="$(${{ steps.chrome.outputs.bin }} --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=45000 --user-data-dir="$profile" --dump-dom http://127.0.0.1:8765/tests/clinical-e2e-v376.html 2>/tmp/rm-e2e.log || true)"
+          printf '%s\n' "$html"
+          grep -q 'CLINICAL_E2E_V376_PASS' <<<"$html" || { cat /tmp/rm-e2e.log || true; cat /tmp/rm-http.log || true; exit 1; }
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Start static server
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/rm-lh-http.log 2>&1 &
+          sleep 1
+      - name: Lighthouse audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes lighthouse@12.2.1 http://127.0.0.1:8765/index.html \
+            --only-categories=performance,accessibility,best-practices \
+            --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage" \
+            --output=json --output-path=/tmp/lighthouse.json --quiet
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('/tmp/lighthouse.json','utf8'));
+          const score=id=>Number(r.categories?.[id]?.score||0);
+          const result={performance:score('performance'),accessibility:score('accessibility'),bestPractices:score('best-practices')};
+          console.log(JSON.stringify(result,null,2));
+          if(result.performance<0.90)throw new Error('Lighthouse performance below 0.90');
+          if(result.accessibility<0.95)throw new Error('Lighthouse accessibility below 0.95');
+          if(result.bestPractices<0.95)throw new Error('Lighthouse best-practices below 0.95');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-clinical
+          path: /tmp/lighthouse.json
+          if-no-files-found: ignore
