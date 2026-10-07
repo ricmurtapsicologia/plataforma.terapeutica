@@ -74,3 +74,7 @@ const rows=candidates.map(file=>{
 const eligible=rows.filter(row=>row.eligible).map(row=>row.file);
 const blocked=rows.filter(row=>row.exists&&!row.testArtifact&&!row.eligible);
 console.log(JSON.stringify({candidateCount:rows.length,eligibleCount:eligible.length,eligible,blocked},null,2));
+
+const expectedRemoved=candidates.filter(file=>!/\.test\.mjs$/.test(file));
+const resurrection=expectedRemoved.filter(file=>fs.existsSync(file));
+if(resurrection.length){console.error('DECOMMISSION_REGRESSION: '+resurrection.join(', '));process.exitCode=1}else console.log('DECOMMISSION_CUTOFF_PASS '+expectedRemoved.length);
