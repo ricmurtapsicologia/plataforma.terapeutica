@@ -1,5 +1,5 @@
 # Refatoração v1.2.0
-- senha padrão 213098;
+- credencial padrão histórica removida do repositório público;
 - correção da sobreposição visual;
 - remoção integral de recursos destinados a portal ou aplicativo do paciente;
 - ícones com o cérebro da identidade visual;
