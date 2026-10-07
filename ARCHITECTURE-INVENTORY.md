@@ -1,159 +1,135 @@
-# Plataforma Clínica 3.3 — Inventário arquitetural
+# Plataforma Clínica — Inventário arquitetural canônico
 
-Data de consolidação: 2026-08-26
+Data de consolidação: 2026-10-07  
+Aplicação: 3.7.5  
+Geração de hardening/arquitetura: v3.7.6
 
-## Princípios
+## Contrato arquitetural
 
-1. Uma fonte canônica por entidade clínica.
-2. Um proprietário por integração e por fluxo operacional crítico.
-3. Dados clínicos nunca usam GitHub como storage.
-4. IA/Gemini produz apoio documental; a decisão e finalização permanecem profissionais.
-5. Reparos históricos são condicionais ou transitórios, não runtimes permanentes.
-6. Falha de integração externa não bloqueia a operação clínica local.
-7. A Agenda possui um único proprietário operacional: `agenda-controller-v330.js`.
+A plataforma é local-first. Dados clínicos têm como fonte canônica o cofre local cifrado; o Google Drive `appDataFolder` recebe apenas o cofre remoto cifrado. GitHub é code-only.
+
+```text
+index.html
+  ↓
+main-v250.js
+  ↓
+bootstrap-v240.js
+  ├─ login mínimo
+  └─ após autenticação
+       ├─ database / migrations / secure-sync
+       ├─ estilos clínicos
+       ├─ OAuth público
+       └─ core/clinical-runtime-manifest-v376.mjs
+             ↓
+       domínios + adapters + governança
+```
+
+O runtime clínico completo não participa mais do carregamento pré-autenticação.
 
 ## Fontes canônicas
 
-| Entidade | Fonte canônica | Projeção/integração |
+| Entidade | Fonte canônica | Projeção / integração |
 |---|---|---|
-| Paciente | Cofre clínico local cifrado | Drive appDataFolder como cópia sincronizada cifrada |
-| Sessão clínica | Cofre clínico local cifrado | Google Calendar como projeção externa |
-| Prontuário | Cofre clínico local cifrado | Drive appDataFolder como cópia sincronizada cifrada |
-| Documento Meet/Gemini | Google Drive | Evidência documental para rascunho clínico |
-| Financeiro | Cofre clínico local cifrado | Nenhuma fonte externa canônica |
-| Preferências | Storage local protegido/cofre | — |
+| Paciente | IndexedDB cifrado | Drive appDataFolder cifrado |
+| Sessão | IndexedDB cifrado | Google Calendar |
+| Prontuário | IndexedDB cifrado | Drive appDataFolder cifrado |
+| Formulação/plano | IndexedDB cifrado | — |
+| Financeiro | IndexedDB cifrado | — |
+| Meet/Gemini RAW | Google Drive | rascunho clínico sob revisão |
 | Código | GitHub | GitHub Pages |
 
-## Componentes ativos de boot — v3.3.0
+## Regras P0
 
-| Componente | Classe | Proprietário | Estado |
-|---|---|---|---|
-| platform-runtime-v300.js | CORE/UX/OBSERVABILITY | Plataforma | CANÔNICO |
-| migration-router-v300.js | MIGRATION ROUTER | Plataforma | CANÔNICO; carrega reparos somente sob condição |
-| google-workspace-oauth-v200.js | INTEGRATION | Google Workspace | CANÔNICO |
-| google-workspace-auto-renew-v264.js | INTEGRATION | Google Workspace | CANÔNICO |
-| calendar-adapter-v300.js | INTEGRATION | Calendar | PROPRIETÁRIO ÚNICO DE BOOT |
-| gemini-sharing-guard-v250.js | SECURITY | Gemini | CANÔNICO |
-| public-clinical-storage-guard-v251.js | SECURITY | Storage | CANÔNICO |
-| clinical-reconcile-v270.js | INTEGRATION/CLINICAL | Gemini | PROPRIETÁRIO ÚNICO |
-| gemini-historical-identity-repair-v272.js | REPAIR/SAFETY | Gemini | ATIVO enquanto existirem identidades históricas |
-| ai-record-review-v220.js | CLINICAL/SAFETY | Prontuário | CANÔNICO |
-| agenda-mobile-v183.js | UX | Agenda | VIEW MOBILE; sem propriedade das ações clínicas |
-| session-payment-visibility-v322.js | DOMAIN/UX | Financeiro | SERVIÇO DE PAGAMENTO; não captura ações da Agenda |
-| agenda-controller-v330.js | DOMAIN/UX/PERSISTENCE | Agenda | PROPRIETÁRIO ÚNICO DAS AÇÕES DE SESSÃO |
-| portable-tools-v153.js | UX | Plataforma | ATIVO |
-| sync-semantic-conflict-cleanup-v260.js | SYNC/SAFETY | Sync | ATIVO; atua apenas em conflito real |
-| patient-closure-v172.js | DOMAIN | Paciente | ATIVO |
-| version-v170.js | UX | Release | ATIVO |
-| material-share-v162.js | DOMAIN/UX | Materiais | ATIVO |
-| mobile-ux-v170.js | UX | Mobile | ATIVO |
-| patient-ux-v240.js | UX | Paciente | ATIVO |
-| record-persistence-v320.js | CLINICAL/PERSISTENCE | Prontuário | CANÔNICO |
-| treatment-plan-intelligence-v320.js | CLINICAL | Plano terapêutico | CANÔNICO |
-| patient-delivery-finance-v320.js | DOMAIN/INTEGRATION | Entregas/Financeiro | CANÔNICO |
-| patient-workspace-v320.js | UX | Paciente | CANÔNICO |
-| clinical-orchestrator-v320.js | ORCHESTRATION | Ecossistema clínico | CANÔNICO |
+1. Registro clínico crítico ilegível nunca é convertido em ausência de dado.
+2. Falha de descriptografia em `patients`, `appointments`, `records`, `notes` ou `formulations` ativa `CLINICAL_DATA_INTEGRITY` e bloqueia mutações.
+3. Diagnóstico da plataforma é read-only.
+4. Limpeza de artefato exige marcador sintético explícito e confirmação.
+5. Sessão curta não é presumida como teste.
+6. Gemini não reativa paciente encerrado/inativo automaticamente.
+7. Prontuário finalizado não pode ser sobrescrito automaticamente.
+8. GitHub não recebe dados clínicos, backup real, token ou credencial.
 
-## Agenda v3.3 — contrato operacional
+## Composition root
 
-A partir da v3.3.0, a sessão é uma unidade clicável no desktop e no mobile.
+`assets/js/core/clinical-runtime-manifest-v376.mjs` é o manifesto canônico do runtime autenticado. Ele organiza módulos por fases:
 
-O cartão exibe:
+- platform;
+- private-clinical-data;
+- clinical-inputs;
+- integrations;
+- agenda-session;
+- patient-treatment;
+- governance.
 
-- paciente;
-- horário;
-- situação da sessão/presença;
-- situação de pagamento.
+`index.html` expõe somente um entrypoint ESM: `main-v250.js`.
 
-Ações clínicas não são mais apresentadas como sequência de microbotões coloridos. `WA`, `R`, `•••`, `×` e a injeção posterior de remarcação deixaram de fazer parte da view canônica.
+## Owners
 
-O evento canônico é `data-action="appointment-open"`. O controlador `agenda-controller-v330.js` concentra:
+| Área | Owner canônico |
+|---|---|
+| Boot | `bootstrap-v240.js` |
+| Composição | `clinical-runtime-manifest-v376.mjs` |
+| Persistência | `database.js` |
+| Sincronização | `secure-sync-v260.js` |
+| Drive privado | `drive-appdata-storage-v260.js` |
+| Agenda | `agenda-controller-v330.js` |
+| Sessão | `clinical-session-runtime-v370.js` |
+| Calendar | `calendar-adapter-v300.js` |
+| Gemini | `clinical-reconcile-v270.js` |
+| Integridade | `clinical-data-integrity-v340.js` + scanner read-only |
+| Diagnóstico | `clinical-health-engine-v360.js` |
 
-- abertura da sessão;
-- presença (`Presente`, `Faltou`, `Desmarcou`);
-- remarcação;
-- vínculo financeiro;
-- WhatsApp;
-- abertura do atendimento;
-- exclusão com confirmação.
+## Migrações e compatibilidade preservadas
 
-Alterações de presença e remarcação são gravadas cifradas e lidas novamente do IndexedDB antes de a interface informar sucesso. Exclusões usam `deleteRecord`, preservando tombstones necessários à sincronização.
+Não foram removidos componentes ainda alcançáveis por caminho condicional:
 
-## Componentes encapsulados/condicionais
+- `legacy-sync-cleanup-v262.js`: migração condicional de estado legado;
+- `gemini-materialization-integrity-v273.js`: one-shot condicional;
+- internals do Calendar v240/v274/v276: encapsulados pelo `CalendarAdapter`.
 
-| Componente | Proprietário | Política |
-|---|---|---|
-| google-calendar-service-v240.js | calendar-adapter-v300.js | interno do adapter |
-| calendar-integrity-v274.js | calendar-adapter-v300.js | interno do adapter |
-| calendar-reverse-reconcile-v275.js | calendar-adapter-v300.js | interno do adapter |
-| gemini-materialization-integrity-v273.js | platform-runtime-v300.js | importado somente se o marcador `done` estiver ausente |
-| legacy-sync-cleanup-v262.js | migration-router-v300.js | importado somente quando houver estado legado detectável ou conflito |
+## Cutoff 2026-10-07
 
-## Componentes retirados do boot permanente
+O CI de reachability identificou 40 arquivos fora do grafo do runtime. Um deles é artefato de teste e foi preservado. Os demais 39 módulos históricos foram removidos em lote somente após:
 
-- runtime-monitor-v240.js — absorvido por `platform-runtime-v300.js`;
-- legacy-sw-cleanup-v240.js — absorvido como migração persistente one-shot;
-- browser-fixes-v153.js — absorvido por `platform-runtime-v300.js`;
-- top-status-owner-v243.js — absorvido por `platform-runtime-v300.js`;
-- workspace-status-v240.js — absorvido por `platform-runtime-v300.js`;
-- gemini-materialization-integrity-v273.js — passou a carregamento condicional;
-- legacy-sync-cleanup-v262.js — passou a carregamento condicional;
-- google-calendar-service-v240.js, calendar-integrity-v274.js e calendar-reverse-reconcile-v275.js — pertencem ao `CalendarAdapter`;
-- agenda-actions-v240.js — retirado do boot na v3.3.0; sua propriedade operacional foi substituída por `agenda-controller-v330.js`.
+```text
+runtime reachable = false
+external operational references = 0
+missing reachable imports = 0
+regression = green
+browser probes = green
+E2E = green
+Lighthouse = green
+```
 
-## Componentes legados proibidos no boot
+O contrato `scripts/decommission-audit.mjs` bloqueia a reintrodução desses módulos.
 
-- clinical-reconcile-v240.js
-- gemini-autodelivery-v264.js
-- gemini-alias-continuity-v263.js
-- gemini-name-token-repair-v245.js
-- gemini-migration-v240.js
-- gemini-attendance-repair-v249.js
-- sync-conflict-recovery-v247.js
-- legacy-sync-cleanup-v242.js
-- agenda-actions-v240.js
+## Performance
 
-O workflow `Static integrity` falha caso o antigo proprietário da Agenda retorne ao entrypoint.
+Carregamento pré-autenticação contém apenas o shell mínimo. Database, sync, integrações e 14 folhas de estilo clínicas são carregados somente depois da abertura do cofre.
 
-## Identidade canônica de sessão
+Gate Lighthouse:
 
-A v3 mantém `clinicalSessionId`.
+- Performance >= 90;
+- Accessibility >= 95;
+- Best Practices >= 95.
 
-Regra de migração:
+Na certificação anterior ao cutoff: Performance 100, Accessibility 96 e Best Practices 100.
 
-1. appointment existente recebe `clinicalSessionId = appointment.id`;
-2. record recebe o ID somente se já houver vínculo explícito por `appointmentId` ou pelo mesmo `source.fileId`;
-3. a gravação da migração usa lote cifrado atômico com verificação (`bulkPutEncryptedAtomic(..., {verify:true})`);
-4. nenhuma associação nova é criada por nome, semelhança textual ou proximidade de horário;
-5. o reconciliador Gemini mantém revisão humana para ambiguidades.
+## Certificação
 
-## UX do psicólogo
+A promoção depende de:
 
-O workspace do paciente permanece organizado em 6 grupos:
+- P0 Public Repo Guard;
+- Clinical Intake quality;
+- Ecosystem sanitation;
+- Static integrity;
+- regressões clínicas;
+- persistência em Chromium;
+- Agenda em Chromium;
+- reachability;
+- decommission contract;
+- auditoria 30/30;
+- browser smoke/E2E;
+- Lighthouse.
 
-- Principal
-- Sessões
-- Clínica
-- Tratamento
-- Recursos
-- Administração
-
-Na Agenda, o mesmo controlador é usado pelas views desktop e mobile. O cartão é um `<button>` acessível, portanto clique, Enter e Espaço acionam o mesmo fluxo sem ações anônimas dependentes apenas de cor.
-
-## IA/documentação assistida
-
-Comandos do Gemini são apresentados como preparação/refação de rascunho, não como decisão clínica autônoma. Prontuários finalizados permanecem protegidos contra sobrescrita automática e ambiguidades de identidade seguem para revisão profissional.
-
-## Verificação v3.3.0
-
-A CI executa, além das regressões clínicas anteriores:
-
-- `tests/agenda-v330.test.mjs` — propriedade única, domínio, acessibilidade estrutural e regressão contra microbotões;
-- `tests/agenda-browser-v330.html` — teste em Chromium real de abertura da sessão, presença, persistência, remarcação, vínculo de pagamento, confirmação de exclusão e idempotência após 100 eventos de renderização.
-
-## Pendências controladas pós-v3.3
-
-1. retirar definitivamente `legacy-sync-cleanup-v262.js` quando nenhum dispositivo/dado histórico depender dele;
-2. aposentar `gemini-historical-identity-repair-v272.js` após evidência de ausência de identidades órfãs históricas;
-3. consolidar fisicamente folhas CSS históricas fora da Agenda em pacote separado, com regressão visual antes/depois;
-4. renomear arquivos versionados no nome apenas em futura reestruturação de build.
+CI remoto não substitui validações que dependam de dois dispositivos físicos, OAuth real, conteúdo clínico real ou restore operacional real.
