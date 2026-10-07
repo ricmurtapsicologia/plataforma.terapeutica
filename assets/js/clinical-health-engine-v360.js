@@ -5,7 +5,7 @@ import {modal,toast,esc} from './ui.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
 import {appointmentIsPerformed,paymentStateForAppointment} from './payment-status-v322.mjs';
 
-const VERSION='3.6.0';
+const VERSION='3.7.6';
 const PERIODIC_MS=300000;
 const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
 let running=false,lastReport=null,timer=null;
@@ -60,13 +60,12 @@ async function scan({stage='scan'}={}){
   return{version:VERSION,appVersion:APP_VERSION,stage,at:nowISO(),issues,summary:metricSummary({issues})}
 }
 
-async function run({repair=true,show=false,reason='automatic'}={}){
+async function run({show=false,reason='automatic'}={}){
   if(running||runtime.locked||!runtime.key||!runtime.dataReady)return null;running=true;
   try{
-    const before=await scan({stage:'before'});let repairResult=null;
-    if(repair&&globalThis.__rmClinicalDataIntegrity?.run)repairResult=await globalThis.__rmClinicalDataIntegrity.run({render:false});
-    if(repair&&globalThis.__rmPrivateClinicalReconciliation?.run)try{await globalThis.__rmPrivateClinicalReconciliation.run()}catch{}
-    const after=await scan({stage:'after'});lastReport={version:VERSION,reason,at:nowISO(),before,repairResult,after};globalThis.__rmClinicalHealthReport=lastReport;
+    const report=await scan({stage:'scan'});
+    lastReport={version:VERSION,reason,mode:'READ_ONLY',at:nowISO(),before:report,repairResult:null,after:report};
+    globalThis.__rmClinicalHealthReport=lastReport;
     document.dispatchEvent(new CustomEvent('rm:clinical-health',{detail:lastReport}));
     if(show)showReport(lastReport);return lastReport
   }finally{running=false}
@@ -74,10 +73,10 @@ async function run({repair=true,show=false,reason='automatic'}={}){
 
 function statusBadge(row){const s=row.severity;return`<span class="badge">${esc(s)}</span>`}
 function rowsHtml(report){return arr(report?.after?.issues).map(row=>`<tr><td>${statusBadge(row)}</td><td><strong>${esc(row.problem)}</strong><div class="tiny muted">${esc(row.code)}</div></td><td>${esc(row.evidence||'—')}</td><td>${esc(row.repair||'—')}</td><td>${esc(row.result||'—')}</td></tr>`).join('')}
-function showReport(report){const s=report?.after?.summary||{};modal('Autodiagnóstico clínico 3.6',`<section class="grid grid-4"><div class="card"><div class="tiny muted">P0</div><strong>${s.p0||0}</strong></div><div class="card"><div class="tiny muted">Erros</div><strong>${s.error||0}</strong></div><div class="card"><div class="tiny muted">Atenções</div><strong>${s.attention||0}</strong></div><div class="card"><div class="tiny muted">Reparados</div><strong>${s.repaired||0}</strong></div></section><div class="notice mt-12">Autorreparo atua apenas em integridade estrutural/administrativa. Conteúdo clínico interpretativo permanece sob revisão profissional.</div><div class="table-wrap mt-16"><table class="table"><thead><tr><th>Status</th><th>Problema</th><th>Evidência</th><th>Reparo</th><th>Resultado</th></tr></thead><tbody>${rowsHtml(report)}</tbody></table></div>`,`<button class="btn secondary" data-action="close-modal">Fechar</button>`,true)}
+function showReport(report){const s=report?.after?.summary||{};modal('Diagnóstico da plataforma',`<section class="grid grid-4"><div class="card"><div class="tiny muted">P0</div><strong>${s.p0||0}</strong></div><div class="card"><div class="tiny muted">Erros</div><strong>${s.error||0}</strong></div><div class="card"><div class="tiny muted">Atenções</div><strong>${s.attention||0}</strong></div><div class="card"><div class="tiny muted">Reparados</div><strong>${s.repaired||0}</strong></div></section><div class="notice mt-12"><strong>Somente leitura.</strong> Este diagnóstico não altera pacientes, sessões, prontuários, vínculos ou financeiro. Reparos exigem fluxo separado e confirmação explícita.</div><div class="table-wrap mt-16"><table class="table"><thead><tr><th>Status</th><th>Problema</th><th>Evidência</th><th>Ação recomendada</th><th>Resultado</th></tr></thead><tbody>${rowsHtml(report)}</tbody></table></div>`,`<button class="btn secondary" data-action="close-modal">Fechar</button>`,true)}
 
-function queue(delay=1200){clearTimeout(timer);timer=setTimeout(()=>void run({repair:true,show:false,reason:'maintenance'}).catch(err=>console.warn('ClinicalHealthEngine',err)),delay)}
-document.addEventListener('click',event=>{const button=event.target.closest?.('[data-action="run-diagnostics"]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();void run({repair:true,show:true,reason:'manual'}).then(report=>{if(report)toast(report.after.summary.p0?`Diagnóstico concluído com ${report.after.summary.p0} falha(s) P0.`:'Diagnóstico concluído sem falhas P0.',report?.after?.summary?.p0?'error':'success')})},true);
+function queue(delay=1200){clearTimeout(timer);timer=setTimeout(()=>void run({show:false,reason:'maintenance-read-only'}).catch(err=>console.warn('ClinicalHealthEngine',err)),delay)}
+document.addEventListener('click',event=>{const button=event.target.closest?.('[data-action="run-diagnostics"]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();void run({show:true,reason:'manual-read-only'}).then(report=>{if(report)toast(report.after.summary.p0?`Diagnóstico concluído com ${report.after.summary.p0} falha(s) P0.`:'Diagnóstico concluído sem falhas P0.',report?.after?.summary?.p0?'error':'success')})},true);
 document.addEventListener('rm:data-ready',()=>queue(1700));
 document.addEventListener('rm:local-data-changed',event=>{if(String(event.detail?.kind||'').startsWith('clinical-health'))return;queue(2200)});
 setInterval(()=>{if(document.visibilityState==='visible'&&runtime.dataReady&&!runtime.locked)queue(0)},PERIODIC_MS);
