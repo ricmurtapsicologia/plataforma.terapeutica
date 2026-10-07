@@ -110,6 +110,10 @@ jobs:
         shell: bash
         run: node scripts/runtime-reachability.mjs
 
+      - name: Audit decommission candidates
+        shell: bash
+        run: node scripts/decommission-audit.mjs
+
       - name: Check index local assets
         shell: bash
         run: |
@@ -186,6 +190,10 @@ jobs:
           if(!platform.includes('clinicalSessionId')||!platform.includes("source:'existing-links-only'"))throw new Error('Canonical session identity invariant missing');
           console.log('Architecture invariants validated.');
           NODE
+
+      - name: Run canonical 30/30 audit
+        shell: bash
+        run: node scripts/clinical-audit-30.mjs
 
       - name: Check application version consistency
         shell: bash
