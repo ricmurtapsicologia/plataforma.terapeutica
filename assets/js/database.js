@@ -1,10 +1,33 @@
-import {STORE_NAMES,SCHEMA_VERSION} from './state.js';
+import {STORE_NAMES,SCHEMA_VERSION,runtime} from './state.js';
 import {encryptJson,decryptJson,bytesToB64,b64ToBytes,randomBytes,deriveKey,makeVerifier,verifyKey} from './crypto.js';
 
 const DB_NAME='richelmy-plataforma-db-v2';
 const DB_VERSION=4;
 const NEW_VAULT_ITERATIONS=600000;
+const CRITICAL_CLINICAL_STORES=new Set(['patients','appointments','records','notes','formulations']);
 let dbPromise=null;
+
+function integrityFailure(storeName,row,error){
+  const item={storeName,id:String(row?.id||''),code:'DECRYPT_FAILED',at:new Date().toISOString()};
+  if(CRITICAL_CLINICAL_STORES.has(storeName)){
+    runtime.integrityBlocked=true;
+    runtime.integrityErrors=[...(Array.isArray(runtime.integrityErrors)?runtime.integrityErrors:[]).filter(x=>!(x?.storeName===item.storeName&&x?.id===item.id)),item];
+    document.dispatchEvent(new CustomEvent('rm:data-integrity-blocked',{detail:{storeName,code:item.code,count:runtime.integrityErrors.length}}));
+    const out=new Error('Integridade clínica bloqueada em '+storeName+'. Um registro cifrado não pôde ser lido; nenhuma mutação clínica deve continuar até recuperação segura.');
+    out.code='CLINICAL_DATA_INTEGRITY';
+    out.storeName=storeName;
+    out.cause=error;
+    return out;
+  }
+  return null;
+}
+function assertMutationAllowed(){
+  if(runtime.integrityBlocked){
+    const error=new Error('Gravação bloqueada: a plataforma detectou falha de integridade em dados clínicos. Execute recuperação segura antes de alterar dados.');
+    error.code='CLINICAL_DATA_INTEGRITY';
+    throw error;
+  }
+}
 
 function notifyChange(storeName,id='',kind='put'){
   if(globalThis.__rmSyncApplying)return;
@@ -72,6 +95,7 @@ async function recordTombstone(storeName,id){
 }
 
 function validateWrite(storeName,value){
+  assertMutationAllowed();
   if(!STORE_NAMES.includes(storeName))throw new Error('Área de dados inválida.');
   if(!value?.id)throw new Error('Registro sem identificador.');
 }
@@ -162,10 +186,20 @@ export async function bulkPutEncryptedAtomic(batches,key,{verify=false}={}){
 export async function getAllDecrypted(storeName,key){
   const db=await openDatabase();if(!db.objectStoreNames.contains(storeName))return[];
   const tx=db.transaction(storeName,'readonly'),done=txDone(tx),rows=await requestAsPromise(tx.objectStore(storeName).getAll());await done;
-  const decoded=await Promise.all(rows.map(async row=>{try{return await decryptJson(key,row.encrypted,`${storeName}:${row.id}`)}catch(err){console.error('Registro não pôde ser lido',storeName,row.id,err);return null}}));return decoded.filter(Boolean);
+  const decoded=[];
+  for(const row of rows){
+    try{decoded.push(await decryptJson(key,row.encrypted,`${storeName}:${row.id}`))}
+    catch(err){
+      console.error('Registro cifrado não pôde ser lido',storeName,row.id,err);
+      const blocked=integrityFailure(storeName,row,err);
+      if(blocked)throw blocked;
+    }
+  }
+  return decoded;
 }
-export async function deleteRecord(storeName,id){const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx);tx.objectStore(storeName).delete(id);await done;await recordTombstone(storeName,id);notifyChange(storeName,id,'delete')}
+export async function deleteRecord(storeName,id){assertMutationAllowed();const db=await openDatabase(),tx=db.transaction(storeName,'readwrite'),done=txDone(tx);tx.objectStore(storeName).delete(id);await done;await recordTombstone(storeName,id);notifyChange(storeName,id,'delete')}
 export async function clearStore(storeName){
+  assertMutationAllowed();
   const db=await openDatabase(),readTx=db.transaction(storeName,'readonly'),readDone=txDone(readTx),rows=await requestAsPromise(readTx.objectStore(storeName).getAll());await readDone;
   const tx=db.transaction(storeName,'readwrite'),done=txDone(tx);tx.objectStore(storeName).clear();await done;for(const row of rows)await recordTombstone(storeName,row.id);notifyChange(storeName,'','clear');
 }

@@ -84,17 +84,26 @@ async function triageGemini(auth){
   const candidates=files.filter(f=>{const item=index.get(f.id);return !item||item.status==='review'||item.status==='ready'||item.status==='write_failed'});
   const fetched=[];for(const file of candidates){try{fetched.push({file,raw:await readGemini(auth,file.id)})}catch{}}
   const patients=candidatePatients();catalog.aliases=learnAliasesFromDocuments({raws:fetched.map(x=>x.raw),patients,professionalName:preferences.professionalName,existingAliases:catalog.aliases||{}});
-  const patientWrites=new Map();let linked=0,ignored=0,review=0;
+  let linked=0,ignored=0,review=0;
   for(const item of fetched){
     const meeting=meetingInfo(item.file),scheduled=appointmentMatch(meeting),identified=scheduled||strongIdentity(item.raw,patients,catalog.aliases||{});
-    if(identified){catalog.manualLinks={...(catalog.manualLinks||{}),[item.file.id]:identified.id};const professional=normalizeIdentity(preferences.professionalName),labels=participantLabels(item.raw).filter(x=>x&&x!==professional);if(labels.length===1)catalog.aliases={...(catalog.aliases||{}),[labels[0]]:identified.id};if(['Encerrado','Arquivado'].includes(identified.status||'')){const next={...identified,status:'Ativo',reactivatedAt:nowISO(),reactivatedReason:'Novo atendimento identificado nas anotações do Google Meet/Gemini.',updatedAt:nowISO()};Object.assign(identified,next);patientWrites.set(next.id,next)}upsertCatalog(catalog,{fileId:item.file.id,name:item.file.name,url:item.file.webViewLink||'',modifiedTime:item.file.modifiedTime||'',meetingDate:meeting?.date||'',meetingTime:meeting?.time||'',rawTime:meeting?.rawTime||'',status:'review',reason:'Atendimento clínico identificado automaticamente; associação preparada.',version:'2.7.0'});linked++;continue}
-    const reason=nonClinicalReason(item.raw);if(reason){delete catalog.manualLinks?.[item.file.id];upsertCatalog(catalog,{fileId:item.file.id,name:item.file.name,url:item.file.webViewLink||'',modifiedTime:item.file.modifiedTime||'',meetingDate:meeting?.date||'',meetingTime:meeting?.time||'',rawTime:meeting?.rawTime||'',status:'ignored',reason:`Ignorado automaticamente: ${reason}; não é atendimento clínico.`,version:'2.7.0'});ignored++;continue}
-    upsertCatalog(catalog,{fileId:item.file.id,name:item.file.name,url:item.file.webViewLink||'',modifiedTime:item.file.modifiedTime||'',meetingDate:meeting?.date||'',meetingTime:item.meetingTime||meeting?.time||'',rawTime:meeting?.rawTime||'',status:'review',reason:'Não foi possível confirmar automaticamente se este arquivo é atendimento clínico. Revise apenas se reconhecer a sessão.',version:'2.7.0'});review++
+    if(identified){
+      if(['Inativo','Encerrado','Arquivado'].includes(identified.status||'')){
+        delete catalog.manualLinks?.[item.file.id];
+        upsertCatalog(catalog,{fileId:item.file.id,name:item.file.name,url:item.file.webViewLink||'',modifiedTime:item.file.modifiedTime||'',meetingDate:meeting?.date||'',meetingTime:meeting?.time||'',rawTime:meeting?.rawTime||'',status:'review',reason:'Paciente identificado está inativo/encerrado. Reativação e vínculo exigem confirmação profissional.',version:'3.7.6'});
+        review++;continue;
+      }
+      catalog.manualLinks={...(catalog.manualLinks||{}),[item.file.id]:identified.id};
+      const professional=normalizeIdentity(preferences.professionalName),labels=participantLabels(item.raw).filter(x=>x&&x!==professional);
+      if(labels.length===1)catalog.aliases={...(catalog.aliases||{}),[labels[0]]:identified.id};
+      upsertCatalog(catalog,{fileId:item.file.id,name:item.file.name,url:item.file.webViewLink||'',modifiedTime:item.file.modifiedTime||'',meetingDate:meeting?.date||'',meetingTime:meeting?.time||'',rawTime:meeting?.rawTime||'',status:'review',reason:'Atendimento clínico identificado automaticamente; associação preparada.',version:'3.7.6'});
+      linked++;continue;
+    }
+    const reason=nonClinicalReason(item.raw);if(reason){delete catalog.manualLinks?.[item.file.id];upsertCatalog(catalog,{fileId:item.file.id,name:item.file.name,url:item.file.webViewLink||'',modifiedTime:item.file.modifiedTime||'',meetingDate:meeting?.date||'',meetingTime:meeting?.time||'',rawTime:meeting?.rawTime||'',status:'ignored',reason:`Ignorado automaticamente: ${reason}; não é atendimento clínico.`,version:'3.7.6'});ignored++;continue}
+    upsertCatalog(catalog,{fileId:item.file.id,name:item.file.name,url:item.file.webViewLink||'',modifiedTime:item.file.modifiedTime||'',meetingDate:meeting?.date||'',meetingTime:item.meetingTime||meeting?.time||'',rawTime:meeting?.rawTime||'',status:'review',reason:'Não foi possível confirmar automaticamente se este arquivo é atendimento clínico. Revise apenas se reconhecer a sessão.',version:'3.7.6'});review++
   }
-  if(patientWrites.size)await bulkPutEncryptedAtomic([{storeName:'patients',values:[...patientWrites.values()]}],runtime.key,{verify:true});
   catalog.filesSeen=files.length;catalog.lastScanAt=nowISO();catalog.lastError='';await saveCatalog(catalog);
-  if(patientWrites.size)document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{storeName:'patients',kind:'clinical-autofix-reactivation',count:patientWrites.size,at:nowISO(),verified:true}}));
-  return{files:files.length,linked,ignored,review,reactivated:patientWrites.size}
+  return{files:files.length,linked,ignored,review,reactivated:0}
 }
 function submittedAtMs(value=''){const raw=String(value||'').trim(),br=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);if(br)return new Date(`${br[3]}-${String(br[2]).padStart(2,'0')}-${String(br[1]).padStart(2,'0')}T${String(br[4]||'0').padStart(2,'0')}:${br[5]||'00'}:00-03:00`).getTime();const ms=new Date(raw).getTime();return Number.isFinite(ms)?ms:0}
 function intakeAppointment(note){const submitted=submittedAtMs(note?.source?.submittedAt);const candidates=arr(data.appointments).filter(a=>a?.patientId===note.patientId&&a?.status!=='Cancelada'&&a?.attendanceStatus!=='Desmarcou'&&a?.date&&a?.time).map(a=>({a,ms:new Date(meetingIso(a.date,a.time)).getTime()})).filter(x=>Number.isFinite(x.ms));if(!candidates.length)return null;if(!submitted)return candidates.sort((a,b)=>a.ms-b.ms)[0].a;const future=candidates.filter(x=>x.ms>=submitted&&x.ms-submitted<=30*86400000).sort((a,b)=>a.ms-b.ms);if(future.length)return future[0].a;const near=candidates.map(x=>({...x,d:Math.abs(x.ms-submitted)})).filter(x=>x.d<=30*86400000).sort((a,b)=>a.d-b.d);return near[0]?.a||null}

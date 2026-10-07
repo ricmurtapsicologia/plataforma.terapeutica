@@ -55,12 +55,16 @@ export function isPlatformSession(appointment){
   return appointment?.sessionStartSource==='platform-one-click'||appointment?.sessionOrigin==='manual-flex-start';
 }
 
+export function isExplicitTestArtifact(value){
+  return Boolean(value?.synthetic===true||value?.testArtifact===true||value?.environment==='diagnostic'||value?.sessionOrigin==='diagnostic-test'||value?.source?.synthetic===true||value?.source?.type==='diagnostic-test');
+}
+
 export function isRunningPlatformSession(appointment){
   return Boolean(isPlatformSession(appointment)&&appointment?.clinicalSessionState==='Em atendimento'&&appointment?.sessionStartedAt&&!appointment?.sessionEndedAt);
 }
 
 export function isShortTestCandidate(appointment,{date,maxMinutes=LIVE_TEST_MAX_MINUTES,includeRunning=true,nowMs=Date.now()}={}){
-  if(!appointment||!isPlatformSession(appointment))return false;
+  if(!appointment||!isPlatformSession(appointment)||!isExplicitTestArtifact(appointment))return false;
   if(date&&appointment?.date!==date)return false;
   const running=isRunningPlatformSession(appointment);
   if(running&&!includeRunning)return false;
@@ -68,7 +72,7 @@ export function isShortTestCandidate(appointment,{date,maxMinutes=LIVE_TEST_MAX_
 }
 
 export function isTodayCleanupCandidate(appointment,{date=TODAY_TEST_CLEANUP_DATE,maxMinutes=TODAY_CLEANUP_MAX_MINUTES,nowMs=Date.now()}={}){
-  if(!appointment||!isPlatformSession(appointment)||appointment?.date!==date)return false;
+  if(!appointment||!isPlatformSession(appointment)||!isExplicitTestArtifact(appointment)||appointment?.date!==date)return false;
   if(isRunningPlatformSession(appointment))return true;
   return elapsedMinutes(appointment,nowMs)<=maxMinutes;
 }
@@ -92,5 +96,5 @@ export function resetScheduledTestSession(appointment,at=''){
 }
 
 export function shouldDeleteAdHocTest(appointment){
-  return appointment?.sessionOrigin==='manual-flex-start';
+  return Boolean(isExplicitTestArtifact(appointment)&&appointment?.sessionOrigin==='manual-flex-start');
 }
