@@ -117,7 +117,9 @@ jobs:
           const fs=require('fs');
           const index=fs.readFileSync('index.html','utf8');
           const refs=[...index.matchAll(/(?:src|href)="(assets\/[^"?#]+|manifest\.webmanifest|sw\.js)/g)].map(m=>m[1]);
-          const missing=refs.filter(ref=>!fs.existsSync(ref));
+          const bootstrap=fs.readFileSync('assets/js/bootstrap-v240.js','utf8');
+          const deferred=[...bootstrap.matchAll(/['"`](assets\/css\/[^'"`?]+\.css)/g)].map(m=>m[1]);
+          const missing=[...new Set([...refs,...deferred])].filter(ref=>!fs.existsSync(ref));
           if(missing.length){console.error('Missing assets referenced by index.html:\n'+missing.join('\n'));process.exit(1)}
           console.log(`Validated ${refs.length} local index assets.`);
           NODE
@@ -165,7 +167,7 @@ jobs:
           if(!sessionRuntime.includes('getDecryptedById')||!sessionRuntime.includes('sessionStartedAt')||!sessionRuntime.includes('sessionEndedAt')||!sessionRuntime.includes('actualDurationMinutes'))throw new Error('Clinical session lifecycle/readback contract missing');
           for(const retired of ['runtime-monitor-v240.js','legacy-sw-cleanup-v240.js','browser-fixes-v153.js','top-status-owner-v243.js','gemini-materialization-integrity-v273.js','workspace-status-v240.js','legacy-sync-cleanup-v262.js'])if(manifest.includes(retired))throw new Error(`Retired permanent boot module referenced: ${retired}`);
           if(!migrations.includes("import('./legacy-sync-cleanup-v262.js')"))throw new Error('MigrationRouter must preserve conditional legacy sync cleanup');
-          if(!bootstrap.includes("from './secure-sync-v260.js'")||bootstrap.includes("from './secure-sync-v240.js'"))throw new Error('Bootstrap must use private SyncManager v260');
+          if(!bootstrap.includes("import('./secure-sync-v260.js")||bootstrap.includes("from './secure-sync-v260.js'")||bootstrap.includes("secure-sync-v240.js"))throw new Error('Bootstrap must lazy-load private SyncManager v260 after authentication');
           if(!sync.includes('HEARTBEAT_MS=90000')||!sync.includes('BroadcastChannel'))throw new Error('Private SyncManager invariants missing');
           if(sync.includes('api.github.com'))throw new Error('Private SyncManager must not use GitHub for clinical vault');
           if(!storage.includes("spaces:'appDataFolder'")||!storage.includes("parents:['appDataFolder']"))throw new Error('Drive appDataFolder adapter invariants missing');
