@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {transitionAttendance,appointmentsConflict,AGENDA_VERSION} from '../assets/js/agenda-domain-v330.mjs';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
-const main=read('assets/js/main-v250.js');
+const manifest=read('assets/js/core/clinical-runtime-manifest-v376.mjs');
 const controller=read('assets/js/agenda-controller-v330.js');
 const desktop=read('assets/js/modules/appointments.js');
 const mobile=read('assets/js/agenda-mobile-v183.js');
@@ -11,8 +11,8 @@ const payments=read('assets/js/session-payment-visibility-v322.js');
 const css=read('assets/css/agenda-v330.css');
 
 assert.equal(AGENDA_VERSION,'3.3.0');
-assert.ok(main.includes('agenda-controller-v330.js'),'canonical agenda controller must boot');
-assert.ok(!main.includes('agenda-actions-v240.js'),'legacy agenda action owner must not boot');
+assert.ok(manifest.includes('agenda-controller-v330.js'),'canonical agenda controller must boot');
+assert.ok(!manifest.includes('../agenda-actions-v240.js'),'legacy agenda action owner must not boot');
 assert.ok(desktop.includes('data-action="appointment-open"'),'desktop session card must open canonical controller');
 assert.ok(mobile.includes('data-action="appointment-open"'),'mobile session card must open canonical controller');
 assert.ok(!desktop.includes('week-mini')&&!desktop.includes('week-event-actions'),'desktop must not render unlabeled micro-actions');
