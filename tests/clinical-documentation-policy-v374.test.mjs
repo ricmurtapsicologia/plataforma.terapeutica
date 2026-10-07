@@ -9,7 +9,8 @@ import {
   isShortTestCandidate,
   isTodayCleanupCandidate,
   resetScheduledTestSession,
-  shouldDeleteAdHocTest
+  shouldDeleteAdHocTest,
+  isExplicitTestArtifact
 } from '../assets/js/clinical-documentation-policy-v374.mjs';
 
 assert.equal(TODAY_TEST_CLEANUP_DATE,'2026-09-02');
@@ -23,6 +24,9 @@ const scheduled={
   sessionPreviousStatus:'Confirmada',sessionPreviousAttendanceStatus:''
 };
 const adHoc={...scheduled,id:'a2',sessionOrigin:'manual-flex-start'};
+const syntheticScheduled={...scheduled,id:'a1-test',synthetic:true};
+const syntheticAdHoc={...adHoc,id:'a2-test',source:{synthetic:true}};
+const syntheticRunning={...runningLong,id:'a3-test',environment:'diagnostic'};
 const runningLong={
   ...scheduled,id:'a3',status:'Confirmada',attendanceStatus:'',actualDurationMinutes:null,
   sessionStartedAt:'2026-09-02T22:00:00.000Z',sessionEndedAt:'',clinicalSessionState:'Em atendimento'
@@ -35,9 +39,13 @@ assert.equal(isSubstantiveRecord(placeholder),false);
 assert.equal(isSubstantiveRecord(realRecord),true);
 assert.equal(hasSubstantiveRecord([placeholder],scheduled),false);
 assert.equal(hasSubstantiveRecord([placeholder,realRecord],scheduled),true);
-assert.equal(isShortTestCandidate(scheduled,{date:'2026-09-02',maxMinutes:3,includeRunning:false}),true);
-assert.equal(isTodayCleanupCandidate(runningLong,{date:'2026-09-02',nowMs:new Date('2026-09-03T00:45:00.000Z').getTime()}),true);
-assert.equal(shouldDeleteAdHocTest(adHoc),true);
+assert.equal(isShortTestCandidate(scheduled,{date:'2026-09-02',maxMinutes:3,includeRunning:false}),false);
+assert.equal(isShortTestCandidate(syntheticScheduled,{date:'2026-09-02',maxMinutes:3,includeRunning:false}),true);
+assert.equal(isTodayCleanupCandidate(runningLong,{date:'2026-09-02',nowMs:new Date('2026-09-03T00:45:00.000Z').getTime()}),false);
+assert.equal(isTodayCleanupCandidate(syntheticRunning,{date:'2026-09-02',nowMs:new Date('2026-09-03T00:45:00.000Z').getTime()}),true);
+assert.equal(shouldDeleteAdHocTest(adHoc),false);
+assert.equal(isExplicitTestArtifact(syntheticAdHoc),true);
+assert.equal(shouldDeleteAdHocTest(syntheticAdHoc),true);
 
 const reset=resetScheduledTestSession(scheduled,'2026-09-03T00:00:00.000Z');
 assert.equal(reset.status,'Confirmada');
