@@ -14,20 +14,22 @@ function walk(dir){
   return out;
 }
 function rel(file){return path.relative(ROOT,file).replaceAll('\\','/')}
-function normalizeSpec(from,spec){
+function resolveSpec(from,spec){
   const clean=String(spec).split('?')[0].split('#')[0];
-  if(!clean.startsWith('.'))return null;
-  return path.normalize(path.resolve(path.dirname(from),clean));
+  if(clean.startsWith('./')||clean.startsWith('../'))return path.normalize(path.resolve(path.dirname(from),clean));
+  if(clean.startsWith('assets/js/'))return path.normalize(path.resolve(ROOT,clean));
+  return null;
 }
 function references(file){
   const source=fs.readFileSync(file,'utf8'),refs=new Set();
   const patterns=[
-    /(?:from\s*|import\s*\()\s*['"]([^'"]+\.m?js(?:\?[^'"]*)?)['"]/g,
-    /['"]((?:\.\.?\/)[^'"]+\.m?js(?:\?[^'"]*)?)['"]/g
+    /(?:from\s*|import\s*\()\s*['"`]((?:\.\.?\/)[^'"`$?]+\.m?js)/g,
+    /['"`]((?:\.\.?\/)[^'"`$?]+\.m?js)/g,
+    /(?:\.src|src)\s*=\s*['"`](assets\/js\/[^'"`$?]+\.m?js)/g
   ];
   for(const pattern of patterns){
     for(const match of source.matchAll(pattern)){
-      const resolved=normalizeSpec(file,match[1]);
+      const resolved=resolveSpec(file,match[1]);
       if(resolved)refs.add(resolved);
     }
   }
@@ -40,12 +42,15 @@ const roots=[...index.matchAll(/<script[^>]+src="(assets\/js\/[^"?#]+\.m?js)/g)]
   .map(match=>path.resolve(ROOT,match[1]))
   .filter(file=>fileSet.has(file));
 
-const edges=new Map();
-const missing=[];
+const edges=new Map(),missingByFile=new Map();
 for(const file of files){
-  const deps=references(file);
-  edges.set(file,deps.filter(dep=>fileSet.has(dep)));
-  for(const dep of deps)if(dep.startsWith(JS_ROOT)&&!fileSet.has(dep))missing.push(`${rel(file)} -> ${rel(dep)}`);
+  const deps=references(file),present=[],missing=[];
+  for(const dep of deps){
+    if(fileSet.has(dep))present.push(dep);
+    else if(dep.startsWith(JS_ROOT))missing.push(dep);
+  }
+  edges.set(file,present);
+  missingByFile.set(file,missing);
 }
 
 const reachable=new Set(),stack=[...roots];
@@ -56,14 +61,24 @@ while(stack.length){
   for(const dep of edges.get(file)||[])stack.push(dep);
 }
 
-const unreachable=files.filter(file=>!reachable.has(file)).map(rel).sort();
+const reachableMissing=[];
+for(const file of reachable){
+  for(const dep of missingByFile.get(file)||[])reachableMissing.push(`${rel(file)} -> ${rel(dep)}`);
+}
+const unreachableFiles=files.filter(file=>!reachable.has(file));
+const historicalMissing=[];
+for(const file of unreachableFiles){
+  for(const dep of missingByFile.get(file)||[])historicalMissing.push(`${rel(file)} -> ${rel(dep)}`);
+}
+
 const report={
   roots:roots.map(rel),
   files:files.length,
   reachable:reachable.size,
-  unreachable:unreachable.length,
-  missing:[...new Set(missing)].sort(),
-  unreachableFiles:unreachable
+  unreachable:unreachableFiles.length,
+  missingReachable:[...new Set(reachableMissing)].sort(),
+  historicalMissing:[...new Set(historicalMissing)].sort(),
+  unreachableFiles:unreachableFiles.map(rel).sort()
 };
 console.log(JSON.stringify(report,null,2));
-if(report.missing.length)process.exitCode=1;
+if(report.missingReachable.length)process.exitCode=1;
