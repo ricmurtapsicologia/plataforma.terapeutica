@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Clinical E2E v3.7.6</title>
+<pre id="out">RUNNING</pre>
+<script type="module">
+const out=document.getElementById('out');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const assert=(condition,message)=>{if(!condition)throw new Error(message)};
+async function waitFor(check,{timeout=30000,step=100,label='condition'}={}){
+  const started=Date.now();
+  while(Date.now()-started<timeout){
+    try{const value=check();if(value)return value}catch{}
+    await sleep(step);
+  }
+  throw new Error('Timeout waiting for '+label);
+}
+async function run(){
+  const frame=document.createElement('iframe');
+  frame.style.width='1280px';frame.style.height='720px';frame.style.border='0';
+  frame.src='../index.html#today';
+  document.body.appendChild(frame);
+  await waitFor(()=>frame.contentDocument?.querySelector('#access-password'),{label:'login UI'});
+  const w=frame.contentWindow,d=frame.contentDocument;
+  const password=d.querySelector('#access-password');
+  password.value='synthetic-e2e-v376-only';
+  password.dispatchEvent(new Event('input',{bubbles:true}));
+  d.querySelector('[data-access-action="login"]').click();
+
+  await waitFor(()=>w.__rmDataReady===true,{timeout:40000,label:'clinical data ready'});
+  assert(w.__rmRuntimeComposition,'runtime composition status missing');
+  assert(Array.isArray(w.__rmRuntimeComposition.failed),'runtime composition failures missing');
+  assert(w.__rmRuntimeComposition.failed.length===0,'runtime composition has failures: '+JSON.stringify(w.__rmRuntimeComposition.failed));
+  assert(typeof w.__rmNavigate==='function','canonical navigation function missing');
+
+  for(const route of ['today','agenda','patients','resources','financeiro','settings']){
+    w.__rmNavigate(route);
+    await sleep(180);
+    const main=d.querySelector('#main-content');
+    assert(main&&main.textContent.trim().length>10,'route '+route+' rendered empty');
+    assert(d.querySelector('.nav-link.active')?.dataset?.route===route,'route '+route+' did not become active');
+  }
+
+  assert(w.__rmClinicalHealthEngine?.run,'read-only platform diagnostics unavailable');
+  const health=await w.__rmClinicalHealthEngine.run({show:false,reason:'e2e-certification'});
+  assert(health?.mode==='READ_ONLY','health diagnostics is not read-only');
+
+  assert(w.__rmClinicalTestArtifactCleanup?.scan,'synthetic cleanup scanner unavailable');
+  const cleanup=w.__rmClinicalTestArtifactCleanup.scan();
+  assert(cleanup?.requiresConfirmation===true,'test-artifact cleanup does not require explicit confirmation');
+
+  out.textContent='CLINICAL_E2E_V376_PASS';
+}
+run().catch(error=>{
+  console.error(error);
+  out.textContent='CLINICAL_E2E_V376_FAIL\n'+String(error?.stack||error);
+});
+</script>

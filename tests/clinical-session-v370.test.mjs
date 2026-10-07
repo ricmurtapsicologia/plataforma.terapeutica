@@ -24,6 +24,7 @@ const calendar=fs.readFileSync('assets/js/google-calendar-service-v240.js','utf8
 const runtime=fs.readFileSync('assets/js/clinical-session-runtime-v370.js','utf8');
 const header=fs.readFileSync('assets/js/clinical-session-header-v371.js','utf8');
 const main=fs.readFileSync('assets/js/main-v250.js','utf8');
+const manifest=fs.readFileSync('assets/js/core/clinical-runtime-manifest-v376.mjs','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const adapter=fs.readFileSync('assets/js/calendar-adapter-v300.js','utf8');
 const version=fs.readFileSync('assets/js/version.js','utf8');
@@ -38,11 +39,12 @@ assert.ok(!runtime.includes("window.open(url,'_blank','noopener,noreferrer')"),'
 for(const needle of ['clinical-session-start-flex-v372','Sem sessão aberta hoje','Iniciar nova sessão'])assert.ok(header.includes(needle),`Flexible session header missing ${needle}`);
 assert.ok(!header.includes('data-v3-action-menu'),'Patient header must not expose generic action-menu marker that can intercept session clicks');
 assert.ok(!header.includes('disabled title="Sem sessão agendada para hoje"'),'No-schedule state must not disable session start');
-assert.ok(index.includes(`clinical-session-header-v371.js?v=${APP_VERSION}&rev=session-flex-runtime-20260903`),'Index must cache-bust flexible session header with canonical version');
-assert.ok(index.includes(`main-v250.js?v=${APP_VERSION}&rev=icaps-v400-20260902`),'Index must cache-bust canonical runtime loader with canonical version');
-assert.ok(main.includes('icaps-v400-20260902'),'Canonical runtime imports must use current cache key');
-assert.ok(main.includes('clinical-session-runtime-v370.js'),'Canonical main must boot clinical session runtime');
-assert.ok(!main.includes('calendar-reverse-reconcile-v276.js'),'Reverse reconciliation must not be double-booted by main');
+assert.ok(!index.includes('clinical-session-header-v371.js'),'Session header must be composed behind the canonical module root');
+assert.ok(manifest.includes('clinical-session-header-v371.js'),'Runtime manifest must own the flexible session header');
+assert.ok(index.includes(`main-v250.js?v=${APP_VERSION}&rev=clinical-runtime-v376`),'Index must cache-bust canonical runtime loader with canonical version');
+assert.ok(main.includes('clinical-runtime-v376'),'Canonical runtime imports must use the composition cache key');
+assert.ok(manifest.includes('clinical-session-runtime-v370.js'),'Canonical manifest must boot clinical session runtime');
+assert.ok(!manifest.includes('../calendar-reverse-reconcile-v276.js'),'Reverse reconciliation must not be double-booted by the composition root');
 assert.ok(adapter.includes('calendar-reverse-reconcile-v276.js'),'Calendar adapter must own v276 reconciliation');
 
 console.log('CLINICAL_SESSION_V370_PASS');
