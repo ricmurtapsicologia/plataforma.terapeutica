@@ -191,6 +191,10 @@ jobs:
           console.log('Architecture invariants validated.');
           NODE
 
+      - name: Run canonical 30/30 audit
+        shell: bash
+        run: node scripts/clinical-audit-30.mjs
+
       - name: Check application version consistency
         shell: bash
         run: |
