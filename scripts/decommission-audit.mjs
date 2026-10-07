@@ -47,7 +47,7 @@ const candidates=[
 const candidateSet=new Set(candidates);
 const tracked=execFileSync('git',['ls-files'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
 const textExt=new Set(['.js','.mjs','.cjs','.html','.md','.yml','.yaml','.json','.css','.py','.txt','.webmanifest']);
-const inspect=tracked.filter(file=>!candidateSet.has(file)&&textExt.has(path.extname(file).toLowerCase())&&fs.existsSync(file));
+const inspect=tracked.filter(file=>!candidateSet.has(file)&&file!=='scripts/decommission-audit.mjs'&&textExt.has(path.extname(file).toLowerCase())&&fs.existsSync(file));
 
 function references(candidate){
   const base=path.basename(candidate),refs=[];
@@ -60,15 +60,15 @@ function references(candidate){
 
 const rows=candidates.map(file=>{
   const refs=references(file);
-  const codeRefs=refs.filter(ref=>/\.(?:js|mjs|cjs|html|ya?ml)$/.test(ref));
-  const docsRefs=refs.filter(ref=>!codeRefs.includes(ref));
+  const operationalRefs=refs.filter(ref=>ref==='index.html'||ref.startsWith('assets/js/'));
+  const governanceRefs=refs.filter(ref=>!operationalRefs.includes(ref));
   return{
     file,
     exists:fs.existsSync(file),
     testArtifact:/\.test\.mjs$/.test(file),
-    codeRefs,
-    docsRefs,
-    eligible:fs.existsSync(file)&&!/\.test\.mjs$/.test(file)&&codeRefs.length===0
+    operationalRefs,
+    governanceRefs,
+    eligible:fs.existsSync(file)&&!/\.test\.mjs$/.test(file)&&operationalRefs.length===0
   };
 });
 const eligible=rows.filter(row=>row.eligible).map(row=>row.file);
