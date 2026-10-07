@@ -53,6 +53,7 @@ jobs:
           node tests/platform-v300.test.mjs
           node tests/agenda-v330.test.mjs
           node tests/clinical-session-v370.test.mjs
+          node tests/clinical-integrity-hardening-v376.test.mjs
 
       - name: Run real browser persistence and agenda probes
         shell: bash
