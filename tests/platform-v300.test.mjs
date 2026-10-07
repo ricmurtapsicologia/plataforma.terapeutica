@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const main=read('assets/js/main-v250.js');
+const bootstrap=read('assets/js/bootstrap-v240.js');
 const manifest=read('assets/js/core/clinical-runtime-manifest-v376.mjs');
 const platform=read('assets/js/platform-runtime-v300.js');
 const calendar=read('assets/js/calendar-adapter-v300.js');
@@ -17,7 +18,8 @@ assert.match(APP_VERSION,/^\d+\.\d+\.\d+$/,'APP_VERSION must use semver');
 assert.ok(index.includes(`${APP_VERSION}-main-v250`),'index architecture marker must match APP_VERSION');
 assert.ok(index.includes(`main-v250.js?v=${APP_VERSION}`),'index must load the current entrypoint cache');
 assert.ok(main.includes(`__rmEntrypointVersion='${APP_VERSION}-main-v250'`),'entrypoint marker must match APP_VERSION');
-assert.ok(main.includes('clinical-runtime-manifest-v376.mjs'),'main must use the canonical composition root');
+assert.ok(main.includes('bootstrap-v240.js'),'main must boot the minimal authenticated bootstrap');
+assert.ok(bootstrap.includes('clinical-runtime-manifest-v376.mjs'),'bootstrap must own the deferred canonical composition root');
 
 for(const active of [
   'platform-runtime-v300.js',
