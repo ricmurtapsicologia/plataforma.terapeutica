@@ -58,6 +58,7 @@ jobs:
           node tests/clinical-integrity-hardening-v376.test.mjs
           node tests/clinical-documentation-policy-v374.test.mjs
           node tests/clinical-composition-root-v376.test.mjs
+          node tests/mobile-refresh-v376.test.mjs
 
       - name: Run real browser persistence and agenda probes
         shell: bash
