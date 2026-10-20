@@ -1,5 +1,6 @@
+import './legacy-sw-cleanup-v240.js?v=3.7.6';
 document.body.classList.add('rm-booting');
-window.__rmEntrypointVersion='3.7.5-main-v250';
+window.__rmEntrypointVersion='3.7.6-main-v250';
 window.__rmPreBootErrors=[];
 let bootReady=false;
 document.addEventListener('rm:boot-ready',()=>{bootReady=true},{once:true});
@@ -10,7 +11,7 @@ setTimeout(()=>{
 },12000);
 
 try{
-  await import('./bootstrap-v240.js?v=3.7.5&rev=clinical-runtime-v376');
+  await import('./bootstrap-v240.js?v=3.7.6&rev=mobile-refresh-v376');
 }catch(err){
   console.error('Falha crítica no bootstrap',err);
   window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||String(err)}`);
