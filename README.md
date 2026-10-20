@@ -114,7 +114,7 @@ A navegação do workspace do paciente prioriza seis áreas recorrentes — Vis�
 
 ## Entrypoints atuais
 
-- `index.html` — build `3.7.5-main-v250`;
+- `index.html` — build `3.7.6-main-v250`;
 - `assets/js/main-v250.js` — entrypoint principal;
 - `assets/js/bootstrap-v240.js` — boot/login e carregamento do SyncManager atual;
 - `assets/js/secure-sync-v260.js` — sincronização privada;
