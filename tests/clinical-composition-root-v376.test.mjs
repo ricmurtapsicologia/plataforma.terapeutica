@@ -38,4 +38,22 @@ for(const forbidden of [
   'agenda-actions-v240.js'
 ])assert.ok(!manifestSource.includes(`../${forbidden}`),`Retired module returned to canonical composition: ${forbidden}`);
 
+const privatePlanPath='../clinical-plan-manual-v377.js';
+assert.ok(modules.some(item=>item.path===privatePlanPath),'Private patient plan editor missing from authenticated runtime.');
+const privatePlan=fs.readFileSync(new URL('../assets/js/clinical-plan-manual-v377.js',import.meta.url),'utf8');
+for(const marker of [
+  "runtime.integrityBlocked",
+  "bulkPutEncryptedAtomic",
+  "getDecryptedById",
+  "reviewRequired:!reviewed",
+  "patient.id!==editingPatientId",
+  "kind:KIND",
+  "rm:rendered",
+  "status:reviewed?'Validado pelo profissional':'Rascunho para revisão'"
+])assert.ok(privatePlan.includes(marker),'Clinical plan persistence guard missing: '+marker);
+assert.doesNotMatch(privatePlan,/Danielle|Fábio|Eduardo|Ronaldo|Michele|\d{3}\.\d{3}\.\d{3}-\d{2}/i,
+  'Public clinical code must not include patient identifiers or national IDs.');
+assert.doesNotMatch(privatePlan,/addEventListener\('rm:data-ready',[^\n]*save\(/,
+  'Plan saves must always require an explicit user interaction.');
+
 console.log('CLINICAL_COMPOSITION_ROOT_PASS');
