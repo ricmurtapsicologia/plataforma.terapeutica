@@ -6,7 +6,7 @@ const index=read('index.html');
 const main=read('assets/js/main-v250.js');
 const cleanup=read('assets/js/legacy-sw-cleanup-v240.js');
 const manifest=read('assets/js/core/clinical-runtime-manifest-v376.mjs');
-assert.equal(version,'3.7.6');
+assert.equal(version,'3.7.7');
 assert.ok(index.includes('content="'+version+'-main-v250"'));
 assert.ok(index.includes('main-v250.js?v='+version));
 assert.ok(index.includes('app.css?v='+version));
