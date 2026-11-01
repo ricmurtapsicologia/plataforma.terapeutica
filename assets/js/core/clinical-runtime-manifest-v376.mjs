@@ -1,4 +1,4 @@
-export const RUNTIME_MANIFEST_VERSION='3.7.6';
+export const RUNTIME_MANIFEST_VERSION='3.7.7';
 
 export const RUNTIME_PHASES=[
   {
@@ -71,6 +71,7 @@ export const RUNTIME_PHASES=[
       ['../record-persistence-v320.js','Persistência verificada de prontuários'],
       ['./clinical-record-normalization-v376.js','Normalização governada de rascunhos clínicos'],
       ['../treatment-plan-intelligence-v320.js','Plano terapêutico longitudinal'],
+      ['../clinical-plan-manual-v377.js','Revisão clínica individual cifrada do plano'],
       ['../tcc-goal-editor-v360.js','Objetivos terapêuticos estruturados TCC'],
       ['../session-tcc-prep-v360.js','Preparação assistida de sessão TCC'],
       ['../therapeutic-exercises-v360.js','Exercícios terapêuticos rápido/guiado'],
