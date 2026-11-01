@@ -40,7 +40,7 @@ for(const forbidden of [
 
 const privatePlanPath='../clinical-plan-manual-v377.js';
 assert.ok(modules.some(item=>item.path===privatePlanPath),'Private patient plan editor missing from authenticated runtime.');
-const privatePlan=fs.readFileSync(new URL(privatePlanPath,import.meta.url),'utf8');
+const privatePlan=fs.readFileSync(new URL('../assets/js/clinical-plan-manual-v377.js',import.meta.url),'utf8');
 for(const marker of [
   "runtime.integrityBlocked",
   "bulkPutEncryptedAtomic",
