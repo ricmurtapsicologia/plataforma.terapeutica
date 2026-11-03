@@ -30,3 +30,19 @@ jobs:
           node --check assets/js/core/clinical-runtime-manifest-v376.mjs
       - name: Domain and contract tests
         run: node --test tests/agenda-slot-hotfix-v378.test.mjs
+      - name: Browser smoke - desktop and mobile
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/agenda-http.log 2>&1 &
+          BROWSER=""
+          for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$candidate" >/dev/null 2>&1; then BROWSER="$(command -v "$candidate")"; break; fi
+          done
+          if [ -z "$BROWSER" ]; then echo "Chromium unavailable"; exit 1; fi
+          html="$("$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=25000 --user-data-dir="/tmp/agenda-e2e-$" --dump-dom http://127.0.0.1:8765/tests/agenda-slot-e2e-v378.html 2>/tmp/agenda-chrome.log || true)"
+          if ! grep -Fq '<pre id="out">AGENDA_SLOT_E2E_V378_PASS</pre>' <<< "$html"; then
+            echo "Agenda browser E2E FAILED"
+            grep -o 'AGENDA_SLOT_E2E_V378_FAIL[^<]*' <<< "$html" | head -1 || true
+            tail -60 /tmp/agenda-chrome.log || true
+            exit 1
+          fi
+          echo "Agenda browser E2E PASS"
