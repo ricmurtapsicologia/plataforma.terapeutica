@@ -22,8 +22,8 @@ const AUTHENTICATED_STYLES=[
   'assets/css/agenda-mobile-v183.css?v='+APP_VERSION,
   'assets/css/mobile-overflow-fix-v190.css?v='+APP_VERSION,
   'assets/css/google-clinical-v220.css?v='+APP_VERSION,
-  'assets/css/agenda-v330.css?v='+APP_VERSION+'&rev=clinical-runtime-v378',
-  'assets/css/hardening-v360.css?v='+APP_VERSION+'&rev=clinical-runtime-v378'
+  'assets/css/agenda-v330.css?v='+APP_VERSION+'&rev=clinical-runtime-v376',
+  'assets/css/hardening-v360.css?v='+APP_VERSION+'&rev=clinical-runtime-v376'
 ];
 async function ensureAuthenticatedStyles(){
   if(styleRuntimePromise)return styleRuntimePromise;
@@ -63,11 +63,11 @@ async function ensureGoogleOAuthPublicClient(){
 async function ensureClinicalRuntime(){
   if(runtimeCompositionPromise)return runtimeCompositionPromise;
   runtimeCompositionPromise=(async()=>{
-    const composition=await withTimeout(import('./core/clinical-runtime-manifest-v376.mjs?v='+encodeURIComponent(APP_VERSION)+'&rev=clinical-runtime-v378'),10000,'Mapa do runtime clínico');
+    const composition=await withTimeout(import('./core/clinical-runtime-manifest-v376.mjs?v='+encodeURIComponent(APP_VERSION)+'&rev=clinical-runtime-v376'),10000,'Mapa do runtime clínico');
     const errors=[];
     const result=await composition.loadClinicalRuntime({
       version:APP_VERSION,
-      revision:'clinical-runtime-v378',
+      revision:'clinical-runtime-v376',
       onError:({phase='',label='',path='',error}={})=>{
         const message=`${label||path||'Módulo'}: ${error?.message||error||'falha desconhecida'}`;
         console.error(`Falha no runtime clínico [${phase||'unknown'}] ${label||path||''}`,error);
