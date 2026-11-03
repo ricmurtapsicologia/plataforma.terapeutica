@@ -61,6 +61,8 @@ async function saveAppointment(){
       note:sanitizeText(q('#a-note')?.value)
     };
     assert(/^([01]\d|2[0-3]):[0-5]\d$/.test(base.time),'Horário inválido.');
+    const [hour,minute]=base.time.split(':').map(Number);
+    assert(hour*60+minute+duration<=1440,'O atendimento ultrapassa o fim do dia. Selecione um horário anterior ou diminua a duração.');
     appointmentSeriesDates(base.date,'Avulso',1);
     const now=nowISO(),prior=id?arr(data.appointments).find(a=>a?.id===id):null;
     if(id)assert(prior,'Sessão original não localizada.');
