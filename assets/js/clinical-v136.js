@@ -1,5 +1,6 @@
 import {data,runtime,preferences,uid,nowISO,patientById,selectedPatient} from './state.js';
-import {putEncrypted,deleteRecord} from './database.js';
+import {putEncrypted,deleteRecord,bulkPutEncryptedAtomic} from './database.js';
+import {appointmentsConflict,appointmentSeriesDates,patientCanSchedule} from './agenda-domain-v330.mjs';
 import {validatePatient,sanitizeText,assert} from './validation.js';
 import {openWhatsApp,openEmail,renderTemplate,DEFAULT_MESSAGES} from './communications.js';
 import {closeModal,toast,fmtDate} from './ui.js';
@@ -9,6 +10,7 @@ const customActions=new Set(['save-patient','save-appointment','schedule-selecte
 const q=s=>document.querySelector(s);
 const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
 let draftTimer=null;
+let appointmentSaving=false;
 
 function rerender(route=runtime.route){runtime.route=route;if(typeof window.__rmNavigate==='function')window.__rmNavigate(route);else{if(location.hash!==`#${route}`)location.hash=route;window.__rmRender?.()}}
 async function saveEntity(store,item){assert(runtime.key,'Sessão encerrada. Entre novamente.');item.updatedAt=nowISO();const list=data[store]||(data[store]=[]),i=list.findIndex(x=>x?.id===item.id);if(i>=0)list[i]=item;else list.push(item);await putEncrypted(store,item,runtime.key);return item}
@@ -36,11 +38,64 @@ const phone=q('#p-phone');if(phone){phone.placeholder='(00) 00000-0000';const la
 function enhanceAppointmentModal(){const body=q('.modal-body'),id=q('#a-id');if(!body||!id||q('#a-recurrence'))return;const existing=arr(data.appointments).find(x=>x?.id===id.value),patient=patientById(q('#a-patient')?.value||runtime.selectedPatientId),defaultRec=existing?.recurrence||patient?.sessionRecurrence||'Avulso';const note=q('#a-note')?.closest('.field');note?.insertAdjacentHTML('beforebegin',`<div class="section-label mt-16">Recorrência</div><div class="input-row"><div class="field"><label>Tipo</label><select id="a-recurrence" class="select" ${id.value?'disabled':''}><option ${defaultRec==='Avulso'||defaultRec==='Nenhuma'?'selected':''}>Avulso</option><option ${defaultRec==='Semanal'?'selected':''}>Semanal</option><option ${defaultRec==='Quinzenal'?'selected':''}>Quinzenal</option></select></div><div class="field"><label>Número de sessões</label><input id="a-recurrence-count" class="input" type="number" min="1" max="52" value="${existing?.occurrenceCount||1}" ${id.value?'disabled':''}></div></div><div class="tiny muted mt-8">Semanal repete a cada 7 dias; quinzenal, a cada 14 dias, sempre no mesmo horário.</div>`);syncRecurrenceCount()}
 function syncRecurrenceCount(){const r=q('#a-recurrence'),c=q('#a-recurrence-count');if(!r||!c)return;if(r.value==='Avulso'){c.value='1';c.disabled=true}else if(!q('#a-id')?.value){c.disabled=false;if(Number(c.value)<2)c.value='10'}}
 async function savePatient(){const id=q('#p-id').value||uid('pat'),prior=patientById(id),obj={...(prior||{}),id,name:sanitizeText(q('#p-name').value),preferredName:sanitizeText(q('#p-preferred').value),cpf:sanitizeText(q('#p-cpf')?.value),rg:sanitizeText(q('#p-rg')?.value),code:sanitizeText(q('#p-code').value)||`PAC-${String(arr(data.patients).length+1).padStart(3,'0')}`,status:q('#p-status').value,birthDate:q('#p-birth').value,phone:sanitizeText(q('#p-phone').value),email:sanitizeText(q('#p-email').value),modality:q('#p-modality').value,value:Number(q('#p-value').value)||0,sessionRecurrence:q('#p-session-recurrence')?.value||prior?.sessionRecurrence||'Avulso',photo:q('#p-photo-preview')?.dataset.photo||prior?.photo||'',address:{zip:sanitizeText(q('#p-zip')?.value),street:sanitizeText(q('#p-street')?.value),number:sanitizeText(q('#p-number')?.value),complement:sanitizeText(q('#p-complement')?.value),neighborhood:sanitizeText(q('#p-neighborhood')?.value),city:sanitizeText(q('#p-city')?.value),state:sanitizeText(q('#p-state')?.value)},summary:sanitizeText(q('#p-summary').value),communicationPreferences:{...(prior?.communicationPreferences||{}),channel:q('#p-channel').value,whatsappConsent:q('#p-wa-consent').checked,emailConsent:q('#p-email-consent').checked,silentStart:prior?.communicationPreferences?.silentStart||'20:00',silentEnd:prior?.communicationPreferences?.silentEnd||'08:00'},createdAt:prior?.createdAt||nowISO()};validatePatient(obj);await saveEntity('patients',obj);await deletePatientDraft();runtime.selectedPatientId=id;closeModal();rerender('patients');toast('Cadastro salvo.','success')}
-function conflict(base,date,ignore=''){const start=new Date(`${date}T${base.time}:00`).getTime(),end=start+base.duration*60000;return arr(data.appointments).find(x=>x?.id!==ignore&&x?.status!=='Cancelada'&&x?.date===date&&(()=>{const s=new Date(`${x.date}T${x.time}:00`).getTime(),e=s+(Number(x.duration)||50)*60000;return start<e&&end>s})())}
-async function saveAppointment(){const id=q('#a-id')?.value||'',patientId=q('#a-patient')?.value||runtime.selectedPatientId;assert(patientId,'Selecione explicitamente o paciente.');const base={patientId,date:q('#a-date').value,time:q('#a-time').value,duration:Number(q('#a-duration').value)||50,status:q('#a-status').value,modality:q('#a-modality').value,location:sanitizeText(q('#a-location').value),note:sanitizeText(q('#a-note').value)};assert(base.date&&base.time,'Informe data e horário.');if(id){const c=conflict(base,base.date,id);if(c)throw new Error(`Conflito de horário com ${patientById(c.patientId)?.name||'outro compromisso'}.`);const old=arr(data.appointments).find(x=>x?.id===id)||{};await saveEntity('appointments',{...old,...base,id,createdAt:old.createdAt||nowISO()});closeModal();rerender(runtime.route);toast('Horário salvo.','success');return}
-const recurrence=q('#a-recurrence')?.value||'Avulso',count=Math.max(1,Math.min(52,Number(q('#a-recurrence-count')?.value)||1)),step=recurrence==='Semanal'?7:recurrence==='Quinzenal'?14:0,total=step?count:1,seriesId=total>1?uid('series'):'',dates=[];for(let i=0;i<total;i++){const d=new Date(`${base.date}T12:00:00`);d.setDate(d.getDate()+i*step);const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,c=conflict(base,iso);if(c)throw new Error(`Conflito de horário em ${new Intl.DateTimeFormat('pt-BR').format(d)} com ${patientById(c.patientId)?.name||'outro compromisso'}.`);dates.push(iso)}for(let i=0;i<dates.length;i++)await saveEntity('appointments',{...base,id:uid('apt'),date:dates[i],recurrence,seriesId,occurrenceIndex:i+1,occurrenceCount:dates.length,createdAt:nowISO()});closeModal();rerender(runtime.route);toast(dates.length>1?`${dates.length} sessões ${recurrence.toLowerCase()}s agendadas.`:'Horário salvo.','success')}
+function conflict(base,date,ignore=''){return appointmentsConflict(data.appointments,{...base,date},ignore)}
+async function saveAppointment(){
+  if(appointmentSaving)return;
+  appointmentSaving=true;
+  const button=q('[data-action="save-appointment"]');
+  if(button)button.disabled=true;
+  try{
+    assert(runtime.key&&!runtime.locked&&runtime.dataReady&&!runtime.integrityBlocked,'Cofre clínico indisponível ou ainda carregando.');
+    const id=q('#a-id')?.value||'',patientId=q('#a-patient')?.value||'';
+    assert(patientId,'Selecione explicitamente o paciente.');
+    const patient=patientById(patientId);
+    assert(patient,'Paciente cadastrado não localizado.');
+    if(!id)assert(patientCanSchedule(patient),'Paciente encerrado ou inativo: reative o cadastro antes de agendar.');
+    const duration=Number(q('#a-duration')?.value);
+    assert(Number.isInteger(duration)&&duration>=20&&duration<=180,'A duração deve ser entre 20 e 180 minutos.');
+    const base={
+      patientId,date:q('#a-date')?.value||'',time:q('#a-time')?.value||'',
+      duration,status:q('#a-status')?.value||'Aguardando confirmação',
+      modality:q('#a-modality')?.value||'On-line',
+      location:sanitizeText(q('#a-location')?.value),
+      note:sanitizeText(q('#a-note')?.value)
+    };
+    assert(/^([01]\d|2[0-3]):[0-5]\d$/.test(base.time),'Horário inválido.');
+    appointmentSeriesDates(base.date,'Avulso',1);
+    const now=nowISO(),prior=id?arr(data.appointments).find(a=>a?.id===id):null;
+    if(id)assert(prior,'Sessão original não localizada.');
+    const recurrence=id?(prior.recurrence||'Avulso'):(q('#a-recurrence')?.value||'Avulso');
+    assert(['Avulso','Semanal','Quinzenal','Nenhuma'].includes(recurrence),'Tipo de recorrência inválido.');
+    const count=id?1:Number(q('#a-recurrence-count')?.value||1);
+    const dates=appointmentSeriesDates(base.date,recurrence,count);
+    const seriesId=id?prior.seriesId||'':dates.length>1?uid('series'):'';
+    for(const date of dates){
+      const overlap=conflict(base,date,id);
+      if(overlap)throw new Error(`Conflito em ${fmtDate(date)} com ${patientById(overlap.patientId)?.name||'outro compromisso'}.`);
+    }
+    const rows=dates.map((date,i)=>({
+      ...(prior||{}),...base,date,
+      id:id||uid('apt'),recurrence,seriesId,
+      occurrenceIndex:id?prior.occurrenceIndex||1:i+1,
+      occurrenceCount:id?prior.occurrenceCount||1:dates.length,
+      createdAt:prior?.createdAt||now,updatedAt:now
+    }));
+    await bulkPutEncryptedAtomic([{storeName:'appointments',values:rows}],runtime.key,{verify:true});
+    const list=data.appointments||(data.appointments=[]);
+    for(const row of rows){
+      const index=list.findIndex(a=>a?.id===row.id);
+      if(index>=0)list[index]=row;else list.push(row);
+    }
+    closeModal();rerender(runtime.route);
+    toast(rows.length>1?`${rows.length} sessões agendadas e verificadas.`:'Sessão salva e verificada.','success');
+  }finally{
+    appointmentSaving=false;
+    if(button?.isConnected)button.disabled=false;
+  }
+}
 function fixFinanceIcon(){const nav=q('.nav-link[data-route="financeiro"]');if(!nav)return;const first=nav.firstElementChild;if(first?.tagName==='IMG'){first.src='assets/images/brand-symbol.svg';first.className='brain-icon';return}const img=document.createElement('img');img.src='assets/images/brand-symbol.svg';img.alt='';img.className='brain-icon';if(first)first.replaceWith(img);else nav.prepend(img)}
 function enhanceCurrentUi(){fixFinanceIcon();enhancePatientModal();enhanceAppointmentModal()}
+document.addEventListener('rm:appointment-form-opened',enhanceCurrentUi);
 async function openOriginalAction(action,id=''){const b=document.createElement('button');b.dataset.action=action;if(id)b.dataset.id=id;b.hidden=true;document.body.append(b);b.click();b.remove();await new Promise(r=>setTimeout(r,0));enhanceCurrentUi()}
 
 document.addEventListener('input',e=>{if(e.target.id==='p-phone')maskPhone(e.target);if(e.target.id==='p-cpf')maskCpf(e.target);if(e.target.id==='p-zip')maskCep(e.target);if(e.target.id==='p-state')e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,2);if(e.target.closest('.modal')&&q('#p-id'))queuePatientDraft()},true);
