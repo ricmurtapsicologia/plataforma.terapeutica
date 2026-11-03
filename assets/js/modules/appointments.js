@@ -1,6 +1,7 @@
 import {data,patientById,todayISO} from '../state.js';
 import {pageHead,esc,fmtDate} from '../ui.js';
 import {paymentStateForAppointment} from '../payment-status-v322.mjs';
+import {agendaSlotTime} from '../agenda-domain-v330.mjs';
 
 const DAY_NAMES=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 const START_HOUR=6;
@@ -25,6 +26,14 @@ function datePart(value=''){const m=String(value||'').match(/^(\d{4}-\d{2}-\d{2}
 function validForPatient(a){const p=patientById(a?.patientId);if(!p||!['Encerrado','Inativo'].includes(p.status))return true;const end=datePart(p.careEndedAt)||datePart(p.careEndedRecordedAt)||datePart(p.updatedAt);return !end||!a?.date||a.date<end}
 function paymentState(a){return paymentStateForAppointment(a,{payments:data.payments,appointments:data.appointments})}
 
+function slotButtons(date){
+  return Array.from({length:(END_HOUR-START_HOUR+1)*2},(_,index)=>{
+    const time=agendaSlotTime(index,START_HOUR,END_HOUR);
+    const spoken=`${date.slice(8,10)}/${date.slice(5,7)}/${date.slice(0,4)} às ${time}`;
+    return `<button class="rm-agenda-slot" type="button" style="top:${index*30}px" data-action="agenda-slot-open" data-date="${date}" data-time="${time}" aria-label="Agendar sessão em ${spoken}" title="Agendar às ${time}"><span aria-hidden="true">+</span></button>`;
+  }).join('');
+}
+
 export function renderAppointments(){
   const offset=Number(localStorage.getItem('rm.agenda.weekOffset')||0);
   const monday=addDays(mondayOf(todayISO()),offset*7);
@@ -32,6 +41,6 @@ export function renderAppointments(){
   const first=isoDate(days[0]),last=isoDate(days[6]);
   const list=arr(data.appointments).filter(a=>a?.date&&a.date>=first&&a.date<=last&&validForPatient(a)).sort((a,b)=>(String(a.date)+String(a.time||'')).localeCompare(String(b.date)+String(b.time||'')));
   const hours=Array.from({length:END_HOUR-START_HOUR+1},(_,i)=>START_HOUR+i);
-  const grid=`<div class="week-calendar-wrap"><div class="week-calendar"><div class="week-head week-time-head">Horário</div>${days.map((d,i)=>`<div class="week-head ${isoDate(d)===todayISO()?'today':''}"><strong>${DAY_NAMES[i]}</strong><span>${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</span></div>`).join('')}<div class="week-time-column">${hours.map(h=>`<div class="week-hour">${String(h).padStart(2,'0')}:00</div>`).join('')}</div>${days.map(d=>{const date=isoDate(d),items=list.filter(a=>a?.date===date);return`<div class="week-day-column ${date===todayISO()?'today':''}" data-agenda-date="${date}" title="Clique em um horário vazio para agendar">${items.map(a=>{const p=patientById(a.patientId),top=Math.max(0,minutesFromStart(a.time)),height=Math.max(58,Math.min(Number(a.duration)||50,180)),fullName=patientDisplayName(p,a.title||'Compromisso'),displayName=agendaDisplayName(p,a.title||'Compromisso'),state=sessionState(a),payment=paymentState(a),meta=`${a.time||'—'} · ${state}`;return`<button class="week-event ${eventClass(a)} payment-${esc(payment.code)}" type="button" style="top:${top}px;height:${height}px" data-action="appointment-open" data-id="${esc(a.id)}" aria-label="Abrir sessão de ${esc(fullName)} às ${esc(a.time||'')} · ${esc(state)} · pagamento ${esc(payment.label)}" title="${esc(fullName)} · ${esc(a.time||'')} · ${esc(state)} · ${esc(payment.label)}"><strong class="week-event-name" data-sensitive>${esc(displayName)}</strong><span class="week-event-meta">${esc(meta)}</span><span class="week-payment-pill ${esc(payment.code)}">${esc(payment.label)}</span></button>`}).join('')}</div>`}).join('')}</div></div>`;
+  const grid=`<div class="week-calendar-wrap"><div class="week-calendar"><div class="week-head week-time-head">Horário</div>${days.map((d,i)=>`<div class="week-head ${isoDate(d)===todayISO()?'today':''}"><strong>${DAY_NAMES[i]}</strong><span>${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</span></div>`).join('')}<div class="week-time-column">${hours.map(h=>`<div class="week-hour">${String(h).padStart(2,'0')}:00</div>`).join('')}</div>${days.map(d=>{const date=isoDate(d),items=list.filter(a=>a?.date===date);return`<div class="week-day-column ${date===todayISO()?'today':''}" data-agenda-date="${date}" title="Clique em um horário vazio para agendar">${slotButtons(date)}${items.map(a=>{const p=patientById(a.patientId),top=Math.max(0,minutesFromStart(a.time)),height=Math.max(58,Math.min(Number(a.duration)||50,180)),fullName=patientDisplayName(p,a.title||'Compromisso'),displayName=agendaDisplayName(p,a.title||'Compromisso'),state=sessionState(a),payment=paymentState(a),meta=`${a.time||'—'} · ${state}`;return`<button class="week-event ${eventClass(a)} payment-${esc(payment.code)}" type="button" style="top:${top}px;height:${height}px" data-action="appointment-open" data-id="${esc(a.id)}" aria-label="Abrir sessão de ${esc(fullName)} às ${esc(a.time||'')} · ${esc(state)} · pagamento ${esc(payment.label)}" title="${esc(fullName)} · ${esc(a.time||'')} · ${esc(state)} · ${esc(payment.label)}"><strong class="week-event-name" data-sensitive>${esc(displayName)}</strong><span class="week-event-meta">${esc(meta)}</span><span class="week-payment-pill ${esc(payment.code)}">${esc(payment.label)}</span></button>`}).join('')}</div>`}).join('')}</div></div>`;
   return pageHead('Agenda',`Semana de ${fmtDate(first)} a ${fmtDate(last)}`,`<button class="btn" data-action="new-appointment">Nova sessão</button>`)+`<section class="agenda-toolbar card"><div class="flex gap-8 wrap"><button class="btn secondary" data-action="agenda-prev-week">← Semana anterior</button><button class="btn secondary" data-action="agenda-today">Semana atual</button><button class="btn secondary" data-action="agenda-next-week">Próxima semana →</button></div><div class="small muted"><strong>${list.length}</strong> compromisso(s) nesta semana · clique na sessão para presença, agenda, clínica e financeiro</div></section>${grid}`;
 }

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Agenda slot E2E 3.7.8</title></head>
+<body>
+<div id="app"></div><div id="modal-root"></div><div id="toast-region"></div><input id="file-input" type="file" hidden>
+<pre id="out">RUNNING</pre>
+<script type="module">
+import {data,runtime} from '../assets/js/state.js';
+import {startCoreApp} from '../assets/js/app-core-v150.js';
+const out=document.getElementById('out');
+const check=(ok,message)=>{if(!ok)throw new Error(message)};
+const tick=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+try{
+  runtime.locked=false;runtime.dataReady=true;
+  runtime.selectedPatientId='patient-synthetic';
+  data.patients.push({id:'patient-synthetic',name:'Pessoa sintética',status:'Ativo'});
+  startCoreApp();window.__rmNavigate('agenda');
+  const slots=[...document.querySelectorAll('.week-day-column .rm-agenda-slot')];
+  check(slots.length===252,'Esperados 252 slots desktop, encontrados '+slots.length);
+  const selected=slots.find(x=>x.dataset.time==='10:30');
+  check(selected,'Slot de 10h30 ausente');
+  selected.click();
+  await tick(75);
+  check(document.getElementById('a-date')?.value===selected.dataset.date,'Data do clique não preenchida');
+  check(document.getElementById('a-time')?.value==='10:30','Horário do clique não preenchido');
+  check(document.getElementById('a-patient')?.value==='','Paciente foi pré-selecionado indevidamente');
+  check(document.querySelectorAll('#a-patient option').length>=2,'Paciente sintético não oferecido na seleção');
+  document.querySelector('[data-action="close-modal"]')?.click();
+  await tick(50);
+  // Retestar depois da atualização da grade com uma sessão sintética.
+  data.appointments.push({id:'session-synthetic',patientId:'patient-synthetic',date:selected.dataset.date,time:'10:00',duration:50,status:'Confirmada'});
+  window.__rmRender();
+  check(document.querySelectorAll('.week-event[data-action="appointment-open"]').length===1,'Sessão existente não aparece na agenda');
+  check(document.querySelectorAll('.rm-agenda-slot').length===252,'A grade perdeu os slots');
+  // Exercitar a mesma ação na agenda móvel em viewport simulado.
+  window.matchMedia=()=>({matches:true,addListener(){},removeListener(){}});
+  await import('../assets/js/agenda-mobile-v183.js');
+  document.dispatchEvent(new CustomEvent('rm:rendered',{detail:{route:'agenda'}}));
+  await tick(320);
+  const mobile=document.querySelector('#rm-mobile-timeline-v183');
+  check(mobile,'Agenda móvel ausente');
+  check(mobile.querySelectorAll('.rm-cal-slot').length===36,'Slots móveis incorretos');
+  const mobileSlot=mobile.querySelector('.rm-cal-slot[data-time="11:30"]');
+  check(mobileSlot,'Slot móvel 11h30 ausente');
+  mobileSlot.click();
+  await tick(75);
+  check(document.getElementById('a-time')?.value==='11:30','Horário móvel não preenchido');
+  check(document.getElementById('a-date')?.value===mobileSlot.dataset.date,'Data móvel não preenchida');
+  check(document.getElementById('a-patient')?.value==='','Paciente selecionado automaticamente no celular');
+  out.textContent='AGENDA_SLOT_E2E_V378_PASS';
+}catch(error){
+  out.textContent='AGENDA_SLOT_E2E_V378_FAIL: '+(error?.stack||String(error));
+  console.error(error);
+}
+</script></body></html>
