@@ -1,0 +1,32 @@
+name: Agenda Hotfix 3.7.8
+on:
+  push:
+    branches:
+      - hotfix/agenda-slot-click-20261103
+  pull_request:
+    paths:
+      - 'assets/js/**'
+      - 'assets/css/**'
+      - 'index.html'
+      - 'tests/agenda-slot-hotfix-v378.test.mjs'
+      - '.github/workflows/agenda-hotfix-v378.yml'
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax validation
+        run: |
+          node --check assets/js/agenda-domain-v330.mjs
+          node --check assets/js/modules/appointments.js
+          node --check assets/js/agenda-mobile-v183.js
+          node --check assets/js/app-core-v150.js
+          node --check assets/js/clinical-v136.js
+          node --check assets/js/main-v250.js
+          node --check assets/js/bootstrap-v240.js
+          node --check assets/js/core/clinical-runtime-manifest-v376.mjs
+      - name: Domain and contract tests
+        run: node --test tests/agenda-slot-hotfix-v378.test.mjs
