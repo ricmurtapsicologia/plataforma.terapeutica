@@ -49,3 +49,10 @@
   .rm-cal-mobile-payment.pending{color:#72520d}
   .rm-cal-mobile-payment.none{color:var(--muted,#657c85)}
 }
+
+
+/* Hotfix 3.7.8: slots livres acessíveis na agenda semanal. Eventos existentes ficam acima. */
+.week-day-column>.rm-agenda-slot{appearance:none;position:absolute;left:0;right:0;width:100%;height:30px;z-index:1;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:4px;background:transparent;color:var(--primary2);cursor:pointer;font:inherit}
+.week-day-column>.rm-agenda-slot span{opacity:0;pointer-events:none;font-size:1.1rem;font-weight:700;line-height:1}
+.week-day-column>.rm-agenda-slot:hover,.week-day-column>.rm-agenda-slot:focus-visible{background:color-mix(in srgb,var(--primary) 12%,transparent);outline:1px dashed var(--primary)}
+.week-day-column>.rm-agenda-slot:hover span,.week-day-column>.rm-agenda-slot:focus-visible span{opacity:1}
