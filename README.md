@@ -4,7 +4,7 @@ Aplicação clínica local-first publicada como código estático em GitHub Page
 
 ## Fonte canônica de versão
 
-A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build vigente é `3.7.8-main-v250`.
+A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build `3.7.8-main-v250` está vigente.
 
 ## Arquitetura vigente
 
