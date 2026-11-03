@@ -10,7 +10,7 @@ const mobile=read('assets/js/agenda-mobile-v183.js');
 const payments=read('assets/js/session-payment-visibility-v322.js');
 const css=read('assets/css/agenda-v330.css');
 
-assert.equal(AGENDA_VERSION,'3.3.0');
+assert.equal(AGENDA_VERSION,'3.3.1');
 assert.ok(manifest.includes('agenda-controller-v330.js'),'canonical agenda controller must boot');
 assert.ok(!manifest.includes('../agenda-actions-v240.js'),'legacy agenda action owner must not boot');
 assert.ok(desktop.includes('data-action="appointment-open"'),'desktop session card must open canonical controller');
