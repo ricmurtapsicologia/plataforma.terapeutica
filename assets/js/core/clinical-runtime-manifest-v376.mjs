@@ -95,7 +95,7 @@ export const RUNTIME_PHASES=[
 
 export const RUNTIME_MODULE_COUNT=RUNTIME_PHASES.reduce((total,phase)=>total+phase.modules.length,0);
 
-export async function loadClinicalRuntime({version='3.7.5',revision='clinical-runtime-v378',onError=()=>{}}={}){
+export async function loadClinicalRuntime({version='3.7.5',revision='clinical-runtime-v376',onError=()=>{}}={}){
   const results=[];
   for(const phase of RUNTIME_PHASES){
     for(const [path,label] of phase.modules){
