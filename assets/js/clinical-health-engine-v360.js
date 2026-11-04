@@ -3,6 +3,7 @@ import {verifyActivityChain} from './audit.js';
 import {backupStatus} from './backup.js';
 import {modal,toast,esc} from './ui.js';
 import {normalizeIdentity} from './clinical-intake-core-v310.mjs';
+import {resolvePlanReference,progressSeries} from './clinical-value-core-v390.mjs';
 import {appointmentIsPerformed,paymentStateForAppointment} from './payment-status-v322.mjs';
 
 const VERSION='3.7.6';
@@ -55,6 +56,17 @@ async function scan({stage='scan'}={}){
   const withoutPlan=active.filter(p=>!arr(data.goals).some(g=>g?.patientId===p.id)&&!arr(data.notes).some(n=>n?.patientId===p.id&&n?.kind==='therapeuticActionPlan')).length;
   if(withoutFormulation)issues.push(issue('FORMULATION_COVERAGE','ATENÇÃO','Pacientes ativos sem Formulação TCC registrada.',`${withoutFormulation} paciente(s)`,'Gerar/editar hipótese de trabalho, sem finalização autônoma.','PENDENTE'));
   if(withoutPlan)issues.push(issue('PLAN_COVERAGE','ATENÇÃO','Pacientes ativos sem plano terapêutico estruturado.',`${withoutPlan} paciente(s)`,'Preparar rascunho assistido para revisão profissional.','PENDENTE'));
+  // Alertas exclusivos do piloto; são diagnósticos de documentação, não decisões clínicas.
+  if(localStorage.getItem('rm.clinicalValuePilot.v390')==='enabled'){
+    const withoutReviewedPlan=active.filter(p=>!resolvePlanReference(data.notes,p.id).approved).length;
+    const activeGoals=arr(data.goals).filter(g=>active.some(p=>p.id===g.patientId)&&!['Alcançado','Pausado'].includes(String(g.status||'')));
+    const goalsWithoutMeasures=activeGoals.filter(g=>progressSeries(data.notes,g.patientId,g.id).total===0).length;
+    const overdueGoals=activeGoals.filter(g=>g.reviewDate&&/^\d{4}-\d{2}-\d{2}$/.test(String(g.reviewDate))&&g.reviewDate<new Date().toLocaleDateString('en-CA')).length;
+    if(withoutReviewedPlan)issues.push(issue('PLAN_REVIEW_COVERAGE','ATENÇÃO','Há planos individuais ainda não validados profissionalmente.',`${withoutReviewedPlan} paciente(s) ativo(s)`,'Revisar fonte clínica antes de usar o plano como referência.','PENDENTE'));
+    if(goalsWithoutMeasures)issues.push(issue('GOAL_PROGRESS_COVERAGE','ATENÇÃO','Objetivos ativos ainda sem medida longitudinal comparável.',`${goalsWithoutMeasures} objetivo(s)`,'Registrar medida somente quando clinicamente pertinente e disponível.','PENDENTE'));
+    if(overdueGoals)issues.push(issue('GOAL_REVIEW_OVERDUE','ATENÇÃO','Objetivos com revisão documental atrasada.',`${overdueGoals} objetivo(s)`,'Revisar data, contexto e plano de tratamento.','PENDENTE'));
+  }
+
 
   const orchestrator=globalThis.__rmClinicalOrchestratorStatus;issues.push(orchestrator?.status==='ready'?issue('ECOSYSTEM','OK','Orquestrador do ecossistema íntegro.',orchestrator.detail||'','—','OK'):issue('ECOSYSTEM','ATENÇÃO','Orquestrador ainda não confirmou estado verde.',orchestrator?.detail||'aguardando execução','Executar ciclo integrado.','PENDENTE'));
   return{version:VERSION,appVersion:APP_VERSION,stage,at:nowISO(),issues,summary:metricSummary({issues})}
