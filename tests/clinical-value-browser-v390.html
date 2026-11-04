@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Clinical value v390 · browser probe</title></head>
+<body>
+<div id="app"><div id="patient-tab-content"></div><button id="prep" data-action="generate-session-agenda">Preparar sessão</button><textarea id="session-professional-agenda"></textarea><div id="generated-agenda" class="hidden"></div></div>
+<div id="modal-root"></div><div id="toast-region"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import {runtime,data} from '../assets/js/state.js';
+import {createVault,getDecryptedById} from '../assets/js/database.js';
+import '../assets/js/session-tcc-prep-v360.js';
+import '../assets/js/clinical-value-runtime-v390.js';
+const out=document.getElementById('result');
+const assert=(ok,message)=>{if(!ok)throw new Error(message)};
+try{
+ localStorage.setItem('rm.clinicalValuePilot.v390','enabled');
+ const pid='SYNTHETIC-P1', pid2='SYNTHETIC-P2';
+ data.patients=[{id:pid,name:'Paciente Exemplo',status:'Ativo'},{id:pid2,name:'Paciente Teste',status:'Ativo'}];
+ data.goals=[{id:'SYN-G1',patientId:pid,title:'Objetivo de teste',status:'Em andamento',baseline:'3/10',reviewedPlanId:'SYN-AP',intervention:'Registro de evidências'},{id:'SYN-G1-OTHER',patientId:pid,title:'Outro foco não vinculado',status:'Em andamento',priority:1}];
+ data.notes=[
+   {id:'SYN-AP',patientId:pid,kind:'clinicalPlanReviewedVersion',status:'Validado pelo profissional',reviewRequired:false,versionNumber:1,text:'Plano aprovado: <img src=x onerror=alert(1)>',createdAt:'2026-10-01T00:00:00Z'},
+   {id:'SYN-DRAFT',patientId:pid,kind:'clinicalPlanReviewedVersion',status:'Rascunho para revisão',reviewRequired:true,createdAt:'2026-10-15T00:00:00Z',text:'Rascunho não aprovado'},
+   {id:'SYN-M1',patientId:pid,kind:'clinicalProgressMeasurement',goalId:'SYN-G1',status:'Validado pelo profissional',value:3,method:'autorreferida',orientation:'maior-melhor',date:'2026-10-01',createdAt:'2026-10-01T00:00:00Z'},
+   {id:'SYN-M2',patientId:pid,kind:'clinicalProgressMeasurement',goalId:'SYN-G1',status:'Validado pelo profissional',value:6,method:'autorreferida',orientation:'maior-melhor',date:'2026-10-22',createdAt:'2026-10-22T00:00:00Z'}
+ ];
+ data.records=[];data.formulations=[];data.tasks=[];data.appointments=[];const syntheticVault=await createVault('synthetic-only-browser-probe-v390');runtime.locked=false;runtime.key=syntheticVault.key;runtime.dataReady=true;runtime.route='patients';runtime.selectedPatientId=pid;runtime.patientTab='plans';
+ document.dispatchEvent(new Event('rm:rendered'));
+ await new Promise(resolve=>setTimeout(resolve,80));
+ assert(document.querySelector('#rm-clinical-value-v390'),'Evolution UI not rendered');
+ assert(document.querySelector('[data-clinical-value-new="SYN-G1"]'),'Goal action missing');
+ assert(document.querySelector('svg[role="img"]'),'Accessible chart missing');
+ assert(document.querySelector('#rm-clinical-value-v390').textContent.includes('Evolução dos objetivos'),'Goal panel missing');
+ document.querySelector('[data-clinical-value-new="SYN-G1"]').click();
+ assert(document.getElementById('value-score-v390'),'Measure entry modal not available');
+ document.getElementById('value-date-v390').value='2026-11-04';
+ document.getElementById('value-score-v390').value='7';
+ document.getElementById('value-confirm-v390').checked=true;
+ document.querySelector('[data-clinical-value-save]').click();
+ await new Promise(resolve=>setTimeout(resolve,900));
+ const saved=data.notes.find(n=>n.kind==='clinicalProgressMeasurement'&&n.id.startsWith('measure_'));
+ assert(saved&&saved.value===7,'Validated measurement not persisted');
+ const stored=await getDecryptedById('notes',saved.id,runtime.key);
+ assert(stored&&stored.value===7&&stored.patientId===pid,'Encrypted readback failed');
+ document.dispatchEvent(new Event('rm:rendered'));
+ await new Promise(resolve=>setTimeout(resolve,80));
+ const correctButton=document.querySelector('[data-clinical-value-correct="'+saved.id+'"]');
+ assert(correctButton,'Correct measure action missing');
+ correctButton.click();
+ document.getElementById('value-score-v390').value='8';
+ document.getElementById('value-confirm-v390').checked=true;
+ document.querySelector('[data-clinical-value-save]').click();
+ await new Promise(resolve=>setTimeout(resolve,900));
+ const corrected=data.notes.find(n=>n.supersedesId===saved.id);
+ assert(corrected&&corrected.value===8,'Correction was not saved');
+ assert((await getDecryptedById('notes',saved.id,runtime.key)).value===7,'Original measure overwritten');
+ assert((await getDecryptedById('notes',corrected.id,runtime.key)).value===8,'Correction encrypted readback failed');
+
+ runtime.patientTab='atendimento';
+ document.getElementById('prep').click();
+ assert(document.getElementById('generated-agenda').textContent.includes('Validado pelo profissional'),'Approved plan not referenced');
+ assert(document.getElementById('generated-agenda').textContent.includes('Trabalhar o objetivo prioritário: Objetivo de teste'),'Approved plan goal not prioritized');
+ assert(document.getElementById('generated-agenda').textContent.includes('Uma versão posterior'),'Newer draft warning missing');
+ assert(document.getElementById('generated-agenda').textContent.includes('Variação descritiva'),'No measured progress');
+ assert(document.querySelector('#generated-agenda img')===null,'Unescaped approved plan markup');
+ runtime.selectedPatientId=pid2;data.goals.push({id:'SYN-G2',patientId:pid2,title:'Outro objetivo',status:'Em andamento'});
+ runtime.patientTab='plans';document.dispatchEvent(new Event('rm:rendered'));
+ await new Promise(resolve=>setTimeout(resolve,80));
+ assert(document.querySelector('#rm-clinical-value-v390').textContent.includes('Outro objetivo'),'Second patient not selected');
+ assert(!document.querySelector('#rm-clinical-value-v390').textContent.includes('Objetivo de teste'),'Cross-patient leak');
+ localStorage.removeItem('rm.clinicalValuePilot.v390');
+ document.dispatchEvent(new Event('rm:rendered'));
+ await new Promise(resolve=>setTimeout(resolve,80));
+ assert(!document.querySelector('#rm-clinical-value-v390'),'Disabled pilot still rendered');
+ out.textContent='CLINICAL_VALUE_V390_BROWSER_PASS';
+}catch(e){out.textContent='CLINICAL_VALUE_V390_BROWSER_FAIL: '+String(e?.stack||e);document.body.dataset.failed='true'}
+</script>
+</body></html>

@@ -59,7 +59,9 @@ test('versão do entrypoint e do runtime alinhadas',()=>{
   const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const entry=readFileSync(new URL('../assets/js/main-v250.js',import.meta.url),'utf8');
   const version=readFileSync(new URL('../assets/js/version.js',import.meta.url),'utf8');
-  assert.match(index,/main-v250\.js\?v=3\.7\.8/);
-  assert.match(entry,/3\.7\.8-main-v250/);
-  assert.match(version,/APP_VERSION='3\.7\.8'/);
+  const appVersion=version.match(/APP_VERSION='([^']+)'/)?.[1];
+  assert.ok(/^\d+\.\d+\.\d+$/.test(appVersion||''));
+  assert.ok(index.includes('main-v250.js?v='+appVersion));
+  assert.ok(entry.includes(appVersion+'-main-v250'));
+  assert.ok(index.includes(appVersion+'-main-v250'));
 });

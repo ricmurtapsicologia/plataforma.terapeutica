@@ -59,6 +59,10 @@ jobs:
           html="$(${{ steps.chrome.outputs.bin }} --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=45000 --user-data-dir="$profile" --dump-dom http://127.0.0.1:8765/tests/clinical-e2e-v376.html 2>/tmp/rm-e2e.log || true)"
           printf '%s\n' "$html"
           grep -q 'CLINICAL_E2E_V376_PASS' <<<"$html" || { cat /tmp/rm-e2e.log || true; cat /tmp/rm-http.log || true; exit 1; }
+          clinical_value_profile="/tmp/rm-value-browser-$RANDOM"
+          clinical_value_html="$(${{ steps.chrome.outputs.bin }} --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=10000 --user-data-dir="$clinical_value_profile" --dump-dom http://127.0.0.1:8765/tests/clinical-value-browser-v390.html 2>/tmp/rm-value-browser.log || true)"
+          printf '%s\n' "$clinical_value_html"
+          grep -q 'CLINICAL_VALUE_V390_BROWSER_PASS' <<<"$clinical_value_html" || { cat /tmp/rm-value-browser.log || true; cat /tmp/rm-http.log || true; exit 1; }
 
   lighthouse:
     runs-on: ubuntu-latest
