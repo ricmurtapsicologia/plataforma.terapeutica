@@ -78,7 +78,8 @@ export const RUNTIME_PHASES=[
       ['../audio-assets-v360.js','Áudios terapêuticos revisados'],
       ['../patient-delivery-finance-v320.js','Materiais, e-mail, WhatsApp e recibos PDF'],
       ['../finance-interactions-v360.js','Detalhamento financeiro mensal'],
-      ['../patient-workspace-v320.js','Workspace do paciente mobile first']
+      ['../patient-workspace-v320.js','Workspace do paciente mobile first'],
+      ['../clinical-value-runtime-v390.js','Piloto opt-in de continuidade e medidas longitudinais']
     ]
   },
   {
