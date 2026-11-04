@@ -92,6 +92,10 @@ test('runtime keeps pilot gated and storage encrypted',()=>{
  assert(source.includes("localStorage.getItem(FLAG) === 'enabled'"));
  assert(source.includes('bulkPutEncryptedAtomic')&&source.includes('getDecryptedById'));
 });
+test('measurement writes also append an audit event',()=>{
+ const source=fs.readFileSync('assets/js/clinical-value-runtime-v390.js','utf8');
+ assert(source.includes("addActivity(row.supersedesId?")&&source.includes("entity:'notes'"));
+});
 test('session prep consults approved plan',()=>{
  const source=fs.readFileSync('assets/js/session-tcc-prep-v360.js','utf8');
  assert(source.includes('resolvePlanReference(data.notes,p.id)')&&source.includes('planReferenceBlock(model)'));
