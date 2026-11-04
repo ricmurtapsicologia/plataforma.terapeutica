@@ -94,6 +94,14 @@ test('session prep consults approved plan',()=>{
  const source=fs.readFileSync('assets/js/session-tcc-prep-v360.js','utf8');
  assert(source.includes('resolvePlanReference(data.notes,p.id)')&&source.includes('planReferenceBlock(model)'));
 });
+test('session prep prioritizes goal linked to the approved plan',()=>{
+ const source=fs.readFileSync('assets/js/session-tcc-prep-v360.js','utf8');
+ assert(source.includes('g.reviewedPlanId===approvedPlanId'));
+});
+test('goal editor validates explicit approved-plan linkage',()=>{
+ const source=fs.readFileSync('assets/js/tcc-goal-editor-v360.js','utf8');
+ assert(source.includes('reviewedPlanId')&&source.includes("n?.status==='Validado pelo profissional'"));
+});
 test('canonical manifest reaches runtime exactly once',()=>{
  const source=fs.readFileSync('assets/js/core/clinical-runtime-manifest-v376.mjs','utf8');
  assert.equal(source.split('clinical-value-runtime-v390.js').length-1,1);
