@@ -7,6 +7,7 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 import {runtime,data} from '../assets/js/state.js';
+import {createVault,getDecryptedById} from '../assets/js/database.js';
 import '../assets/js/session-tcc-prep-v360.js';
 import '../assets/js/clinical-value-runtime-v390.js';
 const out=document.getElementById('result');
@@ -22,13 +23,38 @@ try{
    {id:'SYN-M1',patientId:pid,kind:'clinicalProgressMeasurement',goalId:'SYN-G1',status:'Validado pelo profissional',value:3,method:'autorreferida',orientation:'maior-melhor',date:'2026-10-01',createdAt:'2026-10-01T00:00:00Z'},
    {id:'SYN-M2',patientId:pid,kind:'clinicalProgressMeasurement',goalId:'SYN-G1',status:'Validado pelo profissional',value:6,method:'autorreferida',orientation:'maior-melhor',date:'2026-10-22',createdAt:'2026-10-22T00:00:00Z'}
  ];
- data.records=[];data.formulations=[];data.tasks=[];data.appointments=[];runtime.locked=false;runtime.key={};runtime.dataReady=true;runtime.route='patients';runtime.selectedPatientId=pid;runtime.patientTab='plans';
+ data.records=[];data.formulations=[];data.tasks=[];data.appointments=[];const syntheticVault=await createVault('synthetic-only-browser-probe-v390');runtime.locked=false;runtime.key=syntheticVault.key;runtime.dataReady=true;runtime.route='patients';runtime.selectedPatientId=pid;runtime.patientTab='plans';
  document.dispatchEvent(new Event('rm:rendered'));
  await new Promise(resolve=>setTimeout(resolve,80));
  assert(document.querySelector('#rm-clinical-value-v390'),'Evolution UI not rendered');
  assert(document.querySelector('[data-clinical-value-new="SYN-G1"]'),'Goal action missing');
  assert(document.querySelector('svg[role="img"]'),'Accessible chart missing');
  assert(document.querySelector('#rm-clinical-value-v390').textContent.includes('Evolução dos objetivos'),'Goal panel missing');
+ document.querySelector('[data-clinical-value-new="SYN-G1"]').click();
+ assert(document.getElementById('value-score-v390'),'Measure entry modal not available');
+ document.getElementById('value-date-v390').value='2026-11-04';
+ document.getElementById('value-score-v390').value='7';
+ document.getElementById('value-confirm-v390').checked=true;
+ document.querySelector('[data-clinical-value-save]').click();
+ await new Promise(resolve=>setTimeout(resolve,900));
+ const saved=data.notes.find(n=>n.kind==='clinicalProgressMeasurement'&&n.id.startsWith('measure_'));
+ assert(saved&&saved.value===7,'Validated measurement not persisted');
+ const stored=await getDecryptedById('notes',saved.id,runtime.key);
+ assert(stored&&stored.value===7&&stored.patientId===pid,'Encrypted readback failed');
+ document.dispatchEvent(new Event('rm:rendered'));
+ await new Promise(resolve=>setTimeout(resolve,80));
+ const correctButton=document.querySelector('[data-clinical-value-correct="'+saved.id+'"]');
+ assert(correctButton,'Correct measure action missing');
+ correctButton.click();
+ document.getElementById('value-score-v390').value='8';
+ document.getElementById('value-confirm-v390').checked=true;
+ document.querySelector('[data-clinical-value-save]').click();
+ await new Promise(resolve=>setTimeout(resolve,900));
+ const corrected=data.notes.find(n=>n.supersedesId===saved.id);
+ assert(corrected&&corrected.value===8,'Correction was not saved');
+ assert((await getDecryptedById('notes',saved.id,runtime.key)).value===7,'Original measure overwritten');
+ assert((await getDecryptedById('notes',corrected.id,runtime.key)).value===8,'Correction encrypted readback failed');
+
  runtime.patientTab='atendimento';
  document.getElementById('prep').click();
  assert(document.getElementById('generated-agenda').textContent.includes('Validado pelo profissional'),'Approved plan not referenced');
