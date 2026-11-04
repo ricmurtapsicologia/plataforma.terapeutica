@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Backup gate v390 · synthetic browser probe</title></head>
+<body><div id="app"></div><div id="toast-region"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import {createVault,putEncrypted,rawStoreCounts} from '../assets/js/database.js';
+import {createBackup,verifyBackupFile,backupStatus} from '../assets/js/backup.js';
+import {assessBackupGate} from '../assets/js/clinical-value-core-v390.mjs';
+import {runtime} from '../assets/js/state.js';
+const out=document.querySelector('#result');
+const assert=(condition,message)=>{if(!condition)throw new Error(message)};
+try{
+ const {key}=await createVault('SYNTHETIC_BACKUP_GATE_ONLY');
+ runtime.key=key;runtime.locked=false;runtime.dataReady=true;
+ await putEncrypted('notes',{id:'SYNTHETIC_NOTE_P1',patientId:'SYNTHETIC_PATIENT_P1',text:'CONTEÚDO SINTÉTICO',updatedAt:new Date().toISOString()},key);
+ assert(assessBackupGate(await backupStatus(),null).code==='BACKUP_REQUIRED','pilot unlocked without backup');
+ const before=await rawStoreCounts(),created=await createBackup();
+ const validFile=new File([JSON.stringify(created.payload)],'synthetic-restore-test.rmvault',{type:'application/json'});
+ const proofResult=await verifyBackupFile(validFile);
+ assert(proofResult.restoreTest.ok,'isolated restoration verification failed');
+ const proof=JSON.parse(localStorage.getItem('rm.p0.restoreTest.v1')||'null');
+ const state=await backupStatus();
+ assert(assessBackupGate(state,proof).ok,'fresh same-vault restore proof unexpectedly rejected');
+ const tampered={...created.payload,stores:{...created.payload.stores,notes:[...created.payload.stores.notes,{id:'DIFFERENT_ENCRYPTED_ROW',patientId:'',updatedAt:'2026-11-04',encrypted:'NOT_VALID'}]}};
+ const alteredFile=new File([JSON.stringify(tampered)],'synthetic-tampered-snapshot.rmvault',{type:'application/json'});
+ await verifyBackupFile(alteredFile);
+ const mismatchedProof=JSON.parse(localStorage.getItem('rm.p0.restoreTest.v1')||'null');
+ assert(assessBackupGate(state,mismatchedProof).code==='BACKUP_MISMATCH','a different file bypassed exact digest');
+ const after=await rawStoreCounts();
+ assert(before.notes===after.notes,'isolated backup check changed primary clinical database');
+ await verifyBackupFile(validFile);
+ assert(assessBackupGate(await backupStatus(),JSON.parse(localStorage.getItem('rm.p0.restoreTest.v1')||'null')).ok,'reverification did not restore readiness');
+ out.textContent='CLINICAL_BACKUP_GATE_V390_BROWSER_PASS';
+}catch(err){out.textContent='CLINICAL_BACKUP_GATE_V390_BROWSER_FAIL: '+String(err?.stack||err)}
+</script></body></html>
