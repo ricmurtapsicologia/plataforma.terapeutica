@@ -1,4 +1,4 @@
-export const RUNTIME_MANIFEST_VERSION='3.7.8';
+export const RUNTIME_MANIFEST_VERSION='3.9.0';
 
 export const RUNTIME_PHASES=[
   {
