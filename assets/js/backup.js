@@ -10,6 +10,11 @@ const stable=value=>{
   return JSON.stringify(value);
 };
 const canonicalRows=rows=>stable([...(Array.isArray(rows)?rows:[])].sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||''))));
+async function sha256Hex(bytes){
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+}
+const vaultDigest=async vault=>vault?sha256Hex(new TextEncoder().encode(stable(vault))):null;
 
 function openIsolatedDatabase(name){
   return new Promise((resolve,reject)=>{
@@ -71,7 +76,7 @@ async function isolatedRestoreTest(payload){
 }
 
 export function downloadBlob(blob,filename){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)}
-export async function createBackup(){const payload=await exportRawDatabase(),text=JSON.stringify(payload),blob=new Blob([text],{type:'application/json'}),date=new Date().toISOString().slice(0,10);downloadBlob(blob,`richelmy-clinica-${date}.rmvault`);await setMeta('lastBackupAt',new Date().toISOString());return{size:blob.size,payload}}
+export async function createBackup(){const payload=await exportRawDatabase(),text=JSON.stringify(payload),blob=new Blob([text],{type:'application/json'}),date=new Date().toISOString().slice(0,10),digest=await sha256Hex(await blob.arrayBuffer());downloadBlob(blob,`richelmy-clinica-${date}.rmvault`);await setMeta('lastBackupDigest',digest);await setMeta('lastBackupExportedAt',payload.exportedAt);await setMeta('lastBackupAt',new Date().toISOString());return{size:blob.size,payload}}
 export async function verifyBackupFile(file){
   assert(file&&file.size>0,'Selecione um arquivo de backup.');
   assert(file.size<100_000_000,'O arquivo excede 100 MB.');
@@ -80,10 +85,12 @@ export async function verifyBackupFile(file){
   assert(payload.meta?.vault,'O backup não contém metadados locais válidos.');
   assert(payload.stores&&typeof payload.stores==='object','O backup não contém as áreas de dados.');
   const restoreTest=await isolatedRestoreTest(payload);
+  const backupDigest=await sha256Hex(await file.arrayBuffer());
+  const backupVaultDigest=await vaultDigest(payload.meta.vault);
   const result={payload,size:file.size,exportedAt:payload.exportedAt,counts:Object.fromEntries(STORE_NAMES.map(k=>[k,Array.isArray(payload.stores[k])?payload.stores[k].length:0])),restoreTest};
-  localStorage.setItem('rm.p0.restoreTest.v1',JSON.stringify({ok:true,testedAt:restoreTest.testedAt,exportedAt:payload.exportedAt||null,size:file.size,counts:restoreTest.counts}));
+  localStorage.setItem('rm.p0.restoreTest.v1',JSON.stringify({ok:true,testedAt:restoreTest.testedAt,exportedAt:payload.exportedAt||null,backupDigest,vaultDigest:backupVaultDigest,size:file.size,counts:restoreTest.counts}));
   document.dispatchEvent(new CustomEvent('rm:backup-restore-test',{detail:{ok:true,testedAt:restoreTest.testedAt,counts:restoreTest.counts}}));
   return result;
 }
 export async function restoreBackup(file){const checked=await verifyBackupFile(file);await importRawDatabase(checked.payload);return checked}
-export async function backupStatus(){const lastBackupAt=await getMeta('lastBackupAt'),counts=await rawStoreCounts();const days=lastBackupAt?Math.floor((Date.now()-Date.parse(lastBackupAt))/86400000):null;return{lastBackupAt,days,counts}}
+export async function backupStatus(){const [lastBackupAt,lastBackupDigest,lastBackupExportedAt,currentVault,counts]=await Promise.all([getMeta('lastBackupAt'),getMeta('lastBackupDigest'),getMeta('lastBackupExportedAt'),getMeta('vault'),rawStoreCounts()]);const days=lastBackupAt?Math.floor((Date.now()-Date.parse(lastBackupAt))/86400000):null;return{lastBackupAt,lastBackupDigest,lastBackupExportedAt,vaultDigest:await vaultDigest(currentVault),days,counts}}
