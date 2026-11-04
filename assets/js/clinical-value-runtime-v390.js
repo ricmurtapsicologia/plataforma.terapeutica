@@ -3,12 +3,19 @@ import {bulkPutEncryptedAtomic,getDecryptedById} from './database.js';
 import {backupStatus} from './backup.js';
 import {addActivity} from './audit.js';
 import {modal,closeModal,toast,esc} from './ui.js';
-import {PROGRESS_KIND,makeProgressRecord,progressSeries,progressDescription,clinicalValueSignals,resolvePlanReference} from './clinical-value-core-v390.mjs';
+import {PROGRESS_KIND,makeProgressRecord,progressSeries,progressDescription,clinicalValueSignals,resolvePlanReference,assessBackupGate} from './clinical-value-core-v390.mjs';
 
 // Piloto opt-in; nenhuma gravação ou nova visualização clínica antes do aceite local.
 const FLAG = 'rm.clinicalValuePilot.v390';
 const enabled = () => localStorage.getItem(FLAG) === 'enabled';
 const arr = v => Array.isArray(v) ? v : [];
+const restoreProof = () => {try{return JSON.parse(localStorage.getItem('rm.p0.restoreTest.v1')||'null')}catch{return null}};
+async function showPilotPrerequisites(){
+  const node=document.getElementById('rm-pilot-check-v390');if(!node)return;
+  try{const state=assessBackupGate(await backupStatus(),restoreProof());if(!node.isConnected)return;
+    node.textContent=state.ok?'Backup e restauração isolada verificados neste cofre. Confirme também a sincronização entre dispositivos.':state.message;
+  }catch{if(node.isConnected)node.textContent='Não foi possível conferir o backup. Execute o diagnóstico e tente novamente.'}
+}
 let editingPatientId = '';
 let saving = false;
 let syncConflict = false;
@@ -80,8 +87,10 @@ function decorateSettings(){
   const card=document.createElement('section');card.id='rm-clinical-value-settings-v390';card.className='card mt-16';
   card.innerHTML='<div class="card-title"><h3>Piloto de valor clínico</h3><span class="badge">'+(enabled()?'Ativo neste navegador':'Desativado')+'</span></div>'+
    '<p class="small">Integra plano validado, preparação da sessão e medidas longitudinais. A ativação exige backup real testado e validação entre dispositivos; não substitui o aceite clínico.</p>'+
-   '<button type="button" class="btn secondary" data-clinical-value-toggle="1">'+(enabled()?'Desativar piloto':'Validar requisitos e ativar piloto')+'</button>';
+   (enabled()?'':'<div id="rm-pilot-check-v390" role="status" class="notice mt-12">Conferindo o backup deste cofre…</div><div class="flex gap-8 wrap mt-12"><button type="button" class="btn secondary" data-action="export-backup">1. Gerar backup .rmvault</button><button type="button" class="btn secondary" data-action="verify-backup">2. Testar restore isolado</button></div>')+
+   '<button type="button" class="btn secondary mt-12" data-clinical-value-toggle="1">'+(enabled()?'Desativar piloto':'Validar requisitos e ativar piloto')+'</button>';
   host.appendChild(card);
+  void showPilotPrerequisites();
 }
 function decorate(){decoratePatient();decorateSettings()}
 function modalField(label,html){return '<div class="field mt-12"><label>'+label+'</label>'+html+'</div>'}
@@ -147,14 +156,8 @@ async function saveMeasure(){
 async function togglePilot(){
   if(enabled()){if(!confirm('Desativar as visualizações do piloto neste navegador? Os registros clínicos serão preservados.'))return;localStorage.removeItem(FLAG);window.__rmRender?.();decorate();return;}
   if(runtime.locked||runtime.integrityBlocked)throw new Error('É necessário abrir um cofre íntegro.');
-  const backup=await backupStatus();
-  const validation=JSON.parse(localStorage.getItem('rm.p0.restoreTest.v1')||'null');
-  const backupAt=Date.parse(backup.lastBackupAt||'');
-  const testedAt=Date.parse(validation?.testedAt||'');
-  const exportedAt=Date.parse(validation?.exportedAt||'');
-  const sameBackup=Number.isFinite(backupAt)&&Number.isFinite(exportedAt)&&Math.abs(backupAt-exportedAt)<600000;
-  const recentTest=Number.isFinite(testedAt)&&testedAt>=backupAt&&Date.now()-testedAt<7*86400000;
-  if(!backup.lastBackupAt||!Number.isFinite(backup.days)||backup.days>7||validation?.ok!==true||!sameBackup||!recentTest)throw new Error('Gere um backup recente e teste o restore isolado desse mesmo arquivo antes de ativar.');
+  const result=assessBackupGate(await backupStatus(),restoreProof());
+  if(!result.ok)throw new Error(result.message);
   if(syncConflict)throw new Error('Há conflito de sincronização pendente; resolva antes de ativar.');
   if(!confirm('Confirma que comprovou sincronização bidirecional notebook ↔ celular, sem duplicidades nem conflitos pendentes, e revisou o backup?'))return;
   localStorage.setItem(FLAG,'enabled');window.__rmRender?.();decorate();toast('Piloto ativado neste navegador.','success');
@@ -184,6 +187,7 @@ document.addEventListener('change',event=>{
 });
 document.addEventListener('rm:rendered',()=>queueMicrotask(decorate));
 document.addEventListener('rm:data-ready',()=>queueMicrotask(decorate));
+document.addEventListener('rm:backup-restore-test',()=>void showPilotPrerequisites());
 document.addEventListener('rm:sync-status',event=>{const status=event.detail?.status;if(status==='conflict')syncConflict=true;else if(status==='synced')syncConflict=false;});
 document.addEventListener('rm:vault-locked',()=>{editingPatientId='';editingGoalId='';selectedSeriesKey.clear()});
 globalThis.__rmClinicalValue={version:'3.9.0',enabled,render:decorate,resolvePlan:patientId=>resolvePlanReference(data.notes,patientId)};
