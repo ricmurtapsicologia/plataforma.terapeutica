@@ -1,10 +1,10 @@
-# Plataforma Clínica Richelmy Murta — v3.7.8
+# Plataforma Clínica Richelmy Murta — v3.9.0
 
 Aplicação clínica local-first publicada como código estático em GitHub Pages. O repositório público contém somente código e assets da aplicação; dados clínicos novos não são persistidos no GitHub.
 
 ## Fonte canônica de versão
 
-A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build `3.7.8-main-v250` está vigente.
+A versão funcional da aplicação é definida em `assets/js/version.js`. `index.html`, entrypoint, documentação e testes devem permanecer coerentes com essa fonte. O build `3.9.0-main-v250` está vigente. O piloto de valor clínico permanece desativado até confirmação do backup, restauração isolada e sincronização entre dispositivos.
 
 ## Arquitetura vigente
 
