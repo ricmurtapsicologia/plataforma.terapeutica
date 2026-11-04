@@ -89,3 +89,22 @@ export function progressDescription(series) {
   const trend = diff === 0 ? 'sem alteração numérica' : diff > 0 ? 'aumento de ' + diff : 'redução de ' + Math.abs(diff);
   return 'Variação descritiva: ' + trend + ' ponto(s), entre ' + first.date + ' e ' + last.date + '. Não demonstra causalidade nem substitui interpretação clínica.';
 }
+
+
+/** Confere a prova local de que o MESMO backup, do MESMO cofre, foi testado. */
+export function assessBackupGate(backup, validation, nowMs=Date.now()) {
+  const stamp=v=>typeof v==='string'&&v?Date.parse(v):NaN;
+  if(!backup?.lastBackupAt || !backup?.lastBackupDigest || !backup?.vaultDigest || !backup?.lastBackupExportedAt)
+    return {ok:false,code:'BACKUP_REQUIRED',message:'Gere um novo backup .rmvault neste navegador.'};
+  if(validation?.ok!==true || !validation.backupDigest || !validation.vaultDigest)
+    return {ok:false,code:'RESTORE_REQUIRED',message:'Teste a restauração isolada do backup recém-gerado.'};
+  if(backup.lastBackupDigest!==validation.backupDigest || backup.vaultDigest!==validation.vaultDigest || backup.lastBackupExportedAt!==validation.exportedAt)
+    return {ok:false,code:'BACKUP_MISMATCH',message:'O arquivo testado não corresponde ao backup mais recente deste cofre. Selecione o arquivo recém-gerado.'};
+  const backupAt=stamp(backup.lastBackupAt),testAt=stamp(validation.testedAt);
+  if(!Number.isFinite(backupAt)||!Number.isFinite(testAt)||!Number.isFinite(nowMs)||
+     backupAt>nowMs+60000 || testAt>nowMs+60000 || testAt+60000<backupAt ||
+     nowMs-backupAt>7*86400000 || nowMs-testAt>7*86400000 ||
+     backup.days===null || !Number.isFinite(backup.days) || backup.days>7)
+    return {ok:false,code:'BACKUP_STALE',message:'Backup e teste de restauração devem ser recentes e cronologicamente válidos.'};
+  return {ok:true,code:'READY',message:'Backup e restauração isolada deste cofre comprovados.'};
+}
