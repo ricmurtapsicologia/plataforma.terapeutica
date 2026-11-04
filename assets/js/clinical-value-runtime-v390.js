@@ -11,6 +11,7 @@ const enabled = () => localStorage.getItem(FLAG) === 'enabled';
 const arr = v => Array.isArray(v) ? v : [];
 let editingPatientId = '';
 let saving = false;
+let syncConflict = false;
 let selectedSeriesKey = new Map();
 
 function goalsFor(patientId) {
@@ -86,6 +87,7 @@ function decorate(){decoratePatient();decorateSettings()}
 function modalField(label,html){return '<div class="field mt-12"><label>'+label+'</label>'+html+'</div>'}
 function openMeasureEditor(goalId,previousId=''){
   if(!enabled()||runtime.locked||!runtime.key||!runtime.dataReady||runtime.integrityBlocked)throw new Error('Piloto indisponível ou cofre não íntegro.');
+  if(syncConflict)throw new Error('Conflito de sincronização pendente; resolva antes de registrar medidas.');
   const patient=selectedPatient(),goal=goalsFor(patient?.id).find(x=>x.id===goalId);
   if(!patient||!goal)throw new Error('Paciente e objetivo devem estar ativos.');
   const previous=previousId?arr(data.notes).find(n=>n.id===previousId&&n.kind===PROGRESS_KIND&&n.patientId===patient.id&&n.goalId===goalId):null;
@@ -114,6 +116,7 @@ let editingGoalId='';
 async function saveMeasure(){
   if(saving) return;
   if(!enabled()||runtime.locked||!runtime.key||!runtime.dataReady||runtime.integrityBlocked)throw new Error('Cofre indisponível.');
+  if(syncConflict)throw new Error('Conflito de sincronização pendente; gravação bloqueada.');
   const patient=selectedPatient(),goal=goalsFor(patient?.id).find(g=>g.id===editingGoalId);
   if(!patient||patient.id!==editingPatientId||!goal)throw new Error('O paciente ou objetivo selecionado mudou.');
   if(!document.querySelector('#value-confirm-v390')?.checked)throw new Error('É necessária a validação profissional antes de salvar.');
@@ -146,7 +149,13 @@ async function togglePilot(){
   if(runtime.locked||runtime.integrityBlocked)throw new Error('É necessário abrir um cofre íntegro.');
   const backup=await backupStatus();
   const validation=JSON.parse(localStorage.getItem('rm.p0.restoreTest.v1')||'null');
-  if(!backup.lastBackupAt||!Number.isFinite(backup.days)||backup.days>7||validation?.ok!==true)throw new Error('Gere um backup recente e execute o teste de restore isolado antes de ativar.');
+  const backupAt=Date.parse(backup.lastBackupAt||'');
+  const testedAt=Date.parse(validation?.testedAt||'');
+  const exportedAt=Date.parse(validation?.exportedAt||'');
+  const sameBackup=Number.isFinite(backupAt)&&Number.isFinite(exportedAt)&&Math.abs(backupAt-exportedAt)<600000;
+  const recentTest=Number.isFinite(testedAt)&&testedAt>=backupAt&&Date.now()-testedAt<7*86400000;
+  if(!backup.lastBackupAt||!Number.isFinite(backup.days)||backup.days>7||validation?.ok!==true||!sameBackup||!recentTest)throw new Error('Gere um backup recente e teste o restore isolado desse mesmo arquivo antes de ativar.');
+  if(syncConflict)throw new Error('Há conflito de sincronização pendente; resolva antes de ativar.');
   if(!confirm('Confirma que comprovou sincronização bidirecional notebook ↔ celular, sem duplicidades nem conflitos pendentes, e revisou o backup?'))return;
   localStorage.setItem(FLAG,'enabled');window.__rmRender?.();decorate();toast('Piloto ativado neste navegador.','success');
 }
@@ -175,5 +184,6 @@ document.addEventListener('change',event=>{
 });
 document.addEventListener('rm:rendered',()=>queueMicrotask(decorate));
 document.addEventListener('rm:data-ready',()=>queueMicrotask(decorate));
+document.addEventListener('rm:sync-status',event=>{const status=event.detail?.status;if(status==='conflict')syncConflict=true;else if(status==='synced')syncConflict=false;});
 document.addEventListener('rm:vault-locked',()=>{editingPatientId='';editingGoalId='';selectedSeriesKey.clear()});
 globalThis.__rmClinicalValue={version:'3.9.0',enabled,render:decorate,resolvePlan:patientId=>resolvePlanReference(data.notes,patientId)};
