@@ -11,10 +11,11 @@ Integrar plano terapêutico validado, preparação de sessão, objetivos, medida
 
 1. \`clinical-value-core-v390.mjs\`: resolução de plano aprovado, isolamento por paciente, série de medidas, validações e sinais documentais.
 2. \`session-tcc-prep-v360.js\`: plano individualizado aprovado aparece como fonte clínica, distinguindo rascunhos posteriores e medidas comparáveis. O texto livre é exibido, mas não convertido automaticamente em objetivos ou decisões.
-3. \`clinical-value-runtime-v390.js\`: medidas 0–10 revisadas, com procedência identificada (autorrelato ou observação profissional), direção da escala, vínculo opcional à sessão, correção aditiva sem apagar o original, gráfico e tabela acessível.
-4. \`clinical-health-engine-v360.js\`: alertas somente de leitura para plano sem validação, objetivo sem medida e revisão vencida, ativos apenas no piloto.
-5. \`clinical-runtime-manifest-v376.mjs\`: registro único do runtime, preservando a ordem dos módulos.
-6. Testes de domínio e browser sintéticos, executados na CI. Não utilizam conteúdo clínico real.
+3. \`tcc-goal-editor-v360.js\`: vínculo explícito entre objetivo terapêutico e versão aprovada, selecionado pelo profissional. Essa referência prioriza objetivos na preparação sem interpretar texto livre.
+4. \`clinical-value-runtime-v390.js\`: medidas 0–10 revisadas, com procedência identificada (autorrelato ou observação profissional), direção da escala, vínculo opcional à sessão, correção aditiva sem apagar o original, eventos de auditoria, gráfico e tabela acessível.
+5. \`clinical-health-engine-v360.js\`: alertas somente de leitura para plano sem validação, objetivo sem medida e revisão vencida, ativos apenas no piloto.
+6. \`clinical-runtime-manifest-v376.mjs\`: registro único do runtime, preservando a ordem dos módulos.
+7. Testes de domínio e browser sintéticos, executados na CI. Não utilizam conteúdo clínico real.
 
 ## Fonte de verdade
 
