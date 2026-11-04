@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   PROGRESS_KIND,resolvePlanReference,makeProgressRecord,progressSeries,
-  clinicalValueSignals,progressDescription
+  clinicalValueSignals,progressDescription,assessBackupGate
 } from '../assets/js/clinical-value-core-v390.mjs';
 
 let passed=0;
@@ -116,4 +116,25 @@ test('record persistence still protects final records',()=>{
  const source=fs.readFileSync('assets/js/record-persistence-v320.js','utf8');
  assert(source.includes("existing?.status==='Finalizado'")&&source.includes('bulkPutEncryptedAtomic'));
 });
+
+const goodBackup={
+  lastBackupAt:'2026-11-04T19:30:00.000Z',lastBackupExportedAt:'2026-11-04T19:29:59.900Z',
+  lastBackupDigest:'a'.repeat(64),vaultDigest:'b'.repeat(64),days:0
+};
+const goodProof={
+  ok:true,testedAt:'2026-11-04T19:35:00.000Z',exportedAt:goodBackup.lastBackupExportedAt,
+  backupDigest:goodBackup.lastBackupDigest,vaultDigest:goodBackup.vaultDigest
+};
+const nowMs=Date.parse('2026-11-04T20:00:00.000Z');
+test('pilot requires an actual backup export',()=>assert.equal(assessBackupGate({},goodProof,nowMs).code,'BACKUP_REQUIRED'));
+test('pilot requires isolated restore evidence',()=>assert.equal(assessBackupGate(goodBackup,null,nowMs).code,'RESTORE_REQUIRED'));
+test('pilot rejects a mismatched backup digest',()=>assert.equal(assessBackupGate(goodBackup,{...goodProof,backupDigest:'c'.repeat(64)},nowMs).code,'BACKUP_MISMATCH'));
+test('pilot rejects a restored file from another vault',()=>assert.equal(assessBackupGate(goodBackup,{...goodProof,vaultDigest:'c'.repeat(64)},nowMs).code,'BACKUP_MISMATCH'));
+test('pilot rejects a file with a different export timestamp',()=>assert.equal(assessBackupGate(goodBackup,{...goodProof,exportedAt:'2026-11-03T19:29:59.900Z'},nowMs).code,'BACKUP_MISMATCH'));
+test('pilot rejects a verification older than most recent backup',()=>assert.equal(assessBackupGate(goodBackup,{...goodProof,testedAt:'2026-11-04T18:00:00.000Z'},nowMs).code,'BACKUP_STALE'));
+test('pilot rejects outdated backup',()=>assert.equal(assessBackupGate({...goodBackup,lastBackupAt:'2026-10-24T19:30:00.000Z',days:11},goodProof,nowMs).code,'BACKUP_STALE'));
+test('pilot accepts exact recent backup and restore evidence',()=>assert.equal(assessBackupGate(goodBackup,goodProof,nowMs).ok,true));
+test('pilot rejects a future backup clock',()=>assert.equal(assessBackupGate({...goodBackup,lastBackupAt:'2026-11-05T19:30:00.000Z'},goodProof,nowMs).code,'BACKUP_STALE'));
+test('pilot rejects previous-version proof without digest',()=>assert.equal(assessBackupGate(goodBackup,{ok:true,testedAt:goodProof.testedAt},nowMs).code,'RESTORE_REQUIRED'));
+
 console.log('Clinical value v390 tests: '+passed+' PASS');
