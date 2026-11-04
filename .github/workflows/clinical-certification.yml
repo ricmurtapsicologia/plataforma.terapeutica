@@ -63,6 +63,10 @@ jobs:
           clinical_value_html="$(${{ steps.chrome.outputs.bin }} --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=10000 --user-data-dir="$clinical_value_profile" --dump-dom http://127.0.0.1:8765/tests/clinical-value-browser-v390.html 2>/tmp/rm-value-browser.log || true)"
           printf '%s\n' "$clinical_value_html"
           grep -q 'CLINICAL_VALUE_V390_BROWSER_PASS' <<<"$clinical_value_html" || { cat /tmp/rm-value-browser.log || true; cat /tmp/rm-http.log || true; exit 1; }
+          backup_gate_profile="/tmp/rm-backup-gate-$RANDOM"
+          backup_gate_html="$(${{ steps.chrome.outputs.bin }} --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=20000 --user-data-dir="$backup_gate_profile" --dump-dom http://127.0.0.1:8765/tests/clinical-backup-gate-v390.html 2>/tmp/rm-backup-gate.log || true)"
+          printf '%s\n' "$backup_gate_html"
+          grep -q 'CLINICAL_BACKUP_GATE_V390_BROWSER_PASS' <<<"$backup_gate_html" || { cat /tmp/rm-backup-gate.log || true; cat /tmp/rm-http.log || true; exit 1; }
 
   lighthouse:
     runs-on: ubuntu-latest
