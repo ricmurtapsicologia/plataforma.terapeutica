@@ -1,4 +1,4 @@
-import {APP_VERSION,STORE_NAMES,data,runtime,nowISO} from './state.js';
+import {APP_VERSION,STORE_NAMES,data,runtime,nowISO,todayISO} from './state.js';
 import {verifyActivityChain} from './audit.js';
 import {backupStatus} from './backup.js';
 import {modal,toast,esc} from './ui.js';
@@ -61,7 +61,7 @@ async function scan({stage='scan'}={}){
     const withoutReviewedPlan=active.filter(p=>!resolvePlanReference(data.notes,p.id).approved).length;
     const activeGoals=arr(data.goals).filter(g=>active.some(p=>p.id===g.patientId)&&!['Alcançado','Pausado'].includes(String(g.status||'')));
     const goalsWithoutMeasures=activeGoals.filter(g=>progressSeries(data.notes,g.patientId,g.id).total===0).length;
-    const overdueGoals=activeGoals.filter(g=>g.reviewDate&&/^\d{4}-\d{2}-\d{2}$/.test(String(g.reviewDate))&&g.reviewDate<new Date().toLocaleDateString('en-CA')).length;
+    const overdueGoals=activeGoals.filter(g=>g.reviewDate&&/^\d{4}-\d{2}-\d{2}$/.test(String(g.reviewDate))&&g.reviewDate<todayISO()).length;
     if(withoutReviewedPlan)issues.push(issue('PLAN_REVIEW_COVERAGE','ATENÇÃO','Há planos individuais ainda não validados profissionalmente.',`${withoutReviewedPlan} paciente(s) ativo(s)`,'Revisar fonte clínica antes de usar o plano como referência.','PENDENTE'));
     if(goalsWithoutMeasures)issues.push(issue('GOAL_PROGRESS_COVERAGE','ATENÇÃO','Objetivos ativos ainda sem medida longitudinal comparável.',`${goalsWithoutMeasures} objetivo(s)`,'Registrar medida somente quando clinicamente pertinente e disponível.','PENDENTE'));
     if(overdueGoals)issues.push(issue('GOAL_REVIEW_OVERDUE','ATENÇÃO','Objetivos com revisão documental atrasada.',`${overdueGoals} objetivo(s)`,'Revisar data, contexto e plano de tratamento.','PENDENTE'));
