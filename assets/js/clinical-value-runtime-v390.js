@@ -1,6 +1,7 @@
 import {data,runtime,selectedPatient,uid,nowISO,todayISO} from './state.js';
 import {bulkPutEncryptedAtomic,getDecryptedById} from './database.js';
 import {backupStatus} from './backup.js';
+import {addActivity} from './audit.js';
 import {modal,closeModal,toast,esc} from './ui.js';
 import {PROGRESS_KIND,makeProgressRecord,progressSeries,progressDescription,clinicalValueSignals,resolvePlanReference} from './clinical-value-core-v390.mjs';
 
@@ -134,6 +135,7 @@ async function saveMeasure(){
     const check=await getDecryptedById('notes',row.id,runtime.key);
     if(!check||check.patientId!==row.patientId||check.goalId!==row.goalId||check.value!==row.value||check.status!==row.status)throw new Error('Gravação não verificada.');
     data.notes.push(check);
+    try{await addActivity(row.supersedesId?'Correção de medida de evolução':'Medida de evolução validada',{entity:'notes',patientId:row.patientId,entityId:row.id,details:row.supersedesId?'correcao-aditiva':'registro-original'})}catch{toast('Medida salva, mas a trilha de auditoria precisa ser verificada.','warning')}
     editingGoalId='';editingPatientId='';closeModal();window.__rmRender?.();
     toast('Medida registrada e verificada no cofre clínico.','success');
   }finally{saving=false}
