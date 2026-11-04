@@ -57,7 +57,9 @@ const observed=mk('obs',{method:'observacao',score:8});
 const inverted=mk('inverted',{orientation:'maior-pior',score:9});
 test('series separates provenance',()=>{
  const s=progressSeries([m1,m3,observed],patient,goal.id);
- assert.equal(s.distinctMethods,2);assert.equal(s.records.length,1);
+ assert.equal(s.distinctMethods,2);assert.equal(s.records.length,2);
+ const observedSeries=progressSeries([m1,m3,observed],patient,goal.id,'observacao|maior-melhor|0-10');
+ assert.equal(observedSeries.records.length,1);
  const self=progressSeries([m1,m3,observed],patient,goal.id,'autorreferida|maior-melhor|0-10');
  assert.equal(self.records.length,2);
 });
