@@ -15,7 +15,7 @@ try{
  localStorage.setItem('rm.clinicalValuePilot.v390','enabled');
  const pid='SYNTHETIC-P1', pid2='SYNTHETIC-P2';
  data.patients=[{id:pid,name:'Paciente Exemplo',status:'Ativo'},{id:pid2,name:'Paciente Teste',status:'Ativo'}];
- data.goals=[{id:'SYN-G1',patientId:pid,title:'Objetivo de teste',status:'Em andamento',baseline:'3/10',reviewedPlanId:'SYN-AP',intervention:'Registro de evidências'},{id:'SYN-G1-OTHER',patientId:pid,title:'Outro foco não vinculado',status:'Em andamento',priority:0}];
+ data.goals=[{id:'SYN-G1',patientId:pid,title:'Objetivo de teste',status:'Em andamento',baseline:'3/10',reviewedPlanId:'SYN-AP',intervention:'Registro de evidências'},{id:'SYN-G1-OTHER',patientId:pid,title:'Outro foco não vinculado',status:'Em andamento',priority:1}];
  data.notes=[
    {id:'SYN-AP',patientId:pid,kind:'clinicalPlanReviewedVersion',status:'Validado pelo profissional',reviewRequired:false,versionNumber:1,text:'Plano aprovado: <img src=x onerror=alert(1)>',createdAt:'2026-10-01T00:00:00Z'},
    {id:'SYN-DRAFT',patientId:pid,kind:'clinicalPlanReviewedVersion',status:'Rascunho para revisão',reviewRequired:true,createdAt:'2026-10-15T00:00:00Z',text:'Rascunho não aprovado'},
