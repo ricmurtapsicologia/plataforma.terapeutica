@@ -52,8 +52,9 @@ function goalCard(goal) {
     '<div class="mt-12">'+pointsMarkup(series)+'</div><p class="tiny muted">Medida descritiva de 0 a 10, não diagnóstica. Métodos e sentidos diferentes nunca são agregados.</p></section>';
 }
 function decoratePatient() {
-  if (!enabled()||runtime.locked||!runtime.dataReady||runtime.route!=='patients') return;
-  const p=selectedPatient(),host=document.getElementById('patient-tab-content');
+  const host=document.getElementById('patient-tab-content');
+  if (!enabled()||runtime.locked||!runtime.dataReady||runtime.route!=='patients') {host?.querySelector('#rm-clinical-value-v390')?.remove();return;}
+  const p=selectedPatient();
   if (!p||!host) return;
   host.querySelector('#rm-clinical-value-v390')?.remove();
   if (runtime.patientTab==='plans') {
