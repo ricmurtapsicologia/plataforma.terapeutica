@@ -67,6 +67,10 @@ jobs:
           backup_gate_html="$(${{ steps.chrome.outputs.bin }} --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=20000 --user-data-dir="$backup_gate_profile" --dump-dom http://127.0.0.1:8765/tests/restore-gate-v390-browser.html 2>/tmp/rm-backup-gate.log || true)"
           printf '%s\n' "$backup_gate_html"
           grep -q 'CLINICAL_BACKUP_GATE_V390_BROWSER_PASS' <<<"$backup_gate_html" || { cat /tmp/rm-backup-gate.log || true; cat /tmp/rm-http.log || true; exit 1; }
+          ui_stability_profile="/tmp/rm-ui-stability-$RANDOM"
+          ui_stability_html="$(${{ steps.chrome.outputs.bin }} --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=12000 --user-data-dir="$ui_stability_profile" --dump-dom http://127.0.0.1:8765/tests/ui-stability-v392-browser.html 2>/tmp/rm-ui-stability.log || true)"
+          printf '%s\n' "$ui_stability_html"
+          grep -q 'UI_STABILITY_V392_BROWSER_PASS' <<<"$ui_stability_html" || { cat /tmp/rm-ui-stability.log || true; cat /tmp/rm-http.log || true; exit 1; }
 
   lighthouse:
     runs-on: ubuntu-latest
