@@ -11,7 +11,7 @@ setTimeout(()=>{
 },12000);
 
 try{
-  await import('./bootstrap-v240.js?v=3.9.2&rev=clinical-runtime-v376');
+  await import('./bootstrap-v240.js?v=3.9.2&rev=patient-reactivation-v380');
 }catch(err){
   console.error('Falha crítica no bootstrap',err);
   window.__rmPreBootErrors.push(`Bootstrap: ${err?.message||String(err)}`);
