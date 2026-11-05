@@ -207,7 +207,8 @@ function paintHealth(){
   const main=document.getElementById('main-content');if(!main)return;
   let card=document.getElementById('rm-agenda-health-v330');
   if(!card){card=document.createElement('section');card.id='rm-agenda-health-v330';card.className='card mt-16';main.appendChild(card)}
-  card.innerHTML=`<div class="card-title"><div><div class="eyebrow">Agenda ${esc(AGENDA_VERSION)}</div><h3 class="mb-0">Controlador da Agenda</h3></div><span class="badge success">1 proprietário</span></div><div class="grid grid-3"><div><div class="tiny muted">Proprietário</div><strong>${esc(OWNER)}</strong></div><div><div class="tiny muted">Última persistência</div><strong>${esc(diagnostics.lastPersistedAt||'Ainda não nesta sessão')}</strong></div><div><div class="tiny muted">Última ação</div><strong>${esc(diagnostics.lastAction||'—')}</strong></div></div><div class="small muted mt-12">Último erro: ${esc(diagnostics.lastError||'Nenhum erro registrado nesta sessão.')}</div>`;
+  const markup=`<div class="card-title"><div><div class="eyebrow">Agenda ${esc(AGENDA_VERSION)}</div><h3 class="mb-0">Controlador da Agenda</h3></div><span class="badge success">1 proprietário</span></div><div class="grid grid-3"><div><div class="tiny muted">Proprietário</div><strong>${esc(OWNER)}</strong></div><div><div class="tiny muted">Última persistência</div><strong>${esc(diagnostics.lastPersistedAt||'Ainda não nesta sessão')}</strong></div><div><div class="tiny muted">Última ação</div><strong>${esc(diagnostics.lastAction||'—')}</strong></div></div><div class="small muted mt-12">Último erro: ${esc(diagnostics.lastError||'Nenhum erro registrado nesta sessão.')}</div>`;
+  if(card.__rmAgendaHealthMarkup!==markup){card.innerHTML=markup;card.__rmAgendaHealthMarkup=markup;}
 }
 document.addEventListener('rm:rendered',()=>queueMicrotask(paintHealth));
 
