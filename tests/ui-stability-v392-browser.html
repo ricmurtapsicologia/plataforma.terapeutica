@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>UI stability v392 synthetic browser probe</title></head>
+<body>
+<div id="app"><div class="app-shell">
+  <div class="top-actions"><div id="clock-chip" class="clock-chip">
+    <div><small>Data</small><strong>04/11/2026</strong></div>
+    <div><small>Hora</small><strong>20:20:20</strong></div>
+  </div></div>
+  <main id="main-content"><h1>Configurações sintéticas</h1></main>
+</div></div>
+<div id="modal-root"></div>
+<div id="toast-region"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+ const report=document.getElementById('result');
+ const assert=(ok,message)=>{if(!ok)throw new Error(message)};
+ const tick=()=>new Promise(resolve=>setTimeout(resolve,35));
+ try{
+   localStorage.setItem('rm.v3.migration.legacy-sw.done','done');
+   localStorage.setItem('rm.gemini.materialization-integrity.v273',JSON.stringify({status:'done'}));
+   const {runtime}=await import('../assets/js/state.js');
+   runtime.locked=false;runtime.dataReady=false;runtime.route='settings';
+   await import('../assets/js/platform-runtime-v300.js');
+   document.dispatchEvent(new CustomEvent('rm:rendered',{detail:{route:'settings'}}));
+   await tick();
+   const card=document.getElementById('rm-v3-platform-health');
+   assert(card,'Health card did not render');
+   const initialDiagnostics=card.querySelector('[data-action="run-diagnostics"]');
+   assert(initialDiagnostics,'Health card diagnostic button missing');
+   const initial=window.__rmRuntimeMetrics?.decorations;
+   assert(Number.isFinite(initial),'Render instrumentation unavailable');
+   for(let i=0;i<15;i++){
+     const time=document.querySelectorAll('#clock-chip strong')[1];
+     time.textContent='20:20:'+String(i).padStart(2,'0');
+     await Promise.resolve();
+   }
+   await tick();
+   assert(window.__rmRuntimeMetrics?.decorations===initial,'Clock induced repeated platform decorations');
+   assert(document.querySelector('[data-action="run-diagnostics"]')===initialDiagnostics,'Clock caused health card replacement');
+   const structural=document.createElement('button');structural.type='button';structural.textContent='Other status';document.querySelector('.top-actions').appendChild(structural);
+   await tick();
+   assert(window.__rmRuntimeMetrics?.decorations>initial,'True status-chip structural change ignored');
+   assert(document.querySelector('[data-action="run-diagnostics"]')===initialDiagnostics,'Unchanged health card was replaced');
+   const afterStructural=window.__rmRuntimeMetrics.decorations;
+   document.dispatchEvent(new CustomEvent('rm:rendered',{detail:{route:'settings'}}));
+   await tick();
+   assert(window.__rmRuntimeMetrics.decorations>afterStructural,'Explicit render event did not decorate');
+   assert(document.querySelector('[data-action="run-diagnostics"]')===initialDiagnostics,'Repeated render destroyed unchanged health card');
+   report.textContent='UI_STABILITY_V392_BROWSER_PASS';
+ }catch(err){report.textContent='UI_STABILITY_V392_BROWSER_FAIL: '+String(err?.stack||err);document.body.dataset.failed='true'}
+</script>
+</body></html>
