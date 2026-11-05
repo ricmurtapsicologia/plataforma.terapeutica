@@ -203,6 +203,7 @@ function decorateSettingsHealth(){
 function decorateAll(){
   decorateQueued=false;
   metrics.decorations++;
+  exposeMetrics();
   const app=document.getElementById('app');
   observer?.disconnect();
   try{
