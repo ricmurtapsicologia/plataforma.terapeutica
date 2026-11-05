@@ -112,6 +112,12 @@ O envio automático de confirmação T−6h cruza a fronteira do navegador e uti
 
 A navegação do workspace do paciente prioriza seis áreas recorrentes — Visão geral, Sessões, Atendimento, Prontuário, Plano e Financeiro — e preserva áreas menos frequentes em `Mais`. Nenhuma função clínica é removida; a mudança reduz carga cognitiva no desktop e no celular.
 
+## Reativação de paciente inativo
+
+A seção **Pacientes desativados** e o contexto de um paciente com status **Inativo** disponibilizam **Reativar paciente**. A ação também aparece em **+ Ação** quando o paciente selecionado está inativo.
+
+A confirmação grava o status **Ativo** no cofre local cifrado com verificação de leitura e registra a alteração na auditoria. O mesmo cadastro é preservado, com prontuários, histórico, sessões antigas e financeiro; nenhuma sessão nova é criada automaticamente. Pacientes **Encerrados** não são reabertos pelo atalho de inativos. O código público não armazena nem seleciona pacientes reais automaticamente.
+
 ## Entrypoints atuais
 
 - `index.html` — build `3.9.2-main-v250`;
