@@ -4,7 +4,7 @@ import {addActivity} from './audit.js';
 import {modal,closeModal,toast,esc} from './ui.js';
 
 // Interface apenas; nomes e dados clínicos permanecem no cofre cifrado.
-const VERSION='3.9.3-reactivation-v380';
+const VERSION='3.9.2-reactivation-v380';
 const ACTION='rm-reactivate-patient-v380';
 const CONFIRM='rm-confirm-reactivation-v380';
 let busy=false;
