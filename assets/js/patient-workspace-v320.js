@@ -57,7 +57,8 @@ function unifyNavigation(){
   const current=runtime.patientTab||'summary';
   const currentMore=MORE_NAV.find(([id])=>id===current);
   const moreLabel=currentMore?`Mais · ${currentMore[1]}`:'Mais';
-  nav.innerHTML=`<div class="rm-patient-primary-nav">${PRIMARY_NAV.map(([id,label])=>tabButton(id,label,current)).join('')}</div><details class="rm-patient-more ${currentMore?'active':''}"><summary class="tab" aria-label="Outras áreas do paciente">${esc(moreLabel)}</summary><div class="rm-patient-more-menu">${MORE_NAV.map(([id,label])=>tabButton(id,label,current)).join('')}</div></details>`;
+  const markup=`<div class="rm-patient-primary-nav">${PRIMARY_NAV.map(([id,label])=>tabButton(id,label,current)).join('')}</div><details class="rm-patient-more ${currentMore?'active':''}"><summary class="tab" aria-label="Outras áreas do paciente">${esc(moreLabel)}</summary><div class="rm-patient-more-menu">${MORE_NAV.map(([id,label])=>tabButton(id,label,current)).join('')}</div></details>`;
+  if(nav.__rmPatientNavMarkup!==markup){nav.innerHTML=markup;nav.__rmPatientNavMarkup=markup;}
 }
 
 function addStyles(){
