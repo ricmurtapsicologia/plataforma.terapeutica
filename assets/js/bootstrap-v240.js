@@ -63,7 +63,7 @@ async function ensureGoogleOAuthPublicClient(){
 async function ensureClinicalRuntime(){
   if(runtimeCompositionPromise)return runtimeCompositionPromise;
   runtimeCompositionPromise=(async()=>{
-    const composition=await withTimeout(import('./core/clinical-runtime-manifest-v376.mjs?v='+encodeURIComponent(APP_VERSION)+'&rev=clinical-runtime-v376'),10000,'Mapa do runtime clínico');
+    const composition=await withTimeout(import('./core/clinical-runtime-manifest-v376.mjs?v='+encodeURIComponent(APP_VERSION)+'&rev=patient-reactivation-v380'),10000,'Mapa do runtime clínico');
     const errors=[];
     const result=await composition.loadClinicalRuntime({
       version:APP_VERSION,
