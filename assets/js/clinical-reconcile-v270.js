@@ -82,6 +82,40 @@ function prepareMaterialization(entry,raw,appointments,records){
   return{appointment,record,appointmentChanged:false,recordChanged:true};
 }
 function forcedPatient(fileId){const id=catalog.verifiedLinks?.[fileId];return id?patientById(id):null}
+async function applyPrivateScheduleExclusions(rules){
+  let removed=0,blocked=0,matched=0;
+  for(const rule of arr(rules)){
+    if(rule.action!=='remove-invalid-agenda-slot'||rule.weekday!==1||!/^\d{2}:\d{2}$/.test(rule.time||''))continue;
+    const names=new Set(arr(rule.patientNames).map(normalizeIdentity).filter(Boolean));
+    const patients=arr(data.patients).filter(p=>[p.name,p.preferredName].map(normalizeIdentity).some(n=>names.has(n)));
+    if(patients.length!==1){blocked++;continue}
+    const patient=patients[0];
+    const targets=arr(data.appointments).filter(a=>a.patientId===patient.id&&a.time===rule.time&&/^\d{4}-\d{2}-\d{2}$/.test(a.date||'')&&new Date(a.date+'T12:00:00Z').getUTCDay()===rule.weekday);
+    matched+=targets.length;
+    for(const a of targets){
+      const sessionKey=a.clinicalSessionId||a.id;
+      const linked=r=>r.appointmentId===a.id||arr(r.appointmentIds).includes(a.id)||r.clinicalSessionId===sessionKey;
+      const clinical=arr(data.records).some(r=>linked(r)||(r.patientId===patient.id&&r.date===a.date&&r.time===a.time));
+      const related=['notes','formulations','goals','tasks','materials','documents','payments','consents','communications'].some(s=>arr(data[s]).some(linked));
+      const protectedIds=new Set(arr(rule.protectedCalendarEventIds));
+      const deterministic=await globalThis.__rmGoogleCalendar?.eventIdFor?.(a.id);
+      if(clinical||related||a.sessionStartedAt||a.sessionEndedAt||a.clinicalSessionState==='Encerrada'||a.clinicalSessionState==='Em atendimento'||a.paymentReconciled||a.gemini?.fileId||a.source?.type==='google-meet-gemini'||protectedIds.has(a.calendarEventId)||protectedIds.has(deterministic)){blocked++;continue}
+      const at=nowISO(),id='private-invalid-agenda-slot-v1:'+a.id;
+      if(!arr(data.settings).some(s=>s.id===id)){
+        const backup={id,kind:'private-invalid-agenda-slot-v1',previousAppointment:a,createdAt:at,updatedAt:at};
+        await bulkPutEncryptedAtomic([{storeName:'settings',values:[backup]}],runtime.key,{verify:true});
+        data.settings=[...arr(data.settings),backup];
+      }
+      await deleteRecord('appointments',a.id);
+      if(await getDecryptedById('appointments',a.id,runtime.key))throw Error('Falha na verificação de exclusão da sessão inválida.');
+      data.appointments=arr(data.appointments).filter(row=>row.id!==a.id);
+      removed++;
+    }
+  }
+  globalThis.__rmPrivateScheduleExclusionStatus={matched,removed,blocked,at:nowISO()};
+  if(removed){document.dispatchEvent(new CustomEvent('rm:local-data-changed',{detail:{kind:'private-invalid-agenda-slot-v1',storeName:'appointments',count:removed,at:nowISO(),verified:true}}));window.__rmRender?.()}
+  return globalThis.__rmPrivateScheduleExclusionStatus;
+}
 async function applyPrivateSourceExclusions(){
   if(runtime.integrityBlocked||shouldPauseForConflict())throw Error('Correção bloqueada por integridade/sincronização.');
   const url=new URL('https://www.googleapis.com/drive/v3/files');
@@ -92,6 +126,7 @@ async function applyPrivateSourceExclusions(){
   if(!arr(docs.files).length)return;
   const patch=JSON.parse((await exportDoc(docs.files[0].id)).trim());
   if(patch.schema!=='rm-clinical-source-exclusion-v1')throw Error('Instrução de exclusão inválida.');
+  await applyPrivateScheduleExclusions(patch.scheduleExclusions);
   for(const spec of arr(patch.exclusions)){
     if(spec.action!=='revoke-nonclinical-draft'||!spec.fileId||!spec.date||!spec.time)continue;
     const key=exclusionKey(spec.fileId),prior=arr(data.settings).find(s=>s.id===key);
