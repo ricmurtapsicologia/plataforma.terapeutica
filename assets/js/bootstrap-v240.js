@@ -63,11 +63,11 @@ async function ensureGoogleOAuthPublicClient(){
 async function ensureClinicalRuntime(){
   if(runtimeCompositionPromise)return runtimeCompositionPromise;
   runtimeCompositionPromise=(async()=>{
-    const composition=await withTimeout(import('./core/clinical-runtime-manifest-v376.mjs?v='+encodeURIComponent(APP_VERSION)+'&rev=clinical-source-integrity-v381'),10000,'Mapa do runtime clínico');
+    const composition=await withTimeout(import('./core/clinical-runtime-manifest-v376.mjs?v='+encodeURIComponent(APP_VERSION)+'&rev=clinical-agenda-integrity-v382'),10000,'Mapa do runtime clínico');
     const errors=[];
     const result=await composition.loadClinicalRuntime({
       version:APP_VERSION,
-      revision:'clinical-source-integrity-v381',
+      revision:'clinical-agenda-integrity-v382',
       onError:({phase='',label='',path='',error}={})=>{
         const message=`${label||path||'Módulo'}: ${error?.message||error||'falha desconhecida'}`;
         console.error(`Falha no runtime clínico [${phase||'unknown'}] ${label||path||''}`,error);
