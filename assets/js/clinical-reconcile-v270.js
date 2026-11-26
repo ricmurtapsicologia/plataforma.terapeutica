@@ -72,7 +72,9 @@ function prepareMaterialization(entry,raw,appointments,records){
   const patient=patientById(entry.patientId);if(!patient)return null;
   const appointment=existingRealAppointment(patient.id,entry,appointments);
   if(!appointment){entry.status='review';entry.reason='Atendimento real correspondente não confirmado na agenda clínica.';return null}
-  const existing=records.find(r=>r.patientId===patient.id&&(r.appointmentId===appointment.id||r.clinicalSessionId===(appointment.clinicalSessionId||appointment.id)||r.date===appointment.date));
+  const sameSource=records.find(r=>r.source?.fileId===entry.fileId||r.id==='gmrec_'+entry.fileId);
+  if(sameSource&&sameSource.patientId!==patient.id){entry.status='review';entry.reason='Fonte já vinculada a outra identidade; revisão obrigatória.';return null}
+  const existing=sameSource||records.find(r=>r.patientId===patient.id&&(r.appointmentId===appointment.id||r.clinicalSessionId===(appointment.clinicalSessionId||appointment.id)||r.date===appointment.date));
   if(existing){entry.status='covered';entry.recordId=existing.id;entry.appointmentId=appointment.id;return{appointment,record:existing,appointmentChanged:false,recordChanged:false}}
   const draft=buildClinicalDraft(raw,patient),at=nowISO();
   const record={id:'gmrec_'+entry.fileId,patientId:patient.id,appointmentId:appointment.id,clinicalSessionId:appointment.clinicalSessionId||appointment.id,title:draft.title,date:entry.meetingDate,time:entry.rawTime||entry.meetingTime,status:'Rascunho IA',text:draft.text,followup:draft.followup,requiresReview:true,createdAt:at,updatedAt:at,addenda:[],source:{type:'google-meet-gemini',fileId:entry.fileId,url:entry.url||'',title:entry.name||'',sourceModifiedAt:entry.modifiedTime,rawTime:entry.rawTime||entry.meetingTime,version:VERSION,clinicalPromptVersion:PROMPT_VERSION,aiSource:'Google Meet/Gemini'}};
@@ -88,7 +90,7 @@ async function applyPrivateSourceExclusions(){
   const response=await gfetch(url);if(!response.ok)throw Error('Não foi possível conferir exclusões privadas.');
   const docs=await response.json();if(docs.nextPageToken||arr(docs.files).length>1)throw Error('Instrução de exclusão privada ambígua.');
   if(!arr(docs.files).length)return;
-  const patch=JSON.parse(await exportDoc(docs.files[0].id));
+  const patch=JSON.parse((await exportDoc(docs.files[0].id)).trim());
   if(patch.schema!=='rm-clinical-source-exclusion-v1')throw Error('Instrução de exclusão inválida.');
   for(const spec of arr(patch.exclusions)){
     if(spec.action!=='revoke-nonclinical-draft'||!spec.fileId||!spec.date||!spec.time)continue;
